@@ -1,0 +1,59 @@
+{
+  "menu": [
+    {
+      "label": "View",
+      "submenu": [
+        {
+          "label": "Toggle Diagnostics",
+          "command": "nuclide-diagnostics-ui:toggle-table"
+        }
+      ]
+    },
+    {
+      "label": "Nuclide",
+      "submenu": [
+        {
+          "label": "Diagnostics",
+          "submenu": [
+            {
+              "label": "Show Table",
+              "command": "nuclide-diagnostics-ui:show-table"
+            },
+            {
+              "label": "Fix All in Current File",
+              "command": "nuclide-diagnostics-ui:fix-all-in-current-file"
+            },
+            {
+              "label": "Open All Files with Errors",
+              "command": "nuclide-diagnostics-ui:open-all-files-with-errors"
+            },
+            {
+              "label": "Go To First Diagnostic",
+              "command": "nuclide-diagnostics-ui:go-to-first-diagnostic"
+            },
+            {
+              "label": "Go To Last Diagnostic",
+              "command": "nuclide-diagnostics-ui:go-to-last-diagnostic"
+            },
+            {
+              "label": "Go To Next Diagnostic",
+              "command": "nuclide-diagnostics-ui:go-to-next-diagnostic"
+            },
+            {
+              "label": "Go To Previous Diagnostic",
+              "command": "nuclide-diagnostics-ui:go-to-previous-diagnostic"
+            },
+            {
+              "label": "Go To Next Diagnostic Trace",
+              "command": "nuclide-diagnostics-ui:go-to-next-diagnostic-trace"
+            },
+            {
+              "label": "Go To Previous Diagnostic Trace",
+              "command": "nuclide-diagnostics-ui:go-to-previous-diagnostic-trace"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
