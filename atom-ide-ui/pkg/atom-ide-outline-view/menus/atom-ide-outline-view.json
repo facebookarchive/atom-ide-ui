@@ -1,0 +1,13 @@
+{
+  "menu": [
+    {
+      "label": "View",
+      "submenu": [
+        {
+          "label": "Toggle Outline View",
+          "command": "nuclide-outline-view:toggle"
+        }
+      ]
+    }
+  ]
+}

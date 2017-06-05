@@ -1,0 +1,21 @@
+@import 'ui-variables';
+
+.nuclide-outline-view {
+  flex: 1;
+  /* Prevents this element from shrinking smaller than the width of its content */
+  min-width: min-content;
+}
+
+.nuclide-outline-view-loading {
+  text-align: center;
+}
+
+.nuclide-outline-view-item {
+  cursor: pointer;
+  font-family: Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  padding: 0 @component-padding;
+}
+
+.panel-heading .nuclide-outline-view-close-button {
+  top: -0.25em;
+}
