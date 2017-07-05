@@ -5,6 +5,7 @@ A collection of Atom UIs to support language services (namely the LSP).
 This repository holds the published Atom package, which is a thin wrapper over the [`atom-ide-ui` NPM module](https://www.npmjs.com/package/atom-ide-ui).
 
 The code for `atom-ide-ui` can be found at https://github.com/facebook/nuclide/tree/master/modules/atom-ide-ui.
+To contribute, please take a look at the [CONTRIBUTING.md](https://github.com/facebook/nuclide/blob/master/modules/atom-ide-ui/CONTRIBUTING.md).
 
 > NOTE: Unfortunately `apm publish` behaves quite differently from NPM, which makes it difficult to maintain both an APM-friendly repository and an NPM-friendly repository. This is our workaround!
 
