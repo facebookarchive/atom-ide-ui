@@ -1,6 +1,6 @@
 {
   "name": "atom-ide-ui",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "A collection of Atom UIs to support language services.",
   "keywords": [],
   "repository": "https://github.com/facebooknuclide/atom-ide-ui",
@@ -9,6 +9,6 @@
     "atom": ">= 1.17.0"
   },
   "dependencies": {
-    "atom-ide-ui": "0.1.9"
+    "atom-ide-ui": "0.1.10"
   }
 }
