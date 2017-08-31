@@ -16,11 +16,10 @@
   nuclide-internal/no-commonjs: 0,
   */
 
-const fs = require('fs');
-const path = require('path');
-if (fs.existsSync(path.join(__dirname, 'DEVELOPMENT'))) {
-  // eslint-disable-next-line nuclide-internal/modules-dependencies
-  require('../nuclide-node-transpiler');
+class Foo {
+  static bar() {
+    return 'qux';
+  }
 }
 
-module.exports = require('./index');
+module.exports.Foo = Foo;

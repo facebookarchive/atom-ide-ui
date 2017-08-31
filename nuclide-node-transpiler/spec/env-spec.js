@@ -18,9 +18,11 @@
 
 const fs = require('fs');
 const path = require('path');
-if (fs.existsSync(path.join(__dirname, 'DEVELOPMENT'))) {
-  // eslint-disable-next-line nuclide-internal/modules-dependencies
-  require('../nuclide-node-transpiler');
-}
 
-module.exports = require('./index');
+describe('env', () => {
+  it('has correct __DEV__', () => {
+    // This should exist if we're running a test.
+    expect(fs.existsSync(path.join(__dirname, '../../../DEVELOPMENT'))).toBe(true);
+    expect(require('../lib/env').__DEV__).toBe(true);
+  });
+});

@@ -16,11 +16,15 @@
   nuclide-internal/no-commonjs: 0,
   */
 
-const fs = require('fs');
 const path = require('path');
-if (fs.existsSync(path.join(__dirname, 'DEVELOPMENT'))) {
-  // eslint-disable-next-line nuclide-internal/modules-dependencies
-  require('../nuclide-node-transpiler');
-}
+const fs = require('fs');
 
-module.exports = require('./index');
+// This script is required by every entry point in Nuclide.
+// Use this as an opportunity to inject the 'modules' path.
+process.env.NODE_PATH =
+  (process.env.NODE_PATH || '') +
+  path.delimiter +
+  path.join(__dirname, '../../../modules');
+require('module').Module._initPaths();
+
+module.exports.__DEV__ = fs.existsSync(path.join(__dirname, '../../../DEVELOPMENT'));

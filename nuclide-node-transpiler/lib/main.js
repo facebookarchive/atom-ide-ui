@@ -16,11 +16,20 @@
   nuclide-internal/no-commonjs: 0,
   */
 
-const fs = require('fs');
-const path = require('path');
-if (fs.existsSync(path.join(__dirname, 'DEVELOPMENT'))) {
-  // eslint-disable-next-line nuclide-internal/modules-dependencies
-  require('../nuclide-node-transpiler');
-}
+/**
+ * To use the require hook, you should follow this pattern:
+ *
+ *   const {__DEV__} = require('nuclide-node-transpiler/lib/env');
+ *   if (__DEV__) {
+ *     require('nuclide-node-transpiler');
+ *   }
+ *
+ */
 
-module.exports = require('./index');
+const {__DEV__} = require('./env');
+
+if (__DEV__) {
+  require('./require-hook');
+} else {
+  throw new Error('The require hook can only be enabled in __DEV__ mode.');
+}
