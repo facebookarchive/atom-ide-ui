@@ -3,7 +3,7 @@
   "version": "0.1.12",
   "description": "A collection of Atom UIs to support language services.",
   "keywords": [],
-  "repository": "https://github.com/facebooknuclide/atom-ide-ui",
+  "repository": "https://github.com/facebook-atom/atom-ide-ui",
   "license": "BSD-3-Clause",
   "engines": {
     "atom": ">= 1.17.0"

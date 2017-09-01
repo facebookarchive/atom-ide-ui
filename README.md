@@ -1,23 +1,29 @@
 # atom-ide-ui
 
-A collection of Atom UIs to support language services (namely the LSP).
+[![Package version!](https://img.shields.io/apm/v/atom-ide-ui.svg?style=flat-square)](https://atom.io/packages/atom-ide-ui)
 
-This repository holds the published Atom package, which is a thin wrapper over the [`atom-ide-ui` NPM module](https://www.npmjs.com/package/atom-ide-ui).
+A collection of Atom UIs to support language services as part of Atom IDE,
+designed for use with packages built on top of
+[atom-languageclient](https://github.com/atom/atom-languageclient).
 
-The code for `atom-ide-ui` can be found at https://github.com/facebook/nuclide/tree/master/modules/atom-ide-ui.
-To contribute, please take a look at the [CONTRIBUTING.md](https://github.com/facebook/nuclide/blob/master/modules/atom-ide-ui/CONTRIBUTING.md).
+Contributions are welcome! File bugs and feature requests from the issues page,
+or read the [CONTRIBUTING.md](./CONTRIBUTING.md) file for details on how to submit a pull request.
 
-> NOTE: Unfortunately `apm publish` behaves quite differently from NPM, which makes it difficult to maintain both an APM-friendly repository and an NPM-friendly repository. This is our workaround!
+## Getting Started
+
+Install `atom-ide-ui` from Atom's "Install" panel or run `apm install atom-ide-ui`.
 
 ## Requirements
 
 `atom-ide-ui` requires Atom 1.17+.
 
-Packages based on https://github.com/atom/atom-languageclient should work out of the box with `atom-ide-ui` installed.
+Packages based on https://github.com/atom/atom-languageclient should work out of the box with `atom-ide-ui` installed, such as:
 
-## Installation
-
-Install `atom-ide-ui` from Atom's "Install" panel or run `apm install atom-ide-ui`.
+* [ide-csharp](https://github.com/atom/ide-csharp)
+* [ide-flowtype](https://github.com/flowtype/ide-flowtype)
+* [ide-java](https://github.com/atom/ide-java)
+* [ide-php](https://github.com/atom/ide-php)
+* [ide-typescript](https://github.com/atom/ide-typescript)
 
 ## Feature Overview
 
@@ -28,6 +34,10 @@ Command-click (Control-click on Windows/Linux) on symbols to go to their definit
 ### atom-ide-busy-signal
 
 A loading indicator in the status bar to indicate a busy status.
+
+### atom-ide-code-actions
+
+Displays inline code actions for diagnostics where applicable.
 
 ### atom-ide-code-format
 
