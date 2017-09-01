@@ -1,0 +1,13 @@
+{
+  "menu": [
+    {
+      "label": "Nuclide",
+      "submenu": [
+        {
+          "label": "test",
+          "command": "good_command2"
+        }
+      ]
+    }
+  ]
+}
