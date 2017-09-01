@@ -8,7 +8,15 @@
   "engines": {
     "atom": ">= 1.17.0"
   },
+  "scripts": {
+    "flow": "flow",
+    "lint": "eslint",
+    "lint-all": "eslint .",
+    "release-transpile": "./modules/nuclide-node-transpiler/bin/release-transpile.js",
+    "test": "npm run flow && npm run lint-all && ./scripts/test.js"
+  },
   "dependencies": {
-    "atom-ide-ui": "0.1.11"
+  },
+  "devDependencies": {
   }
 }

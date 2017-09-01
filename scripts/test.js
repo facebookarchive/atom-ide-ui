@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -15,11 +16,23 @@
   prefer-object-spread/prefer-object-spread: 0,
   rulesdir/no-commonjs: 0,
   */
+/* eslint-disable no-console */
 
-const {__DEV__} = require('./modules/nuclide-node-transpiler/lib/env');
-if (__DEV__) {
-  require('./modules/nuclide-node-transpiler');
-}
+/**
+ * Runs 'npm test' for all packages under modules/.
+ */
 
-// Bypass the 'index-entry' script.
-module.exports = require('./modules/atom-ide-ui/index');
+const child_process = require('child_process');
+const {getModules} = require('./util');
+
+getModules().forEach(dirpath => {
+  console.log('Running tests for ' + dirpath);
+  try {
+    child_process.execFileSync('npm', ['test'], {
+      cwd: dirpath,
+      stdio: 'inherit',
+    });
+  } catch (e) {
+    process.exit(1);
+  }
+});
