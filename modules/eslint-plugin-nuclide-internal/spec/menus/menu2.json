@@ -1,0 +1,18 @@
+{
+  "menu": [
+    {
+      "label": "View",
+      "submenu": [
+        {
+          "label": "test",
+          "submenu": [
+            {
+              "label": "nested menu",
+              "command": "good_command"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

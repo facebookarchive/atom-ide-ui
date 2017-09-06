@@ -1,0 +1,37 @@
+{
+  "name": "atom-ide-definitions",
+  "repository": "https://github.com/facebook/nuclide",
+  "main": "./lib/main.js",
+  "version": "0.0.0",
+  "description": "Consumes definition providers and provides services for them.",
+  "atomTestRunner": "../../../scripts/atom-test-runner.js",
+  "consumedServices": {
+    "nuclide-definition-provider": {
+      "versions": {
+        "0.0.0": "consumeDefinitionProvider"
+      }
+    },
+    "datatip": {
+      "versions": {
+        "0.1.0": "consumeDatatipService"
+      }
+    },
+    "definitions": {
+      "versions": {
+        "0.1.0": "consumeDefinitionProvider"
+      }
+    },
+    "definition-preview": {
+      "versions": {
+        "0.1.0": "consumeDefinitionPreviewProvider"
+      }
+    }
+  },
+  "providedServices": {
+    "hyperclick": {
+      "versions": {
+        "0.1.0": "getHyperclickProvider"
+      }
+    }
+  }
+}

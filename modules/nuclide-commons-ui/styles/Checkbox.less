@@ -1,0 +1,38 @@
+@import "ui-variables";
+
+.nuclide-ui-checkbox-label, .nuclide-ui-toggle-label {
+  margin-bottom: 0; // This is to override a default in bootstrap.
+}
+
+.nuclide-ui-checkbox-label,
+.nuclide-ui-toggle-label,
+.nuclide-ui-toggle-label input {
+  cursor: pointer;
+}
+
+@disabled-opacity: 0.65;
+.nuclide-ui-checkbox-disabled {
+  opacity: @disabled-opacity;
+}
+
+/*
+ * Checkbox styles originally copied from Atom's ['settings-view'][1] package.
+ *
+ * Note: 'settings-view' applies transitions to the checkmarks, but when applied to hundreds of
+ * checkboxes simultaenously as is the case in the 'nuclide-file-tree' package w/ Working Sets, they
+ * are too expensive to paint. The followings styles intentionally omit transitions.
+ *
+ * [1] https://github.com/atom/settings-view/blob/v0.232.6/styles/settings-view.less#L113
+ */
+.nuclide-ui-checkbox[type="checkbox"], .nuclide-ui-toggle[type="checkbox"] {
+  cursor: pointer;
+
+  &[disabled] {
+    opacity: @disabled-opacity;
+    cursor: auto;
+  }
+}
+
+.nuclide-ui-checkbox-label-text, .nuclide-ui-toggle-label-text {
+  vertical-align: middle;
+}
