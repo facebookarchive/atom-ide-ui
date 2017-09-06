@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.2.0
+
+### Code Actions
+
+- Added support for code actions!
+
+### Datatips
+
+- Colors are now consistent with the syntax theme rather than the UI theme.
+
+### Diagnostics
+
+- Info messages are now consistently colored (using the theme's "info" color)
+- Improved datatip for diagnostic messages.
+- Diagnostics are now immediately visible (without an active text editor).
+- Fixed Linter V2 "reference" conversion.
+
+### Hyperclick
+
+- Reduced duplicated provider requests on Windows.
+
+### Outline View
+
+- Ensure that the spinner is centered.
+
 ## v0.1.12
 
 - Display a better warning message when installed alongside Nuclide
