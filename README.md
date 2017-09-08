@@ -1,7 +1,4 @@
-# atom-ide-ui
-
-[![Package version](https://img.shields.io/apm/v/atom-ide-ui.svg?style=flat-square)](https://atom.io/packages/atom-ide-ui)
-[![CircleCI](https://img.shields.io/circleci/project/github/facebook-atom/atom-ide-ui.svg)](https://circleci.com/gh/facebook-atom/atom-ide-ui)
+# atom-ide-ui &middot; [![Package version](https://img.shields.io/apm/v/atom-ide-ui.svg)](https://atom.io/packages/atom-ide-ui) [![CircleCI](https://img.shields.io/circleci/project/github/facebook-atom/atom-ide-ui.svg)](https://circleci.com/gh/facebook-atom/atom-ide-ui)
 
 A collection of Atom UIs to support language services as part of Atom IDE,
 designed for use with packages built on top of
@@ -19,7 +16,6 @@ Install `atom-ide-ui` from Atom's "Install" panel or run `apm install atom-ide-u
 ## Requirements
 
 `atom-ide-ui` requires Atom 1.17+.
-
 Packages based on https://github.com/atom/atom-languageclient should work out of the box with `atom-ide-ui` installed, such as:
 
 * [ide-csharp](https://github.com/atom/ide-csharp)
@@ -31,6 +27,8 @@ Packages based on https://github.com/atom/atom-languageclient should work out of
 ## Feature Overview
 
 Check out the documentation pages for more information about each feature!
+
+<!--- These links must use ../master to work from the atom.io page --->
 
 - [Busy Signal](../master/docs/busy-signal.md)
 - [Code Actions](../master/docs/code-actions.md)
