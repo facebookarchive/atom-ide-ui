@@ -1371,13 +1371,10 @@ declare class atom$File {
   // Construction
   create(): Promise<boolean>,
 
-  // Event Subscription
-  onDidChange(callback: () => mixed): IDisposable,
-
   // File Metadata
   isFile(): boolean,
   isDirectory(): boolean,
-  exists(): boolean,
+  exists(): Promise<boolean>,
   setEncoding(encoding: string): void,
   getEncoding(): string,
 
