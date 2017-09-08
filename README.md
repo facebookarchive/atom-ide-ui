@@ -4,7 +4,7 @@ A collection of Atom UIs to support language services as part of Atom IDE,
 designed for use with packages built on top of
 [atom-languageclient](https://github.com/atom/atom-languageclient).
 
-![Screenshot](../master/docs/screenshot.png)
+![Screenshot](../master/docs/images/screenshot.png)
 
 Contributions are welcome! File bugs and feature requests from the issues page,
 or read the [CONTRIBUTING.md](../master/CONTRIBUTING.md) file for details on how to submit a pull request.
