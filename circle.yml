@@ -1,4 +1,6 @@
 machine:
+  environment:
+    PATH: "${PATH}:${HOME}/${CIRCLE_PROJECT_REPONAME}/node_modules/.bin"
   node:
     version: 7.4.0
 
@@ -13,8 +15,10 @@ dependencies:
     - sudo apt-get update
     - sudo apt-get --fix-broken --assume-yes --quiet install
     - yarn
+  cache_directories:
+    - ~/.cache/yarn
 
-# notify:
-#   branches:
-#     only:
-#       - master
+notify:
+  branches:
+    only:
+      - master
