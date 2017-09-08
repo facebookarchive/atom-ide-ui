@@ -7,8 +7,10 @@ A collection of Atom UIs to support language services as part of Atom IDE,
 designed for use with packages built on top of
 [atom-languageclient](https://github.com/atom/atom-languageclient).
 
+![Screenshot](../master/docs/screenshot.png)
+
 Contributions are welcome! File bugs and feature requests from the issues page,
-or read the [CONTRIBUTING.md](./CONTRIBUTING.md) file for details on how to submit a pull request.
+or read the [CONTRIBUTING.md](../master/CONTRIBUTING.md) file for details on how to submit a pull request.
 
 ## Getting Started
 
@@ -28,42 +30,19 @@ Packages based on https://github.com/atom/atom-languageclient should work out of
 
 ## Feature Overview
 
-### hyperclick
+Check out the documentation pages for more information about each feature!
 
-Command-click (Control-click on Windows/Linux) on symbols to go to their definition.
+- [Busy Signal](../master/docs/busy-signal.md)
+- [Code Actions](../master/docs/code-actions.md)
+- [Code Format](../master/docs/code-format.md)
+- [Code Highlight](../master/docs/code-highlight.md)
+- [Datatips](../master/docs/datatips.md)
+- [Definitions (plus Hyperclick)](../master/docs/definitions.md)
+- [Diagnostics](../master/docs/diagnostics.md)
+- [Find References](../master/docs/find-references.md)
+- [Outline View](../master/docs/outline-view.md)
 
-### atom-ide-busy-signal
-
-A loading indicator in the status bar to indicate a busy status.
-
-### atom-ide-code-actions
-
-Displays inline code actions for diagnostics where applicable.
-
-### atom-ide-code-format
-
-Provides the "Format Code" command in text editors.
-
-### atom-ide-code-highlight
-
-Highlights all occurrences of a symbol at the current cursor.
-
-### atom-ide-datatip
-
-Provides mouse-activated overlays inside text editors.
-
-### atom-ide-diagnostics
-
-Displays diagnostics in the status bar, inline in the editor/gutter, and in a dedicated panel.
-
-### atom-ide-definitions
-
-Allows other packages to provide data sources for definitions.
-These are then surfaced via `hyperclick` and preview datatips.
-
-### atom-ide-outline-view
-
-Displays a tree listing of symbols in the current file.
+See [Keybindings](../master/docs/keybindings.md) for a list of default keybindings.
 
 ## License
 
