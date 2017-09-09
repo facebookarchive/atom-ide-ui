@@ -1,6 +1,8 @@
 # Default Keybindings
 
-Remember, you can always search through all the commands via the Command Palette.
+Remember, you can always search through all the commands via the Command Palette (cmd-shift-P).
+
+As with all Atom commands, feel free to customize these to whichever keybindings you prefer in your `keymap.cson`.
 
 | Feature                 | Command                               | MacOS           | Windows/Linux   |
 | -------------------     | ---------------------------           | --------------- | -------------   |
