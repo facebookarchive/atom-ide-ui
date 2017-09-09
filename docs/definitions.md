@@ -5,14 +5,14 @@
 Cmd-click (Ctrl-click on Windows/Linux) on an editor position to go to its
 definition, or trigger the `hyperclick:confirm-cursor` command.
 
-[GIF]
+![Jump to symbol definitions](./images/hyperclick.gif)
 
 ## Definition Preview
 
 Cmd-hover (Ctrl-hover on Windows/Linux) on an editor position to preview the
 source code following the definition.
 
-[Screenshot]
+![Preview a symbol definition](./images/definition-preview.png)
 
 ## Service API
 

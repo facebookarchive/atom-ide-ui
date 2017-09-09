@@ -8,7 +8,7 @@ Atom IDE UI displays diagnostics in three main ways:
 - Diagnostics are underlined inside the text editor (with [datatips](./datatips.md))
 - Color-coded gutter markers indicate the presence of diagnostics on a line
 
-[Screenshot]
+![Highlight and fix problems with your code with Diagnostics](./images/diagnostics.png)
 
 ## Service APIs
 
