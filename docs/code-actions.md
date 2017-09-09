@@ -5,11 +5,11 @@ Code Actions allow you to perform additional actions for [diagnostics](
 
 Code Actions can currently be triggered in two ways.
 
-One, by mousing over a diagnostic with code actions:
+Either by mousing over a diagnostic with code actions:
 
 ![Datatip](./images/code-actions-datatip.png)
 
-Or, by using the `diagnostics:show-actions-at-position` command / keyboard shortcut
+Or by using the `diagnostics:show-actions-at-position` command / keyboard shortcut
 while the cursor is on top of a diagnostic with code actions.
 
 ![Context menu](./images/code-actions-context-menu.png)
