@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.0
+
+- Find References and Code Format now use the busy signal while waiting for providers.
+- CSS classes have been renamed for consistency.
+
 ## v0.2.0
 
 ### Code Actions
