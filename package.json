@@ -8,6 +8,7 @@
   "engines": {
     "atom": ">= 1.17.0"
   },
+  "main": "./index-entry.js",
   "scripts": {
     "flow": "flow",
     "lint": "eslint",
