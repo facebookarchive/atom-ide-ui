@@ -12,6 +12,9 @@ Code Format also provides APIs to:
 - format code as you type
 - format code on save (after you press save but before writing to disk).
 
+You can enable format-on-save using plain range/file providers from the
+"atom-ide-code-format" section in the `atom-ide-ui` package settings.
+
 ## Service API
 
 Provide code format [Atom services](http://flight-manual.atom.io/behind-atom/sections/interacting-with-other-packages-via-services/) by adding one or more of these to your `package.json`:  

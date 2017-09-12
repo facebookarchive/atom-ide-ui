@@ -9,6 +9,9 @@ highlighted snippets of code.
 
 Datatips can be pinned to be persistent using the small 'pin' button.
 
+You can customize the delay for showing and hiding datatips from the
+"atom-ide-datatip" section in the `atom-ide-ui` package settings.
+
 ## Service API
 
 Consume the datatip [Atom service](http://flight-manual.atom.io/behind-atom/sections/interacting-with-other-packages-via-services/) by adding this to your `package.json`:

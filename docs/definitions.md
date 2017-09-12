@@ -7,6 +7,11 @@ definition, or trigger the `hyperclick:confirm-cursor` command.
 
 ![Jump to symbol definitions](./images/hyperclick.gif)
 
+The default keybinding was chosen to be compatible with most other IDEs
+[(see blog post here)](https://nuclide.io/blog/2017/02/27/Command-Click-You-Have-One-Job/),
+but you can always customize it from the "hyperclick" section in the `atom-ide-ui`
+package settings.
+
 ## Definition Preview
 
 Cmd-hover (Ctrl-hover on Windows/Linux) on an editor position to preview the
