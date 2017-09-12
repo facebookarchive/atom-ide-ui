@@ -2,7 +2,7 @@
 
 Use the `outline-view:toggle` command to open the Outline View dock.
 
-![Screenshot](images/outline-view.png)
+<img alt="Outline View" src="images/outline-view.png" width="800" />
 
 The Outline View displays a tree view of all symbols in the active editor,
 along with the ability to filter on a search keyword and jump to selected symbols.
@@ -27,10 +27,12 @@ You can provide the Outline View [Atom service](http://flight-manual.atom.io/beh
 Then, in your package entry point, add:
 
 ```
-export function provideOutlines(outlineProvider) {}
+export function provideOutlines(): OutlineProvider {
+  return ...
+}
 ```
 
-`outlineProvider` must be a `OutlineProvider` object
+The return value must be a `OutlineProvider` object
 as defined in
 [`atom-ide-outline-view/lib/types.js`](../modules/atom-ide-ui/pkg/atom-ide-outline-view/lib/types.js).
 

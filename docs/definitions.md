@@ -40,10 +40,12 @@ You can provide the definitions [Atom service](http://flight-manual.atom.io/behi
 Then, in your package entry point, add:
 
 ```
-export function provideDefinitions(definitionProvider) {}
+export function provideDefinitions(): DefinitionsProvider {
+  return ...
+}
 ```
 
-`definitionProvider` must be a `DefinitionProvider` object
+The return value must be a `DefinitionProvider` object
 as defined in
 [`atom-ide-definitions/lib/types.js`](../modules/atom-ide-ui/pkg/atom-ide-definitions/lib/types.js).
 
@@ -72,8 +74,10 @@ To provide Hyperclick results, add the following to your `package.json`:
 Then, in your package entry point, add:
 
 ```
-export function provideHyperclick(hyperclickProvider) {}
+export function provideHyperclick(): HyperclickProvider {
+  return ...
+}
 ```
 
-`hyperclickProvider` should be a `HyperclickProvider` object as defined in
+The return value must be a `HyperclickProvider` object as defined in
 [`hyperclick/lib/types.js`](../modules/atom-ide-ui/pkg/hyperclick/lib/types.js).

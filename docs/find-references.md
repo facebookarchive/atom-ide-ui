@@ -28,9 +28,11 @@ You can provide the Find References [Atom service](http://flight-manual.atom.io/
 Then, in your package entry point, add:
 
 ```
-export function provideReferences(definitionProvider) {}
+export function provideReferences(): FindReferencesProvider {
+  return ...
+}
 ```
 
-`referencesProvider` must be a `FindReferencesProvider` object
+The return value must be a `FindReferencesProvider` object
 as defined in
 [`atom-ide-find-references/lib/types.js`](../modules/atom-ide-ui/pkg/atom-ide-find-references/lib/types.js).
