@@ -4,14 +4,18 @@ A collection of Atom UIs to support language services as part of Atom IDE,
 designed for use with packages built on top of
 [atom-languageclient](https://github.com/atom/atom-languageclient).
 
-![Screenshot](../master/docs/images/screenshot.png)
+![Screenshot](https://raw.githubusercontent.com/facebook-atom/atom-ide-ui/master/docs/images/screenshot.png)
 
 Contributions are welcome! File bugs and feature requests from the issues page,
 or read the [CONTRIBUTING.md](../master/CONTRIBUTING.md) file for details on how to submit a pull request.
 
 ## Getting Started
 
-Install `atom-ide-ui` from Atom's "Install" panel or run `apm install atom-ide-ui`.
+Install `atom-ide-ui` from "Install" in Atom's settings or run:
+
+```
+apm install atom-ide-ui
+```
 
 ## Requirements
 
