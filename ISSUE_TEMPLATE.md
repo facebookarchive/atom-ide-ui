@@ -14,9 +14,8 @@ Tell us what happens instead.
 
 ### Versions
 * Atom:
-* Nuclide:
 * Client OS:
-* Server OS (optional):
+* atom-ide-ui:
 
 ### Additional Details
 * Installed packages (`apm ls --installed`):
