@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.1
+
+- Fixed occasional empty datatips.
+- Removed default datatip keybindings on Windows/Linux.
+- Fixed Hyperclick underlines in 1.21-beta.
+- Tolerate legacy nameless Linter V1 providers.
+
 ## v0.3.0
 
 - Find References and Code Format now use the busy signal while waiting for providers.
