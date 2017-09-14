@@ -11,15 +11,16 @@ or read the [CONTRIBUTING.md](../master/CONTRIBUTING.md) file for details on how
 
 ## Getting Started
 
+First, make sure you have Atom 1.17+ installed.  
 Install `atom-ide-ui` from "Install" in Atom's settings or run:
 
 ```
 apm install atom-ide-ui
 ```
 
-## Requirements
+You'll also want to install a suitable language package:
+`atom-ide-ui` doesn't provide any language features by default.
 
-`atom-ide-ui` requires Atom 1.17+.
 Packages based on https://github.com/atom/atom-languageclient should work out of the box with `atom-ide-ui` installed, such as:
 
 * [ide-csharp](https://github.com/atom/ide-csharp)
@@ -27,6 +28,7 @@ Packages based on https://github.com/atom/atom-languageclient should work out of
 * [ide-java](https://github.com/atom/ide-java)
 * [ide-php](https://github.com/atom/ide-php)
 * [ide-typescript](https://github.com/atom/ide-typescript)
+* [and more...](https://github.com/atom/atom-languageclient/wiki/List-of-Atom-packages-using-Atom-LanguageClient)
 
 ## Feature Overview
 
