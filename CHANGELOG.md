@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.3
+
+- Ensure linter message types are converted correctly.
+
 ## v0.3.2
 
 - Improved readability of section labels in the Atom Settings panel.
