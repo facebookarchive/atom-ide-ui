@@ -1,5 +1,0 @@
-{
-  "rules": {
-    "rulesdir/license-header": [1, {"useBSDLicense": true}]
-  }
-}
