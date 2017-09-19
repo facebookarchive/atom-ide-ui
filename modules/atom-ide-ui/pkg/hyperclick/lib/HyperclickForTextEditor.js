@@ -104,19 +104,10 @@ export default class HyperclickForTextEditor {
   }
 
   _setupMouseListeners(): void {
-    const getLinesDomNode = (): ?HTMLElement => {
-      const {component} = this._textEditorView;
-      invariant(component);
-      if (component.refs != null) {
-        return component.refs.lineTiles;
-      } else {
-        return component.linesComponent.getDomNode();
-      }
-    };
     const addMouseListeners = () => {
       const {component} = this._textEditorView;
       invariant(component);
-      const linesDomNode = getLinesDomNode();
+      const linesDomNode = component.refs.lineTiles;
       if (linesDomNode == null) {
         return;
       }
@@ -270,7 +261,6 @@ export default class HyperclickForTextEditor {
 
     if (this._lastSuggestionAtMouse != null) {
       const {range} = this._lastSuggestionAtMouse;
-      invariant(range, 'Hyperclick result must have a valid Range');
       if (isPositionInRange(position, range)) {
         return;
       }
@@ -347,7 +337,6 @@ export default class HyperclickForTextEditor {
       return false;
     }
     const {range} = this._lastSuggestionAtMouse;
-    invariant(range, 'Hyperclick result must have a valid Range');
     return isPositionInRange(this._getMousePositionAsBufferPosition(), range);
   }
 
