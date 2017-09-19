@@ -11,7 +11,7 @@ or read the [CONTRIBUTING.md](../master/CONTRIBUTING.md) file for details on how
 
 ## Getting Started
 
-First, make sure you have Atom 1.17+ installed.  
+First, make sure you have Atom 1.19+ installed.
 Install `atom-ide-ui` from "Install" in Atom's settings or run:
 
 ```

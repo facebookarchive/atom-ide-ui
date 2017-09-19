@@ -6,7 +6,7 @@
   "repository": "https://github.com/facebook-atom/atom-ide-ui",
   "license": "BSD-3-Clause",
   "engines": {
-    "atom": ">= 1.17.0"
+    "atom": ">= 1.19.0"
   },
   "main": "./index-entry.js",
   "scripts": {
