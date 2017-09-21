@@ -7,7 +7,8 @@ designed for use with packages built on top of
 ![Screenshot](https://raw.githubusercontent.com/facebook-atom/atom-ide-ui/master/docs/images/screenshot.png)
 
 Contributions are welcome! File bugs and feature requests from the issues page,
-or read the [CONTRIBUTING.md](../master/CONTRIBUTING.md) file for details on how to submit a pull request.
+or read the [CONTRIBUTING.md](https://github.com/facebook-atom/atom-ide-ui/blob/master/CONTRIBUTING.md)
+file for details on how to submit a pull request.
 
 ## Getting Started
 
@@ -34,19 +35,17 @@ Packages based on https://github.com/atom/atom-languageclient should work out of
 
 Check out the documentation pages for more information about each feature!
 
-<!--- These links must use ../master to work from the atom.io page --->
+- [Busy Signal](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/busy-signal.md)
+- [Code Actions](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/code-actions.md)
+- [Code Format](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/code-format.md)
+- [Code Highlight](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/code-highlight.md)
+- [Datatips](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/datatips.md)
+- [Definitions (plus Hyperclick)](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/definitions.md)
+- [Diagnostics](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/diagnostics.md)
+- [Find References](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/find-references.md)
+- [Outline View](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/outline-view.md)
 
-- [Busy Signal](../master/docs/busy-signal.md)
-- [Code Actions](../master/docs/code-actions.md)
-- [Code Format](../master/docs/code-format.md)
-- [Code Highlight](../master/docs/code-highlight.md)
-- [Datatips](../master/docs/datatips.md)
-- [Definitions (plus Hyperclick)](../master/docs/definitions.md)
-- [Diagnostics](../master/docs/diagnostics.md)
-- [Find References](../master/docs/find-references.md)
-- [Outline View](../master/docs/outline-view.md)
-
-See [Keybindings](../master/docs/keybindings.md) for a list of default keybindings.
+See [Keybindings](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/keybindings.md) for a list of default keybindings.
 
 ## License
 
