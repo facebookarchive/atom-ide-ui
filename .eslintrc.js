@@ -95,7 +95,7 @@ module.exports = {
     'default-case': 0,
     'dot-location': [1, 'property'],
     'dot-notation': 1,
-    'eqeqeq': [1, 'allow-null'],
+    'eqeqeq': [1, 'always', {null: 'never'}],
     'guard-for-in': 0,
     'no-alert': 0,
     'no-caller': 1,
