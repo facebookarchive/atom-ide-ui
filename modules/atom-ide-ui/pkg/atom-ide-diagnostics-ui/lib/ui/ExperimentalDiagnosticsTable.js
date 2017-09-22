@@ -72,6 +72,7 @@ type Props = {
   diagnostics: Array<DiagnosticMessage>,
   selectedMessage: ?DiagnosticMessage,
   gotoMessageLocation: (message: DiagnosticMessage) => void,
+  selectMessage: (message: DiagnosticMessage) => void,
   showFileName: ?boolean,
   showTraces: boolean,
 };
@@ -85,6 +86,8 @@ export default class ExperimentalDiagnosticsTable extends React.Component<
   Props,
   State,
 > {
+  _table: ?Table<DisplayDiagnostic>;
+
   constructor(props: Props) {
     super(props);
     (this: any)._handleSort = this._handleSort.bind(this);
@@ -102,9 +105,13 @@ export default class ExperimentalDiagnosticsTable extends React.Component<
     });
   }
 
-  _handleSelectTableRow(item: {diagnostic: DiagnosticMessage}): void {
+  _handleSelectTableRow = (item: {diagnostic: DiagnosticMessage}): void => {
+    this.props.selectMessage(item.diagnostic);
+  };
+
+  _handleConfirmTableRow = (item: {diagnostic: DiagnosticMessage}): void => {
     this.props.gotoMessageLocation(item.diagnostic);
-  }
+  };
 
   _getColumns(): Array<Column<DisplayDiagnostic>> {
     const {showFileName} = this.props;
@@ -145,12 +152,14 @@ export default class ExperimentalDiagnosticsTable extends React.Component<
         key: 'classification',
         title: 'Type',
         width: TYPE_WIDTH,
+        minWidth: 55,
         cellClassName: 'nuclide-diagnostics-ui-cell-classification',
       },
       {
         key: 'providerName',
         title: 'Source',
         width: SOURCE_WIDTH,
+        minWidth: 70,
       },
       {
         component: DescriptionComponent,
@@ -191,6 +200,9 @@ export default class ExperimentalDiagnosticsTable extends React.Component<
           'diagnostics-ui-table-container-empty': sortedRows.length === 0,
         })}>
         <Table
+          ref={table => {
+            this._table = table;
+          }}
           collapsable={true}
           columns={this._getColumns()}
           emptyComponent={EmptyComponent}
@@ -204,10 +216,18 @@ export default class ExperimentalDiagnosticsTable extends React.Component<
           selectable={true}
           selectedIndex={selectedIndex}
           onSelect={this._handleSelectTableRow}
+          onConfirm={this._handleConfirmTableRow}
+          enableKeyboardNavigation={true}
         />
         {maxResultsMessage}
       </div>
     );
+  }
+
+  focus(): void {
+    if (this._table != null) {
+      this._table.focus();
+    }
   }
 
   // TODO: Memoize this so we don't recompute unnecessarily.
@@ -263,7 +283,7 @@ function TypeComponent(props: {data: Classification}): React.Element<any> {
 
 function getIconName(classification: Classification): IconName {
   const {kind, severity} = classification;
-  if (kind === 'feedback') {
+  if (kind === 'review') {
     return 'nuclicon-comment-discussion';
   }
   switch (severity) {
@@ -274,6 +294,7 @@ function getIconName(classification: Classification): IconName {
     case 'Info':
       return 'info';
     default:
+      (severity: empty);
       throw new Error(`Invalid severity: ${severity}`);
   }
 }
@@ -310,7 +331,8 @@ function DescriptionComponent(props: {
   return showTraces && diagnostic.scope === 'file'
     ? DiagnosticsMessageNoHeader({
         message: diagnostic,
-        goToLocation,
+        goToLocation: (file: string, line: number) =>
+          goToLocation(file, {line}),
         fixer: () => {},
       })
     : DiagnosticsMessageText({

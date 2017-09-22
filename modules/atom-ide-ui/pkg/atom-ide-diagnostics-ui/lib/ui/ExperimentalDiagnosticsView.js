@@ -11,7 +11,10 @@
  */
 
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
-import type {DiagnosticMessage} from '../../../atom-ide-diagnostics/lib/types';
+import type {
+  DiagnosticMessage,
+  DiagnosticMessageKind,
+} from '../../../atom-ide-diagnostics/lib/types';
 import type {FilterType} from '../types';
 import type {
   RegExpFilterChange,
@@ -37,7 +40,9 @@ export type Props = {
   showTraces: boolean,
   onShowTracesChange: (isChecked: boolean) => mixed,
   gotoMessageLocation: (message: DiagnosticMessage) => void,
+  selectMessage: (message: DiagnosticMessage) => void,
   selectedMessage: ?DiagnosticMessage,
+  supportedMessageKinds: Set<DiagnosticMessageKind>,
 
   hiddenTypes: Set<FilterType>,
   onTypeFilterChange: (type: FilterType) => mixed,
@@ -51,6 +56,8 @@ export type Props = {
 export default class ExperimentalDiagnosticsView extends React.Component<
   Props,
 > {
+  _table: ?ExperimentalDiagnosticsTable;
+
   constructor(props: Props) {
     super(props);
     (this: any)._onShowTracesChange = this._onShowTracesChange.bind(this);
@@ -67,7 +74,7 @@ export default class ExperimentalDiagnosticsView extends React.Component<
     const {showTraces} = this.props;
     if (this.props.filterByActiveTextEditor) {
       const pathToFilterBy = this.props.pathToActiveTextEditor;
-      if (pathToFilterBy !== null) {
+      if (pathToFilterBy != null) {
         diagnostics = diagnostics.filter(
           diagnostic =>
             diagnostic.scope === 'file' &&
@@ -79,8 +86,15 @@ export default class ExperimentalDiagnosticsView extends React.Component<
       }
     }
 
+    const filterTypes = ['errors', 'warnings'];
+    if (this.props.supportedMessageKinds.has('review')) {
+      filterTypes.push('review');
+    }
+
     return (
       <div
+        onFocus={this._handleFocus}
+        tabIndex={-1}
         style={{
           display: 'flex',
           flex: 1,
@@ -90,7 +104,7 @@ export default class ExperimentalDiagnosticsView extends React.Component<
         <Toolbar location="top">
           <ToolbarLeft>
             <ButtonGroup>
-              {['errors', 'warnings', 'feedback'].map(type =>
+              {filterTypes.map(type =>
                 <FilterButton
                   key={type}
                   type={type}
@@ -118,10 +132,14 @@ export default class ExperimentalDiagnosticsView extends React.Component<
           </ToolbarRight>
         </Toolbar>
         <ExperimentalDiagnosticsTable
+          ref={table => {
+            this._table = table;
+          }}
           showFileName={!this.props.filterByActiveTextEditor}
           diagnostics={diagnostics}
           showTraces={showTraces}
           selectedMessage={this.props.selectedMessage}
+          selectMessage={this.props.selectMessage}
           gotoMessageLocation={this.props.gotoMessageLocation}
         />
       </div>
@@ -148,4 +166,18 @@ export default class ExperimentalDiagnosticsView extends React.Component<
       'diagnostics:open-all-files-with-errors',
     );
   }
+
+  _handleFocus = (event: SyntheticMouseEvent<*>): void => {
+    if (this._table == null) {
+      return;
+    }
+    let el = event.target;
+    while (el != null) {
+      if (el.tagName === 'INPUT' || el.tagName === 'BUTTON') {
+        return;
+      }
+      el = (el: any).parentElement;
+    }
+    this._table.focus();
+  };
 }

@@ -89,7 +89,9 @@ export class DiagnosticsViewModel {
         ),
         onTypeFilterChange: this._handleTypeFilterChange,
         onTextFilterChange: this._handleTextFilterChange,
-        gotoMessageLocation: this._gotoMessageLocation,
+        selectMessage: this._selectMessage,
+        gotoMessageLocation: goToDiagnosticLocation,
+        supportedMessageKinds: globalState.supportedMessageKinds,
       }),
     );
 
@@ -183,14 +185,14 @@ export class DiagnosticsViewModel {
     });
   }
 
-  _gotoMessageLocation = (message: DiagnosticMessage): void => {
+  _selectMessage = (message: DiagnosticMessage): void => {
     this._model.setState({selectedMessage: message});
-    goToDiagnosticLocation(message);
   };
 }
 
 function getMessageFilterType(message: DiagnosticMessage): FilterType {
-  switch (message.kind) {
+  const {kind} = message;
+  switch (kind) {
     case 'lint':
     case null:
     case undefined:
@@ -203,12 +205,14 @@ function getMessageFilterType(message: DiagnosticMessage): FilterType {
         case 'Info':
           return 'warnings';
         default:
+          (message.type: empty);
           throw new Error(`Invalid message severity: ${message.type}`);
       }
-    case 'feedback':
-      return 'feedback';
+    case 'review':
+      return 'review';
     default:
-      throw new Error(`Invalid message kind: ${message.kind}`);
+      (kind: empty);
+      throw new Error(`Invalid message kind: ${kind}`);
   }
 }
 
@@ -224,5 +228,5 @@ function goToDiagnosticLocation(message: DiagnosticMessage): void {
   // Flow sometimes reports a row of -1, so this ensures the line is at least one.
   const line = Math.max(message.range ? message.range.start.row : 0, 0);
   const column = 0;
-  goToLocation(uri, line, column);
+  goToLocation(uri, {line, column});
 }

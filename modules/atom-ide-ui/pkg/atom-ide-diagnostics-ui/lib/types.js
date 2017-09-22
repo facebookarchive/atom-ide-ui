@@ -11,9 +11,12 @@
  */
 
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
-import type {DiagnosticMessage} from '../../atom-ide-diagnostics/lib/types';
+import type {
+  DiagnosticMessage,
+  DiagnosticMessageKind,
+} from '../../atom-ide-diagnostics/lib/types';
 
-export type FilterType = 'errors' | 'warnings' | 'feedback';
+export type FilterType = 'errors' | 'warnings' | 'review';
 
 // State that's shared between every diagnostics panel instance.
 export type GlobalViewState = {
@@ -23,4 +26,5 @@ export type GlobalViewState = {
   onFilterByActiveTextEditorChange: (isChecked: boolean) => mixed,
   showTraces: boolean,
   onShowTracesChange: (isChecked: boolean) => mixed,
+  supportedMessageKinds: Set<DiagnosticMessageKind>,
 };
