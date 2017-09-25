@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.0
+
+- The minimum supported Atom version is now 1.19.
+- Outline and diagnostic entries no longer focus the editor on click.
+  - Use double-click to get the old focus behavior.
+- Definition providers may now return a null query range to use the current word range.
+- Added a "revealTooltip" option for busy signals to forcibly show the tooltip text.
+
 ## v0.3.3
 
 - Ensure linter message types are converted correctly.
