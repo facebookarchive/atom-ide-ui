@@ -1,10 +1,10 @@
-# Outline View
+# Outline
 
-Use the `outline-view:toggle` command to open the Outline View dock.
+Use the `outline-view:toggle` command to open the Outline panel.
 
-<img alt="Outline View" src="images/outline-view.png" width="800" />
+<img alt="Outline" src="images/outline-view.png" width="800" />
 
-The Outline View displays a tree view of all symbols in the active editor,
+The Outline feature displays a tree view of all symbols in the active editor,
 along with the ability to filter on a search keyword and jump to selected symbols.
 
 You can also select the editor range corresponding to an outline view entry by
@@ -12,7 +12,7 @@ simply double-clicking it.
 
 ## Service API
 
-You can provide the Outline View [Atom service](http://flight-manual.atom.io/behind-atom/sections/interacting-with-other-packages-via-services/) by adding the following to your `package.json`:
+You can provide the Outline [Atom service](http://flight-manual.atom.io/behind-atom/sections/interacting-with-other-packages-via-services/) by adding the following to your `package.json`:
 
 ```
 "providedServices": {

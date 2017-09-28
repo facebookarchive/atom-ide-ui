@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.0
+
+- Outlines now respect the editor font, font size, and line height.
+  - Also, the "Outline View" panel is now titled as just "Outline".
+- Linter conflict notification now hides if linter is disabled externally. (#56)
+- Upgraded to React 16.
+
 ## v0.4.0
 
 - The minimum supported Atom version is now 1.19.

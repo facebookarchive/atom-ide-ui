@@ -43,7 +43,7 @@ Check out the documentation pages for more information about each feature!
 - [Definitions (plus Hyperclick)](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/definitions.md)
 - [Diagnostics](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/diagnostics.md)
 - [Find References](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/find-references.md)
-- [Outline View](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/outline-view.md)
+- [Outline](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/outline-view.md)
 
 See [Keybindings](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/keybindings.md) for a list of default keybindings.
 
