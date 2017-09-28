@@ -20,7 +20,10 @@ import invariant from 'assert';
 import classnames from 'classnames';
 
 import analytics from 'nuclide-commons-atom/analytics';
-import {goToLocationInEditor} from 'nuclide-commons-atom/go-to-location';
+import {
+  goToLocation,
+  goToLocationInEditor,
+} from 'nuclide-commons-atom/go-to-location';
 import {
   LoadingSpinner,
   LoadingSpinnerSizes,
@@ -128,7 +131,7 @@ class OutlineViewComponent extends React.PureComponent<
         return (
           <EmptyState
             title="No outline available"
-            message="You need to open a file to use outline view."
+            message="Open a file to see its outline."
           />
         );
       case 'loading':
@@ -141,24 +144,34 @@ class OutlineViewComponent extends React.PureComponent<
           </div>
         );
       case 'no-provider':
-        return outline.grammar === 'Null Grammar'
-          ? <EmptyState
-              title="No outline available"
-              message="The current file doesn't have an associated grammar. You may want to save it."
-            />
-          : <EmptyState
-              title="No outline available"
-              message={
-                'Outline view does not currently support ' +
-                outline.grammar +
-                '.'
-              }
-            />;
+        return outline.grammar === 'Null Grammar' ? (
+          <EmptyState
+            title="No outline available"
+            message="Atom doesn't recognize this file's language. Make sure this file has an extension and has been saved."
+          />
+        ) : (
+          <EmptyState
+            title="No outline available"
+            message={
+              <div>
+                {outline.grammar} files do not currently support outlines.{' '}
+                <a
+                  href="#"
+                  onClick={() =>
+                    goToLocation(
+                      `atom://config/install/package:ide-${outline.grammar}`,
+                    )}>
+                  Install an IDE package first.
+                </a>
+              </div>
+            }
+          />
+        );
       case 'provider-no-outline':
         return (
           <EmptyState
             title="No outline available"
-            message="There are no outline providers registered."
+            message="This is likely an error with the language package."
           />
         );
       case 'outline':
@@ -197,15 +210,15 @@ class OutlineViewCore extends React.PureComponent<
 
     return (
       <div className="outline-view-core">
-        {searchEnabled
-          ? <OutlineViewSearchComponent
-              outlineTrees={outline.outlineTrees}
-              editor={outline.editor}
-              updateSearchResults={searchResults => {
-                this.setState({searchResults});
-              }}
-            />
-          : null}
+        {searchEnabled ? (
+          <OutlineViewSearchComponent
+            outlineTrees={outline.outlineTrees}
+            editor={outline.editor}
+            updateSearchResults={searchResults => {
+              this.setState({searchResults});
+            }}
+          />
+        ) : null}
         <div className="outline-view-trees-scroller">
           <div className="outline-view-trees">
             {renderTrees(
@@ -343,11 +356,7 @@ function renderTextToken(
 }
 
 function renderSubsequence(seq: string, props: Object): React.Element<any> {
-  return (
-    <span {...props}>
-      {seq}
-    </span>
-  );
+  return <span {...props}>{seq}</span>;
 }
 
 function renderUnmatchedSubsequence(
@@ -385,14 +394,14 @@ function renderTrees(
       }}>
       {outlines.map((outline, index) => {
         const result = searchResults.get(outline);
-        return !result || result.visible
-          ? <OutlineTree
-              editor={editor}
-              outline={outline}
-              key={index}
-              searchResults={searchResults}
-            />
-          : null;
+        return !result || result.visible ? (
+          <OutlineTree
+            editor={editor}
+            outline={outline}
+            key={index}
+            searchResults={searchResults}
+          />
+        ) : null;
       })}
     </ul>
   );

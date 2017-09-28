@@ -54,7 +54,7 @@ export class OutlineViewSearchComponent extends React.Component<Props, State> {
     };
   }
 
-  SEARCH_PLACEHOLDER = 'Search Outline View';
+  SEARCH_PLACEHOLDER = 'Search Outline';
   DEBOUNCE_TIME = 100;
 
   componentDidUpdate(prevProps: Props, prevState: State) {
@@ -147,13 +147,13 @@ export class OutlineViewSearchComponent extends React.Component<Props, State> {
           value={this.state.currentQuery}
           size="sm"
         />
-        {this.state.currentQuery.length > 0
-          ? <Icon
-              icon="x"
-              className="outline-view-search-clear"
-              onClick={this._onDidClear}
-            />
-          : null}
+        {this.state.currentQuery.length > 0 ? (
+          <Icon
+            icon="x"
+            className="outline-view-search-clear"
+            onClick={this._onDidClear}
+          />
+        ) : null}
       </div>
     );
   }
