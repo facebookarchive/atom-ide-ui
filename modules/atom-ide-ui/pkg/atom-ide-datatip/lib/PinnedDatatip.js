@@ -44,6 +44,11 @@ function documentMouseUp$(): Observable<MouseEvent> {
   return _mouseUp$;
 }
 
+export type PinnedDatatipParams = {
+  onDispose: (pinnedDatatip: PinnedDatatip) => void,
+  hideDataTips: () => void,
+};
+
 export class PinnedDatatip {
   _boundDispose: Function;
   _boundHandleMouseDown: Function;
@@ -69,11 +74,10 @@ export class PinnedDatatip {
   constructor(
     datatip: Datatip,
     editor: TextEditor,
-    onDispose: (pinnedDatatip: PinnedDatatip) => void,
-    hideDataTips: () => void,
+    params: PinnedDatatipParams,
   ) {
     this._subscriptions = new CompositeDisposable();
-    this._subscriptions.add(new Disposable(() => onDispose(this)));
+    this._subscriptions.add(new Disposable(() => params.onDispose(this)));
     this._datatip = datatip;
     this._editor = editor;
     this._marker = null;
@@ -110,7 +114,7 @@ export class PinnedDatatip {
     this._isDragging = false;
     this._dragOrigin = null;
     this._isHovering = false;
-    this._hideDataTips = hideDataTips;
+    this._hideDataTips = params.hideDataTips;
     this.render();
   }
 
@@ -200,24 +204,8 @@ export class PinnedDatatip {
       'px';
   }
 
-  render(): void {
+  async render(): Promise<void> {
     const {_editor, _datatip, _hostElement, _isDragging, _isHovering} = this;
-    this._updateHostElementPosition();
-    ReactDOM.render(
-      <DatatipComponent
-        action={DATATIP_ACTIONS.CLOSE}
-        actionTitle="Close this datatip"
-        className={classnames(
-          _isDragging ? 'datatip-dragging' : '',
-          'datatip-pinned',
-        )}
-        datatip={_datatip}
-        onActionClick={this._boundDispose}
-        onMouseDown={this._boundHandleMouseDown}
-        onClickCapture={this._boundHandleCapturedClick}
-      />,
-      _hostElement,
-    );
 
     let rangeClassname = 'datatip-highlight-region';
     if (_isHovering) {
@@ -238,6 +226,11 @@ export class PinnedDatatip {
         type: 'highlight',
         class: rangeClassname,
       });
+      await _editor.getElement().getNextUpdatePromise();
+      // Guard against disposals during the await.
+      if (marker.isDestroyed() || _editor.isDestroyed()) {
+        return;
+      }
     } else {
       // `this._rangeDecoration` is guaranteed to exist iff `this._marker` exists.
       invariant(this._rangeDecoration);
@@ -246,6 +239,23 @@ export class PinnedDatatip {
         class: rangeClassname,
       });
     }
+
+    ReactDOM.render(
+      <DatatipComponent
+        action={DATATIP_ACTIONS.CLOSE}
+        actionTitle="Close this datatip"
+        className={classnames(
+          _isDragging ? 'datatip-dragging' : '',
+          'datatip-pinned',
+        )}
+        datatip={_datatip}
+        onActionClick={this._boundDispose}
+        onMouseDown={this._boundHandleMouseDown}
+        onClickCapture={this._boundHandleCapturedClick}
+      />,
+      _hostElement,
+    );
+    this._updateHostElementPosition();
   }
 
   dispose(): void {

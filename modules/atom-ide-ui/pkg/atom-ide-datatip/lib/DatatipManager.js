@@ -186,9 +186,6 @@ function mountDatatipWithMarker(
     invalidate: 'never',
   });
 
-  element.style.display = 'block';
-  ReactDOM.render(renderedProviders, element);
-
   editor.decorateMarker(marker, {
     type: 'overlay',
     position: 'tail',
@@ -199,6 +196,19 @@ function mountDatatipWithMarker(
     type: 'highlight',
     class: 'datatip-highlight-region',
   });
+
+  // The editor may not mount the marker until the next update.
+  // It's not safe to render anything until that point, as datatips
+  // often need to measure their size in the DOM.
+  editor
+    .getElement()
+    .getNextUpdatePromise()
+    .then(() => {
+      if (!marker.isDestroyed() && !editor.isDestroyed()) {
+        element.style.display = 'block';
+        ReactDOM.render(renderedProviders, element);
+      }
+    });
 
   return marker;
 }
@@ -644,16 +654,14 @@ class DatatipManagerForEditor {
   }
 
   createPinnedDataTip(datatip: Datatip, editor: TextEditor): PinnedDatatip {
-    const pinnedDatatip = new PinnedDatatip(
-      datatip,
-      editor,
-      /* onDispose */ () => {
+    const pinnedDatatip = new PinnedDatatip(datatip, editor, {
+      onDispose: () => {
         this._pinnedDatatips.delete(pinnedDatatip);
       },
-      /* hideDataTips */ () => {
+      hideDataTips: () => {
         this._hideDatatip();
       },
-    );
+    });
     return pinnedDatatip;
   }
 
@@ -662,19 +670,17 @@ class DatatipManagerForEditor {
     const startTime = performanceNow();
     this._setState(DatatipState.HIDDEN);
     this._pinnedDatatips.add(
-      new PinnedDatatip(
-        datatip,
-        editor,
-        /* onDispose */ pinnedDatatip => {
+      new PinnedDatatip(datatip, editor, {
+        onDispose: pinnedDatatip => {
           this._pinnedDatatips.delete(pinnedDatatip);
           analytics.track('datatip-pinned-close', {
             duration: performanceNow() - startTime,
           });
         },
-        /* hideDataTips */ () => {
+        hideDataTips: () => {
           this._hideDatatip();
         },
-      ),
+      }),
     );
   };
 

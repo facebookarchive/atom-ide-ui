@@ -953,6 +953,9 @@ declare class atom$TextEditor extends atom$Model {
     position: atom$Point | [?number, ?number],
     options?: {center?: boolean}
   ): void,
+  scrollToCursorPosition(
+    options?: {center?: boolean}
+  ): void,
   scrollToBottom(): void,
   scrollToTop(): void,
 
@@ -970,7 +973,7 @@ declare class atom$TextEditor extends atom$Model {
   getLastBufferRow(): number,
 
   // Undocumented Methods
-  getElement(): HTMLElement,
+  getElement(): atom$TextEditorElement,
   getDefaultCharWidth(): number,
   getLineHeightInPixels(): number,
   moveToTop(): void,
