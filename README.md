@@ -44,6 +44,7 @@ Check out the documentation pages for more information about each feature!
 - [Diagnostics](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/diagnostics.md)
 - [Find References](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/find-references.md)
 - [Outline](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/outline-view.md)
+- [Signature Help (Experimental/WIP)](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/signature-help.md)
 
 See [Keybindings](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/keybindings.md) for a list of default keybindings.
 
