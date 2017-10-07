@@ -44,6 +44,7 @@
     "semver": "5.3.0",
     "shallowequal": "0.2.2",
     "shell-quote": "1.6.1",
+    "tabbable": "1.1.0",
     "temp": "0.8.3",
     "uuid": "3.0.1"
   },
@@ -61,6 +62,7 @@
     "babel-plugin-transform-react-display-name": "6.23.0",
     "babel-plugin-transform-react-jsx": "6.24.1",
     "babel-plugin-transform-strict-mode": "6.24.1",
+    "codecov": "2.3.0",
     "dedent": "0.6.0",
     "eslint": "3.15.0",
     "eslint-plugin-dependencies": "2.4.0",
@@ -73,6 +75,7 @@
     "eslint-plugin-rulesdir": "0.1.0",
     "flow-bin": "0.53.1",
     "jasmine-node": "1.14.5",
+    "nyc": "11.2.1",
     "prettier": "1.7.0",
     "react-addons-test-utils": "15.3.1",
     "simple-text-buffer": "9.2.11",
