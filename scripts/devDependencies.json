@@ -8,7 +8,7 @@
   "eslint-plugin-prettier": "2.1.0",
   "eslint-plugin-react": "6.8.0",
   "eslint-plugin-rulesdir": "0.1.0",
-  "flow-bin": "0.53.1",
+  "flow-bin": "0.56.0",
   "nyc": "11.2.1",
   "prettier": "1.7.0"
 }
