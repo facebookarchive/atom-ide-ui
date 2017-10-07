@@ -2,7 +2,7 @@
 
 set -e
 
-SYNC_PATHS=(flow-libs flow-typed modules ':!modules/big-dig*')
+SYNC_PATHS=(.eslintrc.js flow-libs flow-typed modules ':!modules/big-dig*')
 SYNC_BRANCH=nuclide-sync
 SYNC_MESSAGE="Sync with facebook/nuclide"
 
