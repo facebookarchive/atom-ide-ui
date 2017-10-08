@@ -34,8 +34,6 @@ git checkout "$(git rev-parse HEAD)"
 
 npm run release-transpile -- --overwrite
 
-# Add additional files to ignore for publishing.
-cat .gitignore.release >> .gitignore
 # Remove newly ignored files from the commit.
 git ls-files --ignored --exclude-standard -z | xargs -0 git rm --cached
 
