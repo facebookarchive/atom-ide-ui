@@ -4,7 +4,8 @@
 
 - Added experimental support for signature help.
 - Prevent improperly sized datatips from appearing. (#22)
-- Outlines now respect the editor font, font size, and line height.
+- Many improvements to the outline view, including:
+  - Outlines now respect the editor font, font size, and line height.
   - Also, the "Outline View" panel is now titled as just "Outline".
 - Linter conflict notification now hides if linter is disabled externally. (#56)
 - Upgraded to React 16.
