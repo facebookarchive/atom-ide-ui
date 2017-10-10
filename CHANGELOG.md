@@ -2,6 +2,7 @@
 
 ## v0.5.0
 
+- New, revamped diagnostics experience! (#39)
 - Added experimental support for signature help.
 - Prevent improperly sized datatips from appearing. (#22)
 - Many improvements to the outline view, including:
