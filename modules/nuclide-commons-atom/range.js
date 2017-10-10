@@ -1,3 +1,25 @@
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.wordAtPosition = wordAtPosition;
+exports.trimRange = trimRange;
+
+var _atom = require('atom');
+
+var _range;
+
+function _load_range() {
+  return _range = require('nuclide-commons/range');
+}
+
+/**
+ * Finds the word at the position. You can either provide a word regex yourself,
+ * or have Atom use the word regex in force at the scopes at that position,
+ * in which case it uses the optional includeNonWordCharacters, default true.
+ * (I know that's a weird default but it follows Atom's convention...)
+ */
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -6,24 +28,11 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * 
  * @format
  */
 
-import {Range} from 'atom';
-import {wordAtPositionFromBuffer} from 'nuclide-commons/range';
-
-/**
- * Finds the word at the position. You can either provide a word regex yourself,
- * or have Atom use the word regex in force at the scopes at that position,
- * in which case it uses the optional includeNonWordCharacters, default true.
- * (I know that's a weird default but it follows Atom's convention...)
- */
-export function wordAtPosition(
-  editor: atom$TextEditor,
-  position: atom$PointObject,
-  wordRegex?: RegExp | {includeNonWordCharacters: boolean},
-): ?{wordMatch: Array<string>, range: atom$Range} {
+function wordAtPosition(editor, position, wordRegex) {
   let wordRegex_;
   if (wordRegex instanceof RegExp) {
     wordRegex_ = wordRegex;
@@ -45,7 +54,7 @@ export function wordAtPosition(
     }
     wordRegex_ = new RegExp(r, 'g');
   }
-  return wordAtPositionFromBuffer(editor.getBuffer(), position, wordRegex_);
+  return (0, (_range || _load_range()).wordAtPositionFromBuffer)(editor.getBuffer(), position, wordRegex_);
 }
 
 /**
@@ -59,20 +68,17 @@ export function wordAtPosition(
  *   defaults to first non-whitespace character
  * @return atom$Range  the trimmed range
  */
-export function trimRange(
-  editor: atom$TextEditor,
-  rangeToTrim: atom$Range,
-  stopRegex: RegExp = /\S/,
-): atom$Range {
+function trimRange(editor, rangeToTrim, stopRegex = /\S/) {
   const buffer = editor.getBuffer();
-  let {start, end} = rangeToTrim;
-  buffer.scanInRange(stopRegex, rangeToTrim, ({range, stop}) => {
+  let { start, end } = rangeToTrim;
+  buffer.scanInRange(stopRegex, rangeToTrim, ({ range, stop }) => {
     start = range.start;
     stop();
   });
-  buffer.backwardsScanInRange(stopRegex, rangeToTrim, ({range, stop}) => {
+  buffer.backwardsScanInRange(stopRegex, rangeToTrim, ({ range, stop }) => {
     end = range.end;
     stop();
   });
-  return new Range(start, end);
+  return new _atom.Range(start, end);
 }
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbInJhbmdlLmpzIl0sIm5hbWVzIjpbIndvcmRBdFBvc2l0aW9uIiwidHJpbVJhbmdlIiwiZWRpdG9yIiwicG9zaXRpb24iLCJ3b3JkUmVnZXgiLCJ3b3JkUmVnZXhfIiwiUmVnRXhwIiwic2NvcGVEZXNjcmlwdG9yIiwic2NvcGVEZXNjcmlwdG9yRm9yQnVmZmVyUG9zaXRpb24iLCJub25Xb3JkQ2hhcnMiLCJnZXROb25Xb3JkQ2hhcmFjdGVycyIsImVzY2FwZWQiLCJyZXBsYWNlIiwiciIsImluY2x1ZGVOb25Xb3JkQ2hhcmFjdGVycyIsImdldEJ1ZmZlciIsInJhbmdlVG9UcmltIiwic3RvcFJlZ2V4IiwiYnVmZmVyIiwic3RhcnQiLCJlbmQiLCJzY2FuSW5SYW5nZSIsInJhbmdlIiwic3RvcCIsImJhY2t3YXJkc1NjYW5JblJhbmdlIl0sIm1hcHBpbmdzIjoiOzs7OztRQXFCZ0JBLGMsR0FBQUEsYztRQXdDQUMsUyxHQUFBQSxTOztBQWpEaEI7Ozs7QUFDQTtBQUFBO0FBQUE7O0FBRUE7Ozs7OztBQWZBOzs7Ozs7Ozs7Ozs7QUFxQk8sU0FBU0QsY0FBVCxDQUNMRSxNQURLLEVBRUxDLFFBRkssRUFHTEMsU0FISyxFQUkyQztBQUNoRCxNQUFJQyxVQUFKO0FBQ0EsTUFBSUQscUJBQXFCRSxNQUF6QixFQUFpQztBQUMvQkQsaUJBQWFELFNBQWI7QUFDRCxHQUZELE1BRU87QUFDTDtBQUNBO0FBQ0E7QUFDQTtBQUNBLFVBQU1HLGtCQUFrQkwsT0FBT00sZ0NBQVAsQ0FBd0NMLFFBQXhDLENBQXhCO0FBQ0EsVUFBTU0sZUFBZVAsT0FBT1Esb0JBQVAsQ0FBNEJILGVBQTVCLENBQXJCO0FBQ0EsVUFBTUksVUFBVUYsYUFBYUcsT0FBYixDQUFxQix1QkFBckIsRUFBOEMsTUFBOUMsQ0FBaEI7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBLFFBQUlDLElBQUssaUJBQWdCRixPQUFRLElBQWpDO0FBQ0EsUUFBSVAsYUFBYSxJQUFiLElBQXFCQSxVQUFVVSx3QkFBbkMsRUFBNkQ7QUFDM0RELFdBQU0sS0FBSUYsT0FBUSxJQUFsQjtBQUNEO0FBQ0ROLGlCQUFhLElBQUlDLE1BQUosQ0FBV08sQ0FBWCxFQUFjLEdBQWQsQ0FBYjtBQUNEO0FBQ0QsU0FBTyx3REFBeUJYLE9BQU9hLFNBQVAsRUFBekIsRUFBNkNaLFFBQTdDLEVBQXVERSxVQUF2RCxDQUFQO0FBQ0Q7O0FBRUQ7Ozs7Ozs7Ozs7O0FBV08sU0FBU0osU0FBVCxDQUNMQyxNQURLLEVBRUxjLFdBRkssRUFHTEMsWUFBb0IsSUFIZixFQUlPO0FBQ1osUUFBTUMsU0FBU2hCLE9BQU9hLFNBQVAsRUFBZjtBQUNBLE1BQUksRUFBQ0ksS0FBRCxFQUFRQyxHQUFSLEtBQWVKLFdBQW5CO0FBQ0FFLFNBQU9HLFdBQVAsQ0FBbUJKLFNBQW5CLEVBQThCRCxXQUE5QixFQUEyQyxDQUFDLEVBQUNNLEtBQUQsRUFBUUMsSUFBUixFQUFELEtBQW1CO0FBQzVESixZQUFRRyxNQUFNSCxLQUFkO0FBQ0FJO0FBQ0QsR0FIRDtBQUlBTCxTQUFPTSxvQkFBUCxDQUE0QlAsU0FBNUIsRUFBdUNELFdBQXZDLEVBQW9ELENBQUMsRUFBQ00sS0FBRCxFQUFRQyxJQUFSLEVBQUQsS0FBbUI7QUFDckVILFVBQU1FLE1BQU1GLEdBQVo7QUFDQUc7QUFDRCxHQUhEO0FBSUEsU0FBTyxnQkFBVUosS0FBVixFQUFpQkMsR0FBakIsQ0FBUDtBQUNEIiwiZmlsZSI6InJhbmdlLmpzIiwic291cmNlc0NvbnRlbnQiOlsiLyoqXG4gKiBDb3B5cmlnaHQgKGMpIDIwMTctcHJlc2VudCwgRmFjZWJvb2ssIEluYy5cbiAqIEFsbCByaWdodHMgcmVzZXJ2ZWQuXG4gKlxuICogVGhpcyBzb3VyY2UgY29kZSBpcyBsaWNlbnNlZCB1bmRlciB0aGUgQlNELXN0eWxlIGxpY2Vuc2UgZm91bmQgaW4gdGhlXG4gKiBMSUNFTlNFIGZpbGUgaW4gdGhlIHJvb3QgZGlyZWN0b3J5IG9mIHRoaXMgc291cmNlIHRyZWUuIEFuIGFkZGl0aW9uYWwgZ3JhbnRcbiAqIG9mIHBhdGVudCByaWdodHMgY2FuIGJlIGZvdW5kIGluIHRoZSBQQVRFTlRTIGZpbGUgaW4gdGhlIHNhbWUgZGlyZWN0b3J5LlxuICpcbiAqIEBmbG93XG4gKiBAZm9ybWF0XG4gKi9cblxuaW1wb3J0IHtSYW5nZX0gZnJvbSAnYXRvbSc7XG5pbXBvcnQge3dvcmRBdFBvc2l0aW9uRnJvbUJ1ZmZlcn0gZnJvbSAnbnVjbGlkZS1jb21tb25zL3JhbmdlJztcblxuLyoqXG4gKiBGaW5kcyB0aGUgd29yZCBhdCB0aGUgcG9zaXRpb24uIFlvdSBjYW4gZWl0aGVyIHByb3ZpZGUgYSB3b3JkIHJlZ2V4IHlvdXJzZWxmLFxuICogb3IgaGF2ZSBBdG9tIHVzZSB0aGUgd29yZCByZWdleCBpbiBmb3JjZSBhdCB0aGUgc2NvcGVzIGF0IHRoYXQgcG9zaXRpb24sXG4gKiBpbiB3aGljaCBjYXNlIGl0IHVzZXMgdGhlIG9wdGlvbmFsIGluY2x1ZGVOb25Xb3JkQ2hhcmFjdGVycywgZGVmYXVsdCB0cnVlLlxuICogKEkga25vdyB0aGF0J3MgYSB3ZWlyZCBkZWZhdWx0IGJ1dCBpdCBmb2xsb3dzIEF0b20ncyBjb252ZW50aW9uLi4uKVxuICovXG5leHBvcnQgZnVuY3Rpb24gd29yZEF0UG9zaXRpb24oXG4gIGVkaXRvcjogYXRvbSRUZXh0RWRpdG9yLFxuICBwb3NpdGlvbjogYXRvbSRQb2ludE9iamVjdCxcbiAgd29yZFJlZ2V4PzogUmVnRXhwIHwge2luY2x1ZGVOb25Xb3JkQ2hhcmFjdGVyczogYm9vbGVhbn0sXG4pOiA/e3dvcmRNYXRjaDogQXJyYXk8c3RyaW5nPiwgcmFuZ2U6IGF0b20kUmFuZ2V9IHtcbiAgbGV0IHdvcmRSZWdleF87XG4gIGlmICh3b3JkUmVnZXggaW5zdGFuY2VvZiBSZWdFeHApIHtcbiAgICB3b3JkUmVnZXhfID0gd29yZFJlZ2V4O1xuICB9IGVsc2Uge1xuICAgIC8vIFdoYXQgaXMgdGhlIHdvcmQgcmVnZXggYXNzb2NpYXRlZCB3aXRoIHRoZSBwb3NpdGlvbj8gV2UnZCBsaWtlIHRvIHVzZVxuICAgIC8vIGF0b20kQ3Vyc29yLndvcmRSZWdFeHAsIGV4Y2VwdCB0aGF0IGZ1bmN0aW9uIGdldHMgdGhlIHJlZ2V4IGFzc29jaWF0ZWRcbiAgICAvLyB3aXRoIHRoZSBlZGl0b3IncyBjdXJyZW50IGN1cnNvciB3aGlsZSB3ZSB3YW50IHRoZSByZWdleCBhc3NvY2lhdGVkIHdpdGhcbiAgICAvLyB0aGUgc3BlY2lmaWMgcG9zaXRpb24uIFNvIHdlIHJlLWltcGxlbWVudCBpdCBvdXJzZWx2ZXMuLi5cbiAgICBjb25zdCBzY29wZURlc2NyaXB0b3IgPSBlZGl0b3Iuc2NvcGVEZXNjcmlwdG9yRm9yQnVmZmVyUG9zaXRpb24ocG9zaXRpb24pO1xuICAgIGNvbnN0IG5vbldvcmRDaGFycyA9IGVkaXRvci5nZXROb25Xb3JkQ2hhcmFjdGVycyhzY29wZURlc2NyaXB0b3IpO1xuICAgIGNvbnN0IGVzY2FwZWQgPSBub25Xb3JkQ2hhcnMucmVwbGFjZSgvWy0vXFxcXF4kKis/LigpfFtcXF17fV0vZywgJ1xcXFwkJicpO1xuICAgIC8vIFdlIGNvcGllZCB0aGlzIGVzY2FwaW5nIHJlZ2V4IGZyb20gYXRvbSRDdXJzb3Iud29yZFJlZ2V4cCwgcmF0aGVyIHRoYW5cbiAgICAvLyB1c2luZyB0aGUgbGlicmFyeSBmdW5jdGlvbiAnZXNjYXBlU3RyaW5nUmVnRXhwJy4gVGhhdCdzIGJlY2F1c2UgdGhlXG4gICAgLy8gbGlicmFyeSBmdW5jdGlvbiBkb2Vzbid0IGVzY2FwZSB0aGUgaHlwaGVuIGNoYXJhY3RlciBhbmQgc28gaXNcbiAgICAvLyB1bnN1aXRhYmxlIGZvciB1c2UgaW5zaWRlIGEgcmFuZ2UuXG4gICAgbGV0IHIgPSBgXltcXHQgXSokfFteXFxcXHMke2VzY2FwZWR9XStgO1xuICAgIGlmICh3b3JkUmVnZXggPT0gbnVsbCB8fCB3b3JkUmVnZXguaW5jbHVkZU5vbldvcmRDaGFyYWN0ZXJzKSB7XG4gICAgICByICs9IGB8WyR7ZXNjYXBlZH1dK2A7XG4gICAgfVxuICAgIHdvcmRSZWdleF8gPSBuZXcgUmVnRXhwKHIsICdnJyk7XG4gIH1cbiAgcmV0dXJuIHdvcmRBdFBvc2l0aW9uRnJvbUJ1ZmZlcihlZGl0b3IuZ2V0QnVmZmVyKCksIHBvc2l0aW9uLCB3b3JkUmVnZXhfKTtcbn1cblxuLyoqXG4gKiBHZXRzIHRoZSB0cmltbWVkIHJhbmdlIGZyb20gYSBnaXZlbiByYW5nZSwgaS5lLiBtb3ZlcyB0aGUgc3RhcnQgYW5kIGVuZCBwb2ludHNcbiAqIHRvIHRoZSBmaXJzdCBhbmQgbGFzdCBub24td2hpdGVzcGFjZSBjaGFyYWN0ZXJzIChvciBzcGVjaWZpZWQgcmVnZXgpXG4gKiB3aXRoaW4gdGhlIHJhbmdlIHJlc3BlY3RpdmVseS5cbiAqXG4gKiBAcGFyYW0gZWRpdG9yICAgICAgIHRoZSBlZGl0b3IgY29udGFpbmluZyB0aGUgcmFuZ2VcbiAqIEBwYXJhbSByYW5nZVRvVHJpbSAgdGhlIHJhbmdlIHRvIHRyaW1cbiAqIEBwYXJhbSBzdG9wUmVnZXggICAgc3RvcCB0cmltbWluZyB3aGVuIHRoZSBmaXJzdCBtYXRjaCBpcyBmb3VuZCBmb3IgdGhpcyByZWdleCxcbiAqICAgZGVmYXVsdHMgdG8gZmlyc3Qgbm9uLXdoaXRlc3BhY2UgY2hhcmFjdGVyXG4gKiBAcmV0dXJuIGF0b20kUmFuZ2UgIHRoZSB0cmltbWVkIHJhbmdlXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiB0cmltUmFuZ2UoXG4gIGVkaXRvcjogYXRvbSRUZXh0RWRpdG9yLFxuICByYW5nZVRvVHJpbTogYXRvbSRSYW5nZSxcbiAgc3RvcFJlZ2V4OiBSZWdFeHAgPSAvXFxTLyxcbik6IGF0b20kUmFuZ2Uge1xuICBjb25zdCBidWZmZXIgPSBlZGl0b3IuZ2V0QnVmZmVyKCk7XG4gIGxldCB7c3RhcnQsIGVuZH0gPSByYW5nZVRvVHJpbTtcbiAgYnVmZmVyLnNjYW5JblJhbmdlKHN0b3BSZWdleCwgcmFuZ2VUb1RyaW0sICh7cmFuZ2UsIHN0b3B9KSA9PiB7XG4gICAgc3RhcnQgPSByYW5nZS5zdGFydDtcbiAgICBzdG9wKCk7XG4gIH0pO1xuICBidWZmZXIuYmFja3dhcmRzU2NhbkluUmFuZ2Uoc3RvcFJlZ2V4LCByYW5nZVRvVHJpbSwgKHtyYW5nZSwgc3RvcH0pID0+IHtcbiAgICBlbmQgPSByYW5nZS5lbmQ7XG4gICAgc3RvcCgpO1xuICB9KTtcbiAgcmV0dXJuIG5ldyBSYW5nZShzdGFydCwgZW5kKTtcbn1cbiJdfQ==

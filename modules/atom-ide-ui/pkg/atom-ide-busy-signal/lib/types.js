@@ -1,57 +1,27 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
+var cov_2nuuo353hb = function () {
+  var path = '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-busy-signal/lib/types.js',
+      hash = 'abc815fd94e9cbde1958c150d5f69b9734b162d7',
+      global = new Function('return this')(),
+      gcv = '__coverage__',
+      coverageData = {
+    path: '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-busy-signal/lib/types.js',
+    statementMap: {},
+    fnMap: {},
+    branchMap: {},
+    s: {},
+    f: {},
+    b: {},
+    _coverageSchema: '332fd63041d2c1bcb487cc26dd0d5f7d97098a6c'
+  },
+      coverage = global[gcv] || (global[gcv] = {});
 
-export type BusySignalOptions = {|
-  // Can say that a busy signal will only appear when a given file is open.
-  // Default = null, meaning the busy signal applies to all files.
-  onlyForFile?: NuclideUri,
-  // Is user waiting for computer to finish a task? (traditional busy spinner)
-  // or is the computer waiting for user to finish a task? (action required)
-  // Default = spinner.
-  waitingFor?: 'computer' | 'user',
-  // Debounce it? default = true for busy-signal, and false for action-required.
-  debounce?: boolean,
-  // If onClick is set, then the tooltip will be clickable. Default = null.
-  onDidClick?: () => void,
-  // If set to true, the busy signal tooltip will be immediately revealed
-  // when it first becomes visible (without explicit mouse interaction).
-  revealTooltip?: boolean,
-|};
+  if (coverage[path] && coverage[path].hash === hash) {
+    return coverage[path];
+  }
 
-export type BusySignalService = {
-  // Activates the busy signal with the given title and returns the promise
-  // from the provided callback.
-  // The busy signal automatically deactivates when the returned promise
-  // either resolves or rejects.
-  reportBusyWhile<T>(
-    title: string,
-    f: () => Promise<T>,
-    options?: BusySignalOptions,
-  ): Promise<T>,
-
-  // Activates the busy signal. Set the title in the returned BusySignal
-  // object (you can update the title multiple times) and dispose it when done.
-  reportBusy(title: string, options?: BusySignalOptions): BusyMessage,
-
-  // This is a no-op. When someone consumes the busy service, they get back a
-  // reference to the single shared instance, so disposing of it would be wrong.
-  dispose(): void,
-};
-
-export type BusyMessage = {
-  // You can set/update the title.
-  setTitle(title: string): void,
-  // Dispose of the signal when done to make it go away.
-  dispose(): void,
-};
+  coverageData.hash = hash;
+  return coverage[path] = coverageData;
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJ0eXBlcy5qcyIsInNvdXJjZXNDb250ZW50IjpbXX0=

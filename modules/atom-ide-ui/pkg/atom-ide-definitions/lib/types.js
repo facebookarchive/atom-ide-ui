@@ -1,61 +1,27 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
+var cov_1p7mglshbs = function () {
+  var path = '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-definitions/lib/types.js',
+      hash = 'd5b8a67f91426ff23ebcb2aefd480a9e959da6f1',
+      global = new Function('return this')(),
+      gcv = '__coverage__',
+      coverageData = {
+    path: '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-definitions/lib/types.js',
+    statementMap: {},
+    fnMap: {},
+    branchMap: {},
+    s: {},
+    f: {},
+    b: {},
+    _coverageSchema: '332fd63041d2c1bcb487cc26dd0d5f7d97098a6c'
+  },
+      coverage = global[gcv] || (global[gcv] = {});
 
-export type Definition = {
-  // Path of the file in which the definition is located.
-  path: NuclideUri,
-  // First character of the definition's identifier.
-  // e.g. "F" in `class Foo {}`
-  position: atom$Point,
-  // Optional: the range of the entire definition.
-  // e.g. "c" to "}" in `class Foo {}`
-  range?: atom$Range,
-  // Optional: `name` and `projectRoot` can be provided to display a more human-readable title
-  // inside of Hyperclick when there are multiple definitions.
-  name?: string,
-  // If provided, `projectRoot` will be used to display a relativized version of `path`.
-  projectRoot?: NuclideUri,
-  // `language` may be used by consumers to identify the source of definitions.
-  language: string,
-};
+  if (coverage[path] && coverage[path].hash === hash) {
+    return coverage[path];
+  }
 
-// Definition queries supply a point.
-// The returned queryRange is the range within which the returned definition is valid.
-// Typically queryRange spans the containing identifier around the query point.
-export type DefinitionQueryResult = {
-  queryRange: ?Array<atom$Range>,
-  definitions: Array<Definition>,
-};
-
-// Provides definitions for a set of language grammars.
-export type DefinitionProvider = {
-  // If there are multiple providers for a given grammar,
-  // the one with the highest priority will be used.
-  priority: number,
-  grammarScopes: Array<string>,
-  getDefinition: (
-    editor: TextEditor,
-    position: atom$Point,
-  ) => Promise<?DefinitionQueryResult>,
-};
-
-export type DefinitionPreviewProvider = {
-  getDefinitionPreview(
-    definition: Definition,
-  ): Promise<?{
-    mime: string,
-    contents: string,
-    encoding: string,
-  }>,
-};
+  coverageData.hash = hash;
+  return coverage[path] = coverageData;
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJ0eXBlcy5qcyIsInNvdXJjZXNDb250ZW50IjpbXX0=

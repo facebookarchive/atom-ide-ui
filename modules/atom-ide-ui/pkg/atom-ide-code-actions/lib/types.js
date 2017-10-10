@@ -1,42 +1,27 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {FileDiagnosticMessage} from '../../../pkg/atom-ide-diagnostics/lib/types';
+var cov_2dxqu2qr4g = function () {
+  var path = '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-code-actions/lib/types.js',
+      hash = '2b39d8f28f36e5fada9456b6b37021a9f2f0cbc2',
+      global = new Function('return this')(),
+      gcv = '__coverage__',
+      coverageData = {
+    path: '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-code-actions/lib/types.js',
+    statementMap: {},
+    fnMap: {},
+    branchMap: {},
+    s: {},
+    f: {},
+    b: {},
+    _coverageSchema: '332fd63041d2c1bcb487cc26dd0d5f7d97098a6c'
+  },
+      coverage = global[gcv] || (global[gcv] = {});
 
-export interface CodeAction {
-  apply(): Promise<void>,
-  getTitle(): Promise<string>,
-  dispose(): void,
-}
+  if (coverage[path] && coverage[path].hash === hash) {
+    return coverage[path];
+  }
 
-export type CodeActionProvider = {
-  grammarScopes: Array<string>,
-  priority: number,
-  getCodeActions(
-    editor: atom$TextEditor,
-    range: atom$Range,
-    diagnostics: Array<FileDiagnosticMessage>,
-  ): Promise<Array<CodeAction>>,
-};
-
-/**
-* atom-ide-code-actions provides a CodeActionFetcher which offers an API to
-* request CodeActions from all CodeAction providers. For now, CodeActionFetcher
-* can only fetch CodeActions for a Diagnostic. In the future, this API can be
-* extended to provide a stream of CodeActions based on the cursor position.
-*/
-export type CodeActionFetcher = {
-  getCodeActionForDiagnostic: (
-    diagnostic: FileDiagnosticMessage,
-    editor: atom$TextEditor,
-  ) => Promise<Array<CodeAction>>,
-};
+  coverageData.hash = hash;
+  return coverage[path] = coverageData;
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJ0eXBlcy5qcyIsInNvdXJjZXNDb250ZW50IjpbXX0=

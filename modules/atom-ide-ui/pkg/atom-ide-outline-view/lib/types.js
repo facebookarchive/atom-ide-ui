@@ -1,70 +1,27 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {Observable} from 'rxjs';
-import type {TokenizedText} from 'nuclide-commons/tokenized-text';
-import type {Result} from 'nuclide-commons-atom/ActiveEditorRegistry';
+var cov_2gqabo9ann = function () {
+  var path = '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-outline-view/lib/types.js',
+      hash = '23db3f1e87a4915c8d2e4ef40a0951b9be61705c',
+      global = new Function('return this')(),
+      gcv = '__coverage__',
+      coverageData = {
+    path: '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-outline-view/lib/types.js',
+    statementMap: {},
+    fnMap: {},
+    branchMap: {},
+    s: {},
+    f: {},
+    b: {},
+    _coverageSchema: '332fd63041d2c1bcb487cc26dd0d5f7d97098a6c'
+  },
+      coverage = global[gcv] || (global[gcv] = {});
 
-export type OutlineProvider = {
-  name: string,
-  // If there are multiple providers for a given grammar, the one with the highest priority will be
-  // used.
-  priority: number,
-  grammarScopes: Array<string>,
-  updateOnEdit?: boolean,
-  getOutline(editor: TextEditor): Promise<?Outline>,
-};
+  if (coverage[path] && coverage[path].hash === hash) {
+    return coverage[path];
+  }
 
-export type OutlineTree = {
-  icon?: string, // from atom$Octicon (that type's not allowed over rpc so we use string)
-  kind?: OutlineTreeKind, // kind you can pass to the UI for theming
-
-  // Must be one or the other. If both are present, tokenizedText is preferred.
-  plainText?: string,
-  tokenizedText?: TokenizedText,
-
-  // If user has atom-ide-outline-view.nameOnly then representativeName is used instead.
-  representativeName?: string,
-
-  startPosition: atom$Point,
-  endPosition?: atom$Point,
-  children: Array<OutlineTree>,
-};
-
-export type Outline = {
-  outlineTrees: Array<OutlineTree>,
-};
-
-// Kind of outline tree - matches the names from the Language Server Protocol v2.
-export type OutlineTreeKind =
-  | 'file'
-  | 'module'
-  | 'namespace'
-  | 'package'
-  | 'class'
-  | 'method'
-  | 'property'
-  | 'field'
-  | 'constructor'
-  | 'enum'
-  | 'interface'
-  | 'function'
-  | 'variable'
-  | 'constant'
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'array';
-
-export type ResultsStreamProvider = {
-  getResultsStream: () => Observable<Result<OutlineProvider, ?Outline>>,
-};
+  coverageData.hash = hash;
+  return coverage[path] = coverageData;
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJ0eXBlcy5qcyIsInNvdXJjZXNDb250ZW50IjpbXX0=

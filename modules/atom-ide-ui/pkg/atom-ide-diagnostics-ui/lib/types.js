@@ -1,34 +1,27 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
-import type {
-  DiagnosticMessage,
-  DiagnosticMessageKind,
-  UiConfig,
-} from '../../atom-ide-diagnostics/lib/types';
+var cov_29adv4wqx8 = function () {
+  var path = '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-diagnostics-ui/lib/types.js',
+      hash = '52d01092e29044c3b25abdc7c29ac1dec3de34b4',
+      global = new Function('return this')(),
+      gcv = '__coverage__',
+      coverageData = {
+    path: '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-diagnostics-ui/lib/types.js',
+    statementMap: {},
+    fnMap: {},
+    branchMap: {},
+    s: {},
+    f: {},
+    b: {},
+    _coverageSchema: '332fd63041d2c1bcb487cc26dd0d5f7d97098a6c'
+  },
+      coverage = global[gcv] || (global[gcv] = {});
 
-// We group diagnostics based on kind and severity.
-export type DiagnosticGroup = 'errors' | 'warnings' | 'info' | 'review';
+  if (coverage[path] && coverage[path].hash === hash) {
+    return coverage[path];
+  }
 
-// State that's shared between every diagnostics panel instance.
-export type GlobalViewState = {
-  diagnostics: Array<DiagnosticMessage>,
-  pathToActiveTextEditor: ?NuclideUri,
-  filterByActiveTextEditor: boolean,
-  onFilterByActiveTextEditorChange: (isChecked: boolean) => mixed,
-  showDirectoryColumn: boolean,
-  showTraces: boolean,
-  onShowTracesChange: (isChecked: boolean) => mixed,
-  supportedMessageKinds: Set<DiagnosticMessageKind>,
-  uiConfig: UiConfig,
-};
+  coverageData.hash = hash;
+  return coverage[path] = coverageData;
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJ0eXBlcy5qcyIsInNvdXJjZXNDb250ZW50IjpbXX0=

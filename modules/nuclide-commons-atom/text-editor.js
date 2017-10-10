@@ -1,28 +1,43 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.existingEditorForUri = existingEditorForUri;
+exports.existingEditorForBuffer = existingEditorForBuffer;
+exports.getViewOfEditor = getViewOfEditor;
+exports.getScrollTop = getScrollTop;
+exports.setScrollTop = setScrollTop;
+exports.setPositionAndScroll = setPositionAndScroll;
+exports.getCursorPositions = getCursorPositions;
+exports.observeEditorDestroy = observeEditorDestroy;
+exports.enforceReadOnlyEditor = enforceReadOnlyEditor;
+exports.enforceSoftWrap = enforceSoftWrap;
+exports.observeTextEditors = observeTextEditors;
+exports.isValidTextEditor = isValidTextEditor;
+exports.centerScrollToBufferLine = centerScrollToBufferLine;
 
-import invariant from 'assert';
-import {Observable} from 'rxjs';
+var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
 
-import {observableFromSubscribeFunction} from 'nuclide-commons/event';
-import nuclideUri from 'nuclide-commons/nuclideUri';
+var _event;
+
+function _load_event() {
+  return _event = require('nuclide-commons/event');
+}
+
+var _nuclideUri;
+
+function _load_nuclideUri() {
+  return _nuclideUri = _interopRequireDefault(require('nuclide-commons/nuclideUri'));
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 /**
  * Returns a text editor that has the given path open, or null if none exists. If there are multiple
  * text editors for this path, one is chosen arbitrarily.
  */
-export function existingEditorForUri(path: NuclideUri): ?atom$TextEditor {
+function existingEditorForUri(path) {
   // This isn't ideal but realistically iterating through even a few hundred editors shouldn't be a
   // real problem. And if you have more than a few hundred you probably have bigger problems.
   for (const editor of atom.workspace.getTextEditors()) {
@@ -38,9 +53,19 @@ export function existingEditorForUri(path: NuclideUri): ?atom$TextEditor {
  * Returns a text editor that has the given buffer open, or null if none exists. If there are
  * multiple text editors for this buffer, one is chosen arbitrarily.
  */
-export function existingEditorForBuffer(
-  buffer: atom$TextBuffer,
-): ?atom$TextEditor {
+/**
+ * Copyright (c) 2017-present, Facebook, Inc.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree. An additional grant
+ * of patent rights can be found in the PATENTS file in the same directory.
+ *
+ * 
+ * @format
+ */
+
+function existingEditorForBuffer(buffer) {
   // This isn't ideal but realistically iterating through even a few hundred editors shouldn't be a
   // real problem. And if you have more than a few hundred you probably have bigger problems.
   for (const editor of atom.workspace.getTextEditors()) {
@@ -52,17 +77,15 @@ export function existingEditorForBuffer(
   return null;
 }
 
-export function getViewOfEditor(
-  editor: atom$TextEditor,
-): atom$TextEditorElement {
+function getViewOfEditor(editor) {
   return atom.views.getView(editor);
 }
 
-export function getScrollTop(editor: atom$TextEditor): number {
+function getScrollTop(editor) {
   return getViewOfEditor(editor).getScrollTop();
 }
 
-export function setScrollTop(editor: atom$TextEditor, scrollTop: number): void {
+function setScrollTop(editor, scrollTop) {
   getViewOfEditor(editor).setScrollTop(scrollTop);
 }
 
@@ -73,38 +96,27 @@ export function setScrollTop(editor: atom$TextEditor, scrollTop: number): void {
  * Can be used with editor.getCursorBufferPosition() & getScrollTop() to restore
  * an editors cursor and scroll.
  */
-export function setPositionAndScroll(
-  editor: atom$TextEditor,
-  position: atom$Point,
-  scrollTop: number,
-): void {
-  editor.setCursorBufferPosition(position, {autoscroll: false});
+function setPositionAndScroll(editor, position, scrollTop) {
+  editor.setCursorBufferPosition(position, { autoscroll: false });
   setScrollTop(editor, scrollTop);
 }
 
-export function getCursorPositions(
-  editor: atom$TextEditor,
-): Observable<atom$Point> {
-  return Observable.defer(() => {
+function getCursorPositions(editor) {
+  return _rxjsBundlesRxMinJs.Observable.defer(() => {
     // This will behave strangely in the face of multiple cursors. Consider supporting multiple
     // cursors in the future.
     const cursor = editor.getCursors()[0];
-    invariant(cursor != null);
-    return Observable.merge(
-      Observable.of(cursor.getBufferPosition()),
-      observableFromSubscribeFunction(
-        cursor.onDidChangePosition.bind(cursor),
-      ).map(event => event.newBufferPosition),
-    );
+
+    if (!(cursor != null)) {
+      throw new Error('Invariant violation: "cursor != null"');
+    }
+
+    return _rxjsBundlesRxMinJs.Observable.merge(_rxjsBundlesRxMinJs.Observable.of(cursor.getBufferPosition()), (0, (_event || _load_event()).observableFromSubscribeFunction)(cursor.onDidChangePosition.bind(cursor)).map(event => event.newBufferPosition));
   });
 }
 
-export function observeEditorDestroy(
-  editor: atom$TextEditor,
-): Observable<atom$TextEditor> {
-  return observableFromSubscribeFunction(editor.onDidDestroy.bind(editor))
-    .map(event => editor)
-    .take(1);
+function observeEditorDestroy(editor) {
+  return (0, (_event || _load_event()).observableFromSubscribeFunction)(editor.onDidDestroy.bind(editor)).map(event => editor).take(1);
 }
 
 // As of the introduction of atom.workspace.buildTextEditor(), it is no longer possible to
@@ -112,10 +124,7 @@ export function observeEditorDestroy(
 // is to create an ordinary TextEditor and then override any methods that would allow it to
 // change its contents.
 // TODO: https://github.com/atom/atom/issues/9237.
-export function enforceReadOnlyEditor(
-  textEditor: atom$TextEditor,
-  readOnlyExceptions?: Array<string> = ['append', 'setText'],
-): void {
+function enforceReadOnlyEditor(textEditor, readOnlyExceptions = ['append', 'setText']) {
   // Cancel insert events to prevent typing in the text editor and disallow editing (read-only).
   textEditor.onWillInsertText(event => {
     event.cancel();
@@ -124,10 +133,7 @@ export function enforceReadOnlyEditor(
   enforceReadOnlyBuffer(textEditor.getBuffer(), readOnlyExceptions);
 }
 
-function enforceReadOnlyBuffer(
-  textBuffer: atom$TextBuffer,
-  readOnlyExceptions?: Array<string> = [],
-): void {
+function enforceReadOnlyBuffer(textBuffer, readOnlyExceptions = []) {
   const noop = () => {};
   // All user edits use `transact` - so, mocking this will effectively make the editor read-only.
   const originalApplyChange = textBuffer.applyChange;
@@ -135,11 +141,11 @@ function enforceReadOnlyBuffer(
 
   readOnlyExceptions.forEach(passReadOnlyException);
 
-  function passReadOnlyException(functionName: string) {
-    const buffer: any = textBuffer;
+  function passReadOnlyException(functionName) {
+    const buffer = textBuffer;
     const originalFunction = buffer[functionName];
 
-    buffer[functionName] = function() {
+    buffer[functionName] = function () {
       textBuffer.applyChange = originalApplyChange;
       const result = originalFunction.apply(textBuffer, arguments);
       textBuffer.applyChange = noop;
@@ -151,10 +157,7 @@ function enforceReadOnlyBuffer(
 // Turn off soft wrap setting for these editors so diffs properly align.
 // Some text editor register sometimes override the set soft wrapping
 // after mounting an editor to the workspace - here, that's watched and reset to `false`.
-export function enforceSoftWrap(
-  editor: atom$TextEditor,
-  enforcedSoftWrap: boolean,
-): IDisposable {
+function enforceSoftWrap(editor, enforcedSoftWrap) {
   editor.setSoftWrapped(enforcedSoftWrap);
   return editor.onDidChangeSoftWrapped(softWrapped => {
     if (softWrapped !== enforcedSoftWrap) {
@@ -172,9 +175,7 @@ export function enforceSoftWrap(
  * Small wrapper around `atom.workspace.observeTextEditors` that filters out
  * uninitialized remote editors. Most callers should use this one instead.
  */
-export function observeTextEditors(
-  callback: (editor: atom$TextEditor) => mixed,
-): IDisposable {
+function observeTextEditors(callback) {
   // The one place where atom.workspace.observeTextEditors needs to be used.
   // eslint-disable-next-line rulesdir/atom-apis
   return atom.workspace.observeTextEditors(editor => {
@@ -187,37 +188,27 @@ export function observeTextEditors(
 /**
  * Checks if an object (typically an Atom pane) is a TextEditor with a non-broken path.
  */
-export function isValidTextEditor(item: mixed): boolean {
+function isValidTextEditor(item) {
   // eslint-disable-next-line rulesdir/atom-apis
   if (atom.workspace.isTextEditor(item)) {
-    return !nuclideUri.isBrokenDeserializedUri(
-      ((item: any): atom$TextEditor).getPath(),
-    );
+    return !(_nuclideUri || _load_nuclideUri()).default.isBrokenDeserializedUri(item.getPath());
   }
   return false;
 }
 
-export function centerScrollToBufferLine(
-  textEditorElement: atom$TextEditorElement,
-  bufferLineNumber: number,
-): void {
+function centerScrollToBufferLine(textEditorElement, bufferLineNumber) {
   const textEditor = textEditorElement.getModel();
-  const pixelPositionTop = textEditorElement.pixelPositionForBufferPosition([
-    bufferLineNumber,
-    0,
-  ]).top;
+  const pixelPositionTop = textEditorElement.pixelPositionForBufferPosition([bufferLineNumber, 0]).top;
   // Manually calculate the scroll location, instead of using
   // `textEditor.scrollToBufferPosition([lineNumber, 0], {center: true})`
   // because that API to wouldn't center the line if it was in the visible screen range.
-  const scrollTop =
-    pixelPositionTop +
-    textEditor.getLineHeightInPixels() / 2 -
-    textEditorElement.clientHeight / 2;
+  const scrollTop = pixelPositionTop + textEditor.getLineHeightInPixels() / 2 - textEditorElement.clientHeight / 2;
   textEditorElement.setScrollTop(Math.max(scrollTop, 1));
 
   textEditorElement.focus();
 
   textEditor.setCursorBufferPosition([bufferLineNumber, 0], {
-    autoscroll: false,
+    autoscroll: false
   });
 }
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbInRleHQtZWRpdG9yLmpzIl0sIm5hbWVzIjpbImV4aXN0aW5nRWRpdG9yRm9yVXJpIiwiZXhpc3RpbmdFZGl0b3JGb3JCdWZmZXIiLCJnZXRWaWV3T2ZFZGl0b3IiLCJnZXRTY3JvbGxUb3AiLCJzZXRTY3JvbGxUb3AiLCJzZXRQb3NpdGlvbkFuZFNjcm9sbCIsImdldEN1cnNvclBvc2l0aW9ucyIsIm9ic2VydmVFZGl0b3JEZXN0cm95IiwiZW5mb3JjZVJlYWRPbmx5RWRpdG9yIiwiZW5mb3JjZVNvZnRXcmFwIiwib2JzZXJ2ZVRleHRFZGl0b3JzIiwiaXNWYWxpZFRleHRFZGl0b3IiLCJjZW50ZXJTY3JvbGxUb0J1ZmZlckxpbmUiLCJwYXRoIiwiZWRpdG9yIiwiYXRvbSIsIndvcmtzcGFjZSIsImdldFRleHRFZGl0b3JzIiwiZ2V0UGF0aCIsImJ1ZmZlciIsImdldEJ1ZmZlciIsInZpZXdzIiwiZ2V0VmlldyIsInNjcm9sbFRvcCIsInBvc2l0aW9uIiwic2V0Q3Vyc29yQnVmZmVyUG9zaXRpb24iLCJhdXRvc2Nyb2xsIiwiZGVmZXIiLCJjdXJzb3IiLCJnZXRDdXJzb3JzIiwibWVyZ2UiLCJvZiIsImdldEJ1ZmZlclBvc2l0aW9uIiwib25EaWRDaGFuZ2VQb3NpdGlvbiIsImJpbmQiLCJtYXAiLCJldmVudCIsIm5ld0J1ZmZlclBvc2l0aW9uIiwib25EaWREZXN0cm95IiwidGFrZSIsInRleHRFZGl0b3IiLCJyZWFkT25seUV4Y2VwdGlvbnMiLCJvbldpbGxJbnNlcnRUZXh0IiwiY2FuY2VsIiwiZW5mb3JjZVJlYWRPbmx5QnVmZmVyIiwidGV4dEJ1ZmZlciIsIm5vb3AiLCJvcmlnaW5hbEFwcGx5Q2hhbmdlIiwiYXBwbHlDaGFuZ2UiLCJmb3JFYWNoIiwicGFzc1JlYWRPbmx5RXhjZXB0aW9uIiwiZnVuY3Rpb25OYW1lIiwib3JpZ2luYWxGdW5jdGlvbiIsInJlc3VsdCIsImFwcGx5IiwiYXJndW1lbnRzIiwiZW5mb3JjZWRTb2Z0V3JhcCIsInNldFNvZnRXcmFwcGVkIiwib25EaWRDaGFuZ2VTb2Z0V3JhcHBlZCIsInNvZnRXcmFwcGVkIiwicHJvY2VzcyIsIm5leHRUaWNrIiwiaXNEZXN0cm95ZWQiLCJjYWxsYmFjayIsIml0ZW0iLCJpc1RleHRFZGl0b3IiLCJpc0Jyb2tlbkRlc2VyaWFsaXplZFVyaSIsInRleHRFZGl0b3JFbGVtZW50IiwiYnVmZmVyTGluZU51bWJlciIsImdldE1vZGVsIiwicGl4ZWxQb3NpdGlvblRvcCIsInBpeGVsUG9zaXRpb25Gb3JCdWZmZXJQb3NpdGlvbiIsInRvcCIsImdldExpbmVIZWlnaHRJblBpeGVscyIsImNsaWVudEhlaWdodCIsIk1hdGgiLCJtYXgiLCJmb2N1cyJdLCJtYXBwaW5ncyI6Ijs7Ozs7UUF3QmdCQSxvQixHQUFBQSxvQjtRQWdCQUMsdUIsR0FBQUEsdUI7UUFjQUMsZSxHQUFBQSxlO1FBTUFDLFksR0FBQUEsWTtRQUlBQyxZLEdBQUFBLFk7UUFXQUMsb0IsR0FBQUEsb0I7UUFTQUMsa0IsR0FBQUEsa0I7UUFpQkFDLG9CLEdBQUFBLG9CO1FBYUFDLHFCLEdBQUFBLHFCO1FBdUNBQyxlLEdBQUFBLGU7UUFxQkFDLGtCLEdBQUFBLGtCO1FBZUFDLGlCLEdBQUFBLGlCO1FBVUFDLHdCLEdBQUFBLHdCOztBQXhMaEI7Ozs7QUFFQTtBQUFBO0FBQUE7Ozs7QUFDQTtBQUFBO0FBQUE7Ozs7QUFFQTs7OztBQUlPLFNBQVNaLG9CQUFULENBQThCYSxJQUE5QixFQUFrRTtBQUN2RTtBQUNBO0FBQ0EsT0FBSyxNQUFNQyxNQUFYLElBQXFCQyxLQUFLQyxTQUFMLENBQWVDLGNBQWYsRUFBckIsRUFBc0Q7QUFDcEQsUUFBSUgsT0FBT0ksT0FBUCxPQUFxQkwsSUFBekIsRUFBK0I7QUFDN0IsYUFBT0MsTUFBUDtBQUNEO0FBQ0Y7O0FBRUQsU0FBTyxJQUFQO0FBQ0Q7O0FBRUQ7Ozs7QUFwQ0E7Ozs7Ozs7Ozs7OztBQXdDTyxTQUFTYix1QkFBVCxDQUNMa0IsTUFESyxFQUVhO0FBQ2xCO0FBQ0E7QUFDQSxPQUFLLE1B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QTlCLFdBQVdpQyxxQkFBWCxLQUFxQyxDQURyQyxHQUVBTixrQkFBa0JPLFlBQWxCLEdBQWlDLENBSG5DO0FBSUFQLG9CQUFrQi9ELFlBQWxCLENBQStCdUUsS0FBS0MsR0FBTCxDQUFTckQsU0FBVCxFQUFvQixDQUFwQixDQUEvQjs7QUFFQTRDLG9CQUFrQlUsS0FBbEI7O0FBRUFyQyxhQUFXZix1QkFBWCxDQUFtQyxDQUFDMkMsZ0JBQUQsRUFBbUIsQ0FBbkIsQ0FBbkMsRUFBMEQ7QUFDeEQxQyxnQkFBWTtBQUQ0QyxHQUExRDtBQUdEIiwiZmlsZSI6InRleHQtZWRpdG9yLmpzIiwic291cmNlc0NvbnRlbnQiOlsiLyoqXG4gKiBDb3B5cmlnaHQgKGMpIDIwMTctcHJlc2VudCwgRmFjZWJvb2ssIEluYy5cbiAqIEFsbCByaWdodHMgcmVzZXJ2ZWQuXG4gKlxuICogVGhpcyBzb3VyY2UgY29kZSBpcyBsaWNlbnNlZCB1bmRlciB0aGUgQlNELXN0eWxlIGxpY2Vuc2UgZm91bmQgaW4gdGhlXG4gKiBMSUNFTlNFIGZpbGUgaW4gdGhlIHJvb3QgZGlyZWN0b3J5IG9mIHRoaXMgc291cmNlIHRyZWUuIEFuIGFkZGl0aW9uYWwgZ3JhbnRcbiAqIG9mIHBhdGVudCByaWdodHMgY2FuIGJlIGZvdW5kIGluIHRoZSBQQVRFTlRTIGZpbGUgaW4gdGhlIHNhbWUgZGlyZWN0b3J5LlxuICpcbiAqIEBmbG93XG4gKiBAZm9ybWF0XG4gKi9cblxuaW1wb3J0IHR5cGUge051Y2xpZGVVcml9IGZyb20gJ251Y2xpZGUtY29tbW9ucy9udWNsaWRlVXJpJztcblxuaW1wb3J0IGludmFyaWFudCBmcm9tICdhc3NlcnQnO1xuaW1wb3J0IHtPYnNlcnZhYmxlfSBmcm9tICdyeGpzJztcblxuaW1wb3J0IHtvYnNlcnZhYmxlRnJvbVN1YnNjcmliZUZ1bmN0aW9ufSBmcm9tICdudWNsaWRlLWNvbW1vbnMvZXZlbnQnO1xuaW1wb3J0IG51Y2xpZGVVcmkgZnJvbSAnbnVjbGlkZS1jb21tb25zL251Y2xpZGVVcmknO1xuXG4vKipcbiAqIFJldHVybnMgYSB0ZXh0IGVkaXRvciB0aGF0IGhhcyB0aGUgZ2l2ZW4gcGF0aCBvcGVuLCBvciBudWxsIGlmIG5vbmUgZXhpc3RzLiBJZiB0aGVyZSBhcmUgbXVsdGlwbGVcbiAqIHRleHQgZWRpdG9ycyBmb3IgdGhpcyBwYXRoLCBvbmUgaXMgY2hvc2VuIGFyYml0cmFyaWx5LlxuICovXG5leHBvcnQgZnVuY3Rpb24gZXhpc3RpbmdFZGl0b3JGb3JVcmkocGF0aDogTnVjbGlkZVVyaSk6ID9hdG9tJFRleHRFZGl0b3Ige1xuICAvLyBUaGlzIGlzbid0IGlkZWFsIGJ1dCByZWFsaXN0aWNhbGx5IGl0ZXJhdGluZyB0aHJvdWdoIGV2ZW4gYSBmZXcgaHVuZHJlZCBlZGl0b3JzIHNob3VsZG4ndCBiZSBhXG4gIC8vIHJlYWwgcHJvYmxlbS4gQW5kIGlmIHlvdSBoYXZlIG1vcmUgdGhhbiBhIGZldyBodW5kcmVkIHlvdSBwcm9iYWJseSBoYXZlIGJpZ2dlciBwcm9ibGVtcy5cbiAgZm9yIChjb25zdCBlZGl0b3Igb2YgYXRvbS53b3Jrc3BhY2UuZ2V0VGV4dEVkaXRvcnMoKSkge1xuICAgIGlmIChlZGl0b3IuZ2V0UGF0aCgpID09PSBwYXRoKSB7XG4gICAgICByZXR1cm4gZWRpdG9yO1xuICAgIH1cbiAgfVxuXG4gIHJldHVybiBudWxsO1xufVxuXG4vKipcbiAqIFJldHVybnMgYSB0ZXh0IGVkaXRvciB0aGF0IGhhcyB0aGUgZ2l2ZW4gYnVmZmVyIG9wZW4sIG9yIG51bGwgaWYgbm9uZSBleGlzdHMuIElmIHRoZXJlIGFyZVxuICogbXVsdGlwbGUgdGV4dCBlZGl0b3JzIGZvciB0aGlzIGJ1ZmZlciwgb25lIGlzIGNob3NlbiBhcmJpdHJhcmlseS5cbiAqL1xuZXhwb3J0IGZ1bmN0aW9uIGV4aXN0aW5nRWRpdG9yRm9yQnVmZmVyKFxuICBidWZmZXI6IGF0b20kVGV4dEJ1ZmZlcixcbik6ID9hdG9tJFRleHRFZGl0b3Ige1xuICAvLyBUaGlzIGlzbid0IGlkZWFsIGJ1dCByZWFsaXN0aWNhbGx5IGl0ZXJhdGluZyB0aHJvdWdoIGV2ZW4gYSBmZXcgaHVuZHJlZCBlZGl0b3JzIHNob3VsZG4ndCBiZSBhXG4gIC8vIHJlYWwgcHJvYmxlbS4gQW5kIGlmIHlvdSBoYXZlIG1vcmUgdGhhbiBhIGZldyBodW5kcmVkIHlvdSBwcm9iYWJseSBoYXZlIGJpZ2dlciBwcm9ibGVtcy5cbiAgZm9yIChjb25zdCBlZGl0b3Igb2YgYXRvbS53b3Jrc3BhY2UuZ2V0VGV4dEVkaXRvcnMoKSkge1xuICAgIGlmIChlZGl0b3IuZ2V0QnVmZmVyKCkgPT09IGJ1ZmZlcikge1xuICAgICAgcmV0dXJuIGVkaXRvcjtcbiAgICB9XG4gIH1cblxuICByZXR1cm4gbnVsbDtcbn1cblxuZXhwb3J0IGZ1bmN0aW9uIGdldFZpZXdPZkVkaXRvcihcbiAgZWRpdG9yOiBhdG9tJFRleHRFZGl0b3IsXG4pOiBhdG9tJFRleHRFZGl0b3JFbGVtZW50IHtcbiAgcmV0dXJuIGF0b20udmlld3MuZ2V0VmlldyhlZGl0b3IpO1xufVxuXG5leHBvcnQgZnVuY3Rpb24gZ2V0U2Nyb2xsVG9wKGVkaXRvcjogYXRvbSRUZXh0RWRpdG9yKTogbnVtYmVyIHtcbiAgcmV0dXJuIGdldFZpZXdPZkVkaXRvcihlZGl0b3IpLmdldFNjcm9sbFRvcCgpO1xufVxuXG5leHBvcnQgZnVuY3Rpb24gc2V0U2Nyb2xsVG9wKGVkaXRvcjogYXRvbSRUZXh0RWRpdG9yLCBzY3JvbGxUb3A6IG51bWJlcik6IHZvaWQge1xuICBnZXRWaWV3T2ZFZGl0b3IoZWRpdG9yKS5zZXRTY3JvbGxUb3Aoc2Nyb2xsVG9wKTtcbn1cblxuLyoqXG4gKiBEb2VzIGEgYmVzdCBlZmZvcnQgdG8gc2V0IGFuIGVkaXRvciBwYW5lIHRvIGEgZ2l2ZW4gY3Vyc29yIHBvc2l0aW9uICYgc2Nyb2xsLlxuICogRG9lcyBub3QgZW5zdXJlIHRoYXQgdGhlIGN1cnJlbnQgY3Vyc29yIHBvc2l0aW9uIGlzIHZpc2libGUuXG4gKlxuICogQ2FuIGJlIHVzZWQgd2l0aCBlZGl0b3IuZ2V0Q3Vyc29yQnVmZmVyUG9zaXRpb24oKSAmIGdldFNjcm9sbFRvcCgpIHRvIHJlc3RvcmVcbiAqIGFuIGVkaXRvcnMgY3Vyc29yIGFuZCBzY3JvbGwuXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBzZXRQb3NpdGlvbkFuZFNjcm9sbChcbiAgZWRpdG9yOiBhdG9tJFRleHRFZGl0b3IsXG4gIHBvc2l0aW9uOiBhdG9tJFBvaW50LFxuICBzY3JvbGxUb3A6IG51bWJlcixcbik6IHZvaWQge1xuICBlZGl0b3Iuc2V0Q3Vyc29yQnVmZmVyUG9zaXRpb24ocG9zaXRpb24sIHthdXRvc2Nyb2xsOiBmYWxzZX0pO1xuICBzZXRTY3JvbGxUb3AoZWRpdG9yLCBzY3JvbGxUb3ApO1xufVxuXG5leHBvcnQgZnVuY3Rpb24gZ2V0Q3Vyc29yUG9zaXRpb25zKFxuICBlZGl0b3I6IGF0b20kVGV4dEVkaXRvcixcbik6IE9ic2VydmFibGU8YXRvbSRQb2ludD4ge1xuICByZXR1cm4gT2JzZXJ2YWJsZS5kZWZlcigoKSA9PiB7XG4gICAgLy8gVGhpcyB3aWxsIGJlaGF2ZSBzdHJhbmdlbHkgaW4gdGhlIGZhY2Ugb2YgbXVsdGlwbGUgY3Vyc29ycy4gQ29uc2lkZXIgc3VwcG9ydGluZyBtdWx0aXBsZVxuICAgIC8vIGN1cnNvcnMgaW4gdGhlIGZ1dHVyZS5cbiAgICBjb25zdCBjdXJzb3IgPSBlZGl0b3IuZ2V0Q3Vyc29ycygpWzBdO1xuICAgIGludmFyaWFudChjdXJzb3IgIT0gbnVsbCk7XG4gICAgcmV0dXJuIE9ic2VydmFibGUubWVyZ2UoXG4gICAgICBPYnNlcnZhYmxlLm9mKGN1cnNvci5nZXRCdWZmZXJQb3NpdGlvbigpKSxcbiAgICAgIG9ic2VydmFibGVGcm9tU3Vic2NyaWJlRnVuY3Rpb24oXG4gICAgICAgIGN1cnNvci5vbkRpZENoYW5nZVBvc2l0aW9uLmJpbmQoY3Vyc29yKSxcbiAgICAgICkubWFwKGV2ZW50ID0+IGV2ZW50Lm5ld0J1ZmZlclBvc2l0aW9uKSxcbiAgICApO1xuICB9KTtcbn1cblxuZXhwb3J0IGZ1bmN0aW9uIG9ic2VydmVFZGl0b3JEZXN0cm95KFxuICBlZGl0b3I6IGF0b20kVGV4dEVkaXRvcixcbik6IE9ic2VydmFibGU8YXRvbSRUZXh0RWRpdG9yPiB7XG4gIHJldHVybiBvYnNlcnZhYmxlRnJvbVN1YnNjcmliZUZ1bmN0aW9uKGVkaXRvci5vbkRpZERlc3Ryb3kuYmluZChlZGl0b3IpKVxuICAgIC5tYXAoZXZlbnQgPT4gZWRpdG9yKVxuICAgIC50YWtlKDEpO1xufVxuXG4vLyBBcyBvZiB0aGUgaW50cm9kdWN0aW9uIG9mIGF0b20ud29ya3NwYWNlLmJ1aWxkVGV4dEVkaXRvcigpLCBpdCBpcyBubyBsb25nZXIgcG9zc2libGUgdG9cbi8vIHN1YmNsYXNzIFRleHRFZGl0b3IgdG8gY3JlYXRlIGEgUmVhZE9ubHlUZXh0RWRpdG9yLiBJbnN0ZWFkLCB0aGUgd2F5IHRvIGFjaGlldmUgdGhpcyBlZmZlY3Rcbi8vIGlzIHRvIGNyZWF0ZSBhbiBvcmRpbmFyeSBUZXh0RWRpdG9yIGFuZCB0aGVuIG92ZXJyaWRlIGFueSBtZXRob2RzIHRoYXQgd291bGQgYWxsb3cgaXQgdG9cbi8vIGNoYW5nZSBpdHMgY29udGVudHMuXG4vLyBUT0RPOiBodHRwczovL2dpdGh1Yi5jb20vYXRvbS9hdG9tL2lzc3Vlcy85MjM3LlxuZXhwb3J0IGZ1bmN0aW9uIGVuZm9yY2VSZWFkT25seUVkaXRvcihcbiAgdGV4dEVkaXRvcjogYXRvbSRUZXh0RWRpdG9yLFxuICByZWFkT25seUV4Y2VwdGlvbnM/OiBBcnJheTxzdHJpbmc+ID0gWydhcHBlbmQnLCAnc2V0VGV4dCddLFxuKTogdm9pZCB7XG4gIC8vIENhbmNlbCBpbnNlcnQgZXZlbnRzIHRvIHByZXZlbnQgdHlwaW5nIGluIHRoZSB0ZXh0IGVkaXRvciBhbmQgZGlzYWxsb3cgZWRpdGluZyAocmVhZC1vbmx5KS5cbiAgdGV4dEVkaXRvci5vbldpbGxJbnNlcnRUZXh0KGV2ZW50ID0+IHtcbiAgICBldmVudC5jYW5jZWwoKTtcbiAgfSk7XG4gIC8vIGBzZXRUZXh0YCAmIGBhcHBlbmRgIGFyZSB0aGUgb25seSBleGNlcHRpb25zIHRoYXQncyB1c2VkIHRvIHNldCB0aGUgcmVhZC1vbmx5IHRleHQuXG4gIGVuZm9yY2VSZWFkT25seUJ1ZmZlcih0ZXh0RWRpdG9yLmdldEJ1ZmZlcigpLCByZWFkT25seUV4Y2VwdGlvbnMpO1xufVxuXG5mdW5jdGlvbiBlbmZvcmNlUmVhZE9ubHlCdWZmZXIoXG4gIHRleHRCdWZmZXI6IGF0b20kVGV4dEJ1ZmZlcixcbiAgcmVhZE9ubHlFeGNlcHRpb25zPzogQXJyYXk8c3RyaW5nPiA9IFtdLFxuKTogdm9pZCB7XG4gIGNvbnN0IG5vb3AgPSAoKSA9PiB7fTtcbiAgLy8gQWxsIHVzZXIgZWRpdHMgdXNlIGB0cmFuc2FjdGAgLSBzbywgbW9ja2luZyB0aGlzIHdpbGwgZWZmZWN0aXZlbHkgbWFrZSB0aGUgZWRpdG9yIHJlYWQtb25seS5cbiAgY29uc3Qgb3JpZ2luYWxBcHBseUNoYW5nZSA9IHRleHRCdWZmZXIuYXBwbHlDaGFuZ2U7XG4gIHRleHRCdWZmZXIuYXBwbHlDaGFuZ2UgPSBub29wO1xuXG4gIHJlYWRPbmx5RXhjZXB0aW9ucy5mb3JFYWNoKHBhc3NSZWFkT25seUV4Y2VwdGlvbik7XG5cbiAgZnVuY3Rpb24gcGFzc1JlYWRPbmx5RXhjZXB0aW9uKGZ1bmN0aW9uTmFtZTogc3RyaW5nKSB7XG4gICAgY29uc3QgYnVmZmVyOiBhbnkgPSB0ZXh0QnVmZmVyO1xuICAgIGNvbnN0IG9yaWdpbmFsRnVuY3Rpb24gPSBidWZmZXJbZnVuY3Rpb25OYW1lXTtcblxuICAgIGJ1ZmZlcltmdW5jdGlvbk5hbWVdID0gZnVuY3Rpb24oKSB7XG4gICAgICB0ZXh0QnVmZmVyLmFwcGx5Q2hhbmdlID0gb3JpZ2luYWxBcHBseUNoYW5nZTtcbiAgICAgIGNvbnN0IHJlc3VsdCA9IG9yaWdpbmFsRnVuY3Rpb24uYXBwbHkodGV4dEJ1ZmZlciwgYXJndW1lbnRzKTtcbiAgICAgIHRleHRCdWZmZXIuYXBwbHlDaGFuZ2UgPSBub29wO1xuICAgICAgcmV0dXJuIHJlc3VsdDtcbiAgICB9O1xuICB9XG59XG5cbi8vIFR1cm4gb2ZmIHNvZnQgd3JhcCBzZXR0aW5nIGZvciB0aGVzZSBlZGl0b3JzIHNvIGRpZmZzIHByb3Blcmx5IGFsaWduLlxuLy8gU29tZSB0ZXh0IGVkaXRvciByZWdpc3RlciBzb21ldGltZXMgb3ZlcnJpZGUgdGhlIHNldCBzb2Z0IHdyYXBwaW5nXG4vLyBhZnRlciBtb3VudGluZyBhbiBlZGl0b3IgdG8gdGhlIHdvcmtzcGFjZSAtIGhlcmUsIHRoYXQncyB3YXRjaGVkIGFuZCByZXNldCB0byBgZmFsc2VgLlxuZXhwb3J0IGZ1bmN0aW9uIGVuZm9yY2VTb2Z0V3JhcChcbiAgZWRpdG9yOiBhdG9tJFRleHRFZGl0b3IsXG4gIGVuZm9yY2VkU29mdFdyYXA6IGJvb2xlYW4sXG4pOiBJRGlzcG9zYWJsZSB7XG4gIGVkaXRvci5zZXRTb2Z0V3JhcHBlZChlbmZvcmNlZFNvZnRXcmFwKTtcbiAgcmV0dXJuIGVkaXRvci5vbkRpZENoYW5nZVNvZnRXcmFwcGVkKHNvZnRXcmFwcGVkID0+IHtcbiAgICBpZiAoc29mdFdyYXBwZWQgIT09IGVuZm9yY2VkU29mdFdyYXApIHtcbiAgICAgIC8vIFJlc2V0IHRoZSBvdmVycmlkZGVuIHNvZnRXcmFwIHRvIGBmYWxzZWAgb25jZSB0aGUgb3BlcmF0aW9uIGNvbXBsZXRlcy5cbiAgICAgIHByb2Nlc3MubmV4dFRpY2soKCkgPT4ge1xuICAgICAgICBpZiAoIWVkaXRvci5pc0Rlc3Ryb3llZCgpKSB7XG4gICAgICAgICAgZWRpdG9yLnNldFNvZnRXcmFwcGVkKGVuZm9yY2VkU29mdFdyYXApO1xuICAgICAgICB9XG4gICAgICB9KTtcbiAgICB9XG4gIH0pO1xufVxuXG4vKipcbiAqIFNtYWxsIHdyYXBwZXIgYXJvdW5kIGBhdG9tLndvcmtzcGFjZS5vYnNlcnZlVGV4dEVkaXRvcnNgIHRoYXQgZmlsdGVycyBvdXRcbiAqIHVuaW5pdGlhbGl6ZWQgcmVtb3RlIGVkaXRvcnMuIE1vc3QgY2FsbGVycyBzaG91bGQgdXNlIHRoaXMgb25lIGluc3RlYWQuXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBvYnNlcnZlVGV4dEVkaXRvcnMoXG4gIGNhbGxiYWNrOiAoZWRpdG9yOiBhdG9tJFRleHRFZGl0b3IpID0+IG1peGVkLFxuKTogSURpc3Bvc2FibGUge1xuICAvLyBUaGUgb25lIHBsYWNlIHdoZXJlIGF0b20ud29ya3NwYWNlLm9ic2VydmVUZXh0RWRpdG9ycyBuZWVkcyB0byBiZSB1c2VkLlxuICAvLyBlc2xpbnQtZGlzYWJsZS1uZXh0LWxpbmUgcnVsZXNkaXIvYXRvbS1hcGlzXG4gIHJldHVybiBhdG9tLndvcmtzcGFjZS5vYnNlcnZlVGV4dEVkaXRvcnMoZWRpdG9yID0+IHtcbiAgICBpZiAoaXNWYWxpZFRleHRFZGl0b3IoZWRpdG9yKSkge1xuICAgICAgY2FsbGJhY2soZWRpdG9yKTtcbiAgICB9XG4gIH0pO1xufVxuXG4vKipcbiAqIENoZWNrcyBpZiBhbiBvYmplY3QgKHR5cGljYWxseSBhbiBBdG9tIHBhbmUpIGlzIGEgVGV4dEVkaXRvciB3aXRoIGEgbm9uLWJyb2tlbiBwYXRoLlxuICovXG5leHBvcnQgZnVuY3Rpb24gaXNWYWxpZFRleHRFZGl0b3IoaXRlbTogbWl4ZWQpOiBib29sZWFuIHtcbiAgLy8gZXNsaW50LWRpc2FibGUtbmV4dC1saW5lIHJ1bGVzZGlyL2F0b20tYXBpc1xuICBpZiAoYXRvbS53b3Jrc3BhY2UuaXNUZXh0RWRpdG9yKGl0ZW0pKSB7XG4gICAgcmV0dXJuICFudWNsaWRlVXJpLmlzQnJva2VuRGVzZXJpYWxpemVkVXJpKFxuICAgICAgKChpdGVtOiBhbnkpOiBhdG9tJFRleHRFZGl0b3IpLmdldFBhdGgoKSxcbiAgICApO1xuICB9XG4gIHJldHVybiBmYWxzZTtcbn1cblxuZXhwb3J0IGZ1bmN0aW9uIGNlbnRlclNjcm9sbFRvQnVmZmVyTGluZShcbiAgdGV4dEVkaXRvckVsZW1lbnQ6IGF0b20kVGV4dEVkaXRvckVsZW1lbnQsXG4gIGJ1ZmZlckxpbmVOdW1iZXI6IG51bWJlcixcbik6IHZvaWQge1xuICBjb25zdCB0ZXh0RWRpdG9yID0gdGV4dEVkaXRvckVsZW1lbnQuZ2V0TW9kZWwoKTtcbiAgY29uc3QgcGl4ZWxQb3NpdGlvblRvcCA9IHRleHRFZGl0b3JFbGVtZW50LnBpeGVsUG9zaXRpb25Gb3JCdWZmZXJQb3NpdGlvbihbXG4gICAgYnVmZmVyTGluZU51bWJlcixcbiAgICAwLFxuICBdKS50b3A7XG4gIC8vIE1hbnVhbGx5IGNhbGN1bGF0ZSB0aGUgc2Nyb2xsIGxvY2F0aW9uLCBpbnN0ZWFkIG9mIHVzaW5nXG4gIC8vIGB0ZXh0RWRpdG9yLnNjcm9sbFRvQnVmZmVyUG9zaXRpb24oW2xpbmVOdW1iZXIsIDBdLCB7Y2VudGVyOiB0cnVlfSlgXG4gIC8vIGJlY2F1c2UgdGhhdCBBUEkgdG8gd291bGRuJ3QgY2VudGVyIHRoZSBsaW5lIGlmIGl0IHdhcyBpbiB0aGUgdmlzaWJsZSBzY3JlZW4gcmFuZ2UuXG4gIGNvbnN0IHNjcm9sbFRvcCA9XG4gICAgcGl4ZWxQb3NpdGlvblRvcCArXG4gICAgdGV4dEVkaXRvci5nZXRMaW5lSGVpZ2h0SW5QaXhlbHMoKSAvIDIgLVxuICAgIHRleHRFZGl0b3JFbGVtZW50LmNsaWVudEhlaWdodCAvIDI7XG4gIHRleHRFZGl0b3JFbGVtZW50LnNldFNjcm9sbFRvcChNYXRoLm1heChzY3JvbGxUb3AsIDEpKTtcblxuICB0ZXh0RWRpdG9yRWxlbWVudC5mb2N1cygpO1xuXG4gIHRleHRFZGl0b3Iuc2V0Q3Vyc29yQnVmZmVyUG9zaXRpb24oW2J1ZmZlckxpbmVOdW1iZXIsIDBdLCB7XG4gICAgYXV0b3Njcm9sbDogZmFsc2UsXG4gIH0pO1xufVxuIl19

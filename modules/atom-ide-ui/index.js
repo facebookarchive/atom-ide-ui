@@ -1,98 +1,27 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-export type {
-  BusySignalOptions,
-  BusySignalService,
-} from './pkg/atom-ide-busy-signal/lib/types';
+var cov_1fwhle0ehn = function () {
+  var path = '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/index.js',
+      hash = 'd651407bd9ddcdfd7b829c65da7c469ec1435c49',
+      global = new Function('return this')(),
+      gcv = '__coverage__',
+      coverageData = {
+    path: '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/index.js',
+    statementMap: {},
+    fnMap: {},
+    branchMap: {},
+    s: {},
+    f: {},
+    b: {},
+    _coverageSchema: '332fd63041d2c1bcb487cc26dd0d5f7d97098a6c'
+  },
+      coverage = global[gcv] || (global[gcv] = {});
 
-export type {
-  CodeAction,
-  CodeActionProvider,
-} from './pkg/atom-ide-code-actions/lib/types';
+  if (coverage[path] && coverage[path].hash === hash) {
+    return coverage[path];
+  }
 
-export type {
-  CodeFormatProvider,
-  RangeCodeFormatProvider,
-  FileCodeFormatProvider,
-  OnTypeCodeFormatProvider,
-  OnSaveCodeFormatProvider,
-} from './pkg/atom-ide-code-format/lib/types';
-
-export type {
-  CodeHighlightProvider,
-} from './pkg/atom-ide-code-highlight/lib/types';
-
-export type {
-  Datatip,
-  DatatipProvider,
-  DatatipService,
-  MarkedString,
-  ModifierDatatipProvider,
-  ModifierKey,
-} from './pkg/atom-ide-datatip/lib/types';
-
-export type {
-  Definition,
-  DefinitionProvider,
-  DefinitionPreviewProvider,
-  DefinitionQueryResult,
-} from './pkg/atom-ide-definitions/lib/types';
-
-export type {
-  CallbackDiagnosticProvider,
-  DiagnosticFix,
-  DiagnosticInvalidationCallback,
-  DiagnosticInvalidationMessage,
-  DiagnosticMessage,
-  DiagnosticMessageType,
-  DiagnosticProvider,
-  DiagnosticProviderUpdate,
-  DiagnosticTrace,
-  DiagnosticUpdateCallback,
-  FileDiagnosticMessage,
-  FileDiagnosticMessages,
-  IndieLinterDelegate,
-  LinterMessage,
-  LinterMessageV1,
-  LinterMessageV2,
-  LinterProvider,
-  LinterTrace,
-  ObservableDiagnosticProvider,
-  ProjectDiagnosticMessage,
-  RegisterIndieLinter,
-} from './pkg/atom-ide-diagnostics/lib/types';
-
-export type {
-  FindReferencesProvider,
-  FindReferencesReturn,
-  Reference,
-} from './pkg/atom-ide-find-references/lib/types';
-
-export type {
-  Outline,
-  OutlineProvider,
-  OutlineTree,
-  ResultsStreamProvider,
-} from './pkg/atom-ide-outline-view/lib/types';
-
-export type {
-  Signature,
-  SignatureHelp,
-  SignatureHelpProvider,
-  SignatureParameter,
-} from './pkg/atom-ide-signature-help/lib/types';
-
-export type {
-  HyperclickProvider,
-  HyperclickSuggestion,
-} from './pkg/hyperclick/lib/types';
+  coverageData.hash = hash;
+  return coverage[path] = coverageData;
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJpbmRleC5qcyIsInNvdXJjZXNDb250ZW50IjpbXX0=

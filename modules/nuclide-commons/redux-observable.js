@@ -1,14 +1,34 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ActionsObservable = undefined;
+exports.combineEpics = combineEpics;
+exports.createEpicMiddleware = createEpicMiddleware;
+
+var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
+
+// This should be { type: readonly string } when we get readonly props. Because this is used with
+// disjoint unions we can't use `string` here due to mutation concerns. Flow doesn't know that we
+// aren't going to mutate the objects with a random string value so it can't allow us to pass a
+// specific action type into something of type { type: string }
+function combineEpics(...epics) {
+  return (actions, store, extra) => {
+    const streams = epics.map(epic => epic(actions, store, extra));
+    return _rxjsBundlesRxMinJs.Observable.merge(...streams);
+  };
+} /**
+   * Copyright (c) 2017-present, Facebook, Inc.
+   * All rights reserved.
+   *
+   * This source code is licensed under the BSD-style license found in the
+   * LICENSE file in the root directory of this source tree. An additional grant
+   * of patent rights can be found in the PATENTS file in the same directory.
+   *
+   * 
+   * @format
+   */
 
 // Derived from <https://github.com/redux-observable/redux-observable/> because their version
 // imports an Rx operator module and we use a bundle. Original license follows:
@@ -35,46 +55,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import {Observable, Subject} from 'rxjs';
-
-// This should be { type: readonly string } when we get readonly props. Because this is used with
-// disjoint unions we can't use `string` here due to mutation concerns. Flow doesn't know that we
-// aren't going to mutate the objects with a random string value so it can't allow us to pass a
-// specific action type into something of type { type: string }
-type Action = {type: any};
-type Store<T: Action, U> = {
-  dispatch(action: T): void,
-  getState(): U,
-};
-type Next<T: Action> = (action: T) => T;
-export type Epic<T: Action, U, E> = (
-  actions: ActionsObservable<T>,
-  store: Store<T, U>,
-  extra: E,
-) => Observable<T>;
-
-export function combineEpics<T: Action, U, E>(
-  ...epics: Array<Epic<T, U, E>>
-): Epic<T, U, E> {
-  return (actions: ActionsObservable<T>, store: Store<T, U>, extra: E) => {
-    const streams: Array<Observable<T>> = epics.map(epic =>
-      epic(actions, store, extra),
-    );
-    return Observable.merge(...streams);
-  };
-}
-
-export function createEpicMiddleware<T: Action, U>(
-  rootEpic?: Epic<T, U, void>,
-) {
-  const actions = new Subject();
+function createEpicMiddleware(rootEpic) {
+  const actions = new _rxjsBundlesRxMinJs.Subject();
   const actionsObs = new ActionsObservable(actions);
 
-  return (store: Store<T, U>) => (next: Next<T>) => {
+  return store => next => {
     if (rootEpic != null) {
       rootEpic(actionsObs, store).subscribe(store.dispatch);
     }
-    return (action: T) => {
+    return action => {
       const result = next(action);
       actions.next(action);
       return result;
@@ -82,22 +71,21 @@ export function createEpicMiddleware<T: Action, U>(
   };
 }
 
-export class ActionsObservable<T: Action> extends Observable<T> {
-  operator: any;
+class ActionsObservable extends _rxjsBundlesRxMinJs.Observable {
 
-  constructor(actionsSubject: Observable<any>) {
+  constructor(actionsSubject) {
     super();
     this.source = actionsSubject;
   }
 
-  lift(operator: any): Observable<T> {
+  lift(operator) {
     const observable = new ActionsObservable(this);
     observable.operator = operator;
     return observable;
   }
 
-  ofType(...keys: Array<any>): ActionsObservable<T> {
-    const result = this.filter(({type}) => {
+  ofType(...keys) {
+    const result = this.filter(({ type }) => {
       const len = keys.length;
       if (len === 1) {
         return type === keys[0];
@@ -110,6 +98,8 @@ export class ActionsObservable<T: Action> extends Observable<T> {
       }
       return false;
     });
-    return ((result: any): ActionsObservable<T>);
+    return result;
   }
 }
+exports.ActionsObservable = ActionsObservable;
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbInJlZHV4LW9ic2VydmFibGUuanMiXSwibmFtZXMiOlsiY29tYmluZUVwaWNzIiwiY3JlYXRlRXBpY01pZGRsZXdhcmUiLCJlcGljcyIsImFjdGlvbnMiLCJzdG9yZSIsImV4dHJhIiwic3RyZWFtcyIsIm1hcCIsImVwaWMiLCJtZXJnZSIsInJvb3RFcGljIiwiYWN0aW9uc09icyIsIkFjdGlvbnNPYnNlcnZhYmxlIiwibmV4dCIsInN1YnNjcmliZSIsImRpc3BhdGNoIiwiYWN0aW9uIiwicmVzdWx0IiwiY29uc3RydWN0b3IiLCJhY3Rpb25zU3ViamVjdCIsInNvdXJjZSIsImxpZnQiLCJvcGVyYXRvciIsIm9ic2VydmFibGUiLCJvZlR5cGUiLCJrZXlzIiwiZmlsdGVyIiwidHlwZSIsImxlbiIsImxlbmd0aCIsImkiXSwibWFwcGluZ3MiOiI7Ozs7OztRQXVEZ0JBLFksR0FBQUEsWTtRQVdBQyxvQixHQUFBQSxvQjs7QUE3QmhCOztBQUVBO0FBQ0E7QUFDQTtBQUNBO0FBYU8sU0FBU0QsWUFBVCxDQUNMLEdBQUdFLEtBREUsRUFFVTtBQUNmLFNBQU8sQ0FBQ0MsT0FBRCxFQUFnQ0MsS0FBaEMsRUFBb0RDLEtBQXBELEtBQWlFO0FBQ3RFLFVBQU1DLFVBQWdDSixNQUFNSyxHQUFOLENBQVVDLFFBQzlDQSxLQUFLTCxPQUFMLEVBQWNDLEtBQWQsRUFBcUJDLEtBQXJCLENBRG9DLENBQXRDO0FBR0EsV0FBTywrQkFBV0ksS0FBWCxDQUFpQixHQUFHSCxPQUFwQixDQUFQO0FBQ0QsR0FMRDtBQU1ELEMsQ0FoRUQ7Ozs7Ozs7Ozs7OztBQVlBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTs7QUErQk8sU0FBU0wsb0JBQVQsQ0FDTFMsUUFESyxFQUVMO0FBQ0EsUUFBTVAsVUFBVSxpQ0FBaEI7QUFDQSxRQUFNUSxhQUFhLElBQUlDLGlCQUFKLENBQXNCVCxPQUF0QixDQUFuQjs7QUFFQSxTQUFRQyxLQUFELElBQXlCUyxJQUFELElBQW1CO0FBQ2hELFFBQUlILFlBQVksSUFBaEIsRUFBc0I7QUFDcEJBLGVBQVNDLFVBQVQsRUFBcUJQLEtBQXJCLEVBQTRCVSxTQUE1QixDQUFzQ1YsTUFBTVcsUUFBNUM7QUFDRDtBQUNELFdBQVFDLE1BQUQsSUFBZTtBQUNwQixZQUFNQyxTQUFTSixLQUFLRyxNQUFMLENBQWY7QUFDQWIsY0FBUVUsSUFBUixDQUFhRyxNQUFiO0FBQ0EsYUFBT0MsTUFBUDtBQUNELEtBSkQ7QUFLRCxHQVREO0FBVUQ7O0FBRU0sTUFBTUwsaUJBQU4sd0NBQXlEOztBQUc5RE0sY0FBWUMsY0FBWixFQUE2QztBQUMzQztBQUNBLFNBQUtDLE1BQUwsR0FBY0QsY0FBZDtBQUNEOztBQUVERSxPQUFLQyxRQUFMLEVBQW1DO0FBQ2pDLFVBQU1DLGFBQWEsSUFBSVgsaUJBQUosQ0FBc0IsSUFBdEIsQ0FBbkI7QUFDQVcsZUFBV0QsUUFBWCxHQUFzQkEsUUFBdEI7QUFDQSxXQUFPQyxVQUFQO0FBQ0Q7O0FBRURDLFNBQU8sR0FBR0MsSUFBVixFQUFrRDtBQUNoRCxVQUFNUixTQUFTLEtBQUtTLE1BQUwsQ0FBWSxDQUFDLEVBQUNDLElBQUQsRUFBRCxLQUFZO0FBQ3JDLFlBQU1DLE1BQU1ILEtBQUtJLE1BQWpCO0FBQ0EsVUFBSUQsUUFBUSxDQUFaLEVBQWU7QUFDYixlQUFPRCxTQUFTRixLQUFLLENBQUwsQ0FBaEI7QUFDRCxPQUZELE1BRU87QUFDTCxhQUFLLElBQUlLLElBQUksQ0FBYixFQUFnQkEsSUFBSUYsR0FBcEIsRUFBeUJFLEdBQXpCLEVBQThCO0FBQzVCLGNBQUlMLEtBQUtLLENBQUwsTUFBWUgsSUFBaEIsRUFBc0I7QUFDcEIsbUJBQU8sSUFBUDtBQUNEO0FBQ0Y7QUFDRjtBQUNELGFBQU8sS0FBUDtBQUNELEtBWmMsQ0FBZjtBQWFBLFdBQVNWLE1BQVQ7QUFDRDtBQTdCNkQ7UUFBbkRMLGlCLEdBQUFBLGlCIiwiZmlsZSI6InJlZHV4LW9ic2VydmFibGUuanMiLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIENvcHlyaWdodCAoYykgMjAxNy1wcmVzZW50LCBGYWNlYm9vaywgSW5jLlxuICogQWxsIHJpZ2h0cyByZXNlcnZlZC5cbiAqXG4gKiBUaGlzIHNvdXJjZSBjb2RlIGlzIGxpY2Vuc2VkIHVuZGVyIHRoZSBCU0Qtc3R5bGUgbGljZW5zZSBmb3VuZCBpbiB0aGVcbiAqIExJQ0VOU0UgZmlsZSBpbiB0aGUgcm9vdCBkaXJlY3Rvcnkgb2YgdGhpcyBzb3VyY2UgdHJlZS4gQW4gYWRkaXRpb25hbCBncmFudFxuICogb2YgcGF0ZW50IHJpZ2h0cyBjYW4gYmUgZm91bmQgaW4gdGhlIFBBVEVOVFMgZmlsZSBpbiB0aGUgc2FtZSBkaXJlY3RvcnkuXG4gKlxuICogQGZsb3dcbiAqIEBmb3JtYXRcbiAqL1xuXG4vLyBEZXJpdmVkIGZyb20gPGh0dHBzOi8vZ2l0aHViLmNvbS9yZWR1eC1vYnNlcnZhYmxlL3JlZHV4LW9ic2VydmFibGUvPiBiZWNhdXNlIHRoZWlyIHZlcnNpb25cbi8vIGltcG9ydHMgYW4gUnggb3BlcmF0b3IgbW9kdWxlIGFuZCB3ZSB1c2UgYSBidW5kbGUuIE9yaWdpbmFsIGxpY2Vuc2UgZm9sbG93czpcbi8vXG4vLyBUaGUgTUlUIExpY2Vuc2UgKE1JVClcbi8vXG4vLyBDb3B5cmlnaHQgKGMpIDIwMTYgQmVuIExlc2hcbi8vXG4vLyBQZXJtaXNzaW9uIGlzIGhlcmVieSBncmFudGVkLCBmcmVlIG9mIGNoYXJnZSwgdG8gYW55IHBlcnNvbiBvYnRhaW5pbmcgYSBjb3B5XG4vLyBvZiB0aGlzIHNvZnR3YXJlIGFuZCBhc3NvY2lhdGVkIGRvY3VtZW50YXRpb24gZmlsZXMgKHRoZSBcIlNvZnR3YXJlXCIpLCB0byBkZWFsXG4vLyBpbiB0aGUgU29mdHdhcmUgd2l0aG91dCByZXN0cmljdGlvbiwgaW5jbHVkaW5nIHdpdGhvdXQgbGltaXRhdGlvbiB0aGUgcmlnaHRzXG4vLyB0byB1c2UsIGNvcHksIG1vZGlmeSwgbWVyZ2UsIHB1Ymxpc2gsIGRpc3RyaWJ1dGUsIHN1YmxpY2Vuc2UsIGFuZC9vciBzZWxsXG4vLyBjb3BpZXMgb2YgdGhlIFNvZnR3YXJlLCBhbmQgdG8gcGVybWl0IHBlcnNvbnMgdG8gd2hvbSB0aGUgU29mdHdhcmUgaXNcbi8vIGZ1cm5pc2hlZCB0byBkbyBzbywgc3ViamVjdCB0byB0aGUgZm9sbG93aW5nIGNvbmRpdGlvbnM6XG4vL1xuLy8gVGhlIGFib3ZlIGNvcHlyaWdodCBub3RpY2UgYW5kIHRoaXMgcGVybWlzc2lvbiBub3RpY2Ugc2hhbGwgYmUgaW5jbHVkZWQgaW4gYWxsXG4vLyBjb3BpZXMgb3Igc3Vic3RhbnRpYWwgcG9ydGlvbnMgb2YgdGhlIFNvZnR3YXJlLlxuLy9cbi8vIFRIRSBTT0ZUV0FSRSBJUyBQUk9WSURFRCBcIkFTIElTXCIsIFdJVEhPVVQgV0FSUkFOVFkgT0YgQU5ZIEtJTkQsIEVYUFJFU1MgT1Jcbi8vIElNUExJRUQsIElOQ0xVRElORyBCVVQgTk9UIExJTUlURUQgVE8gVEhFIFdBUlJBTlRJRVMgT0YgTUVSQ0hBTlRBQklMSVRZLFxuLy8gRklUTkVTUyBGT1IgQSBQQVJUSUNVTEFSIFBVUlBPU0UgQU5EIE5PTklORlJJTkdFTUVOVC4gSU4gTk8gRVZFTlQgU0hBTEwgVEhFXG4vLyBBVVRIT1JTIE9SIENPUFlSSUdIVCBIT0xERVJTIEJFIExJQUJMRSBGT1IgQU5ZIENMQUlNLCBEQU1BR0VTIE9SIE9USEVSXG4vLyBMSUFCSUxJVFksIFdIRVRIRVIgSU4gQU4gQUNUSU9OIE9GIENPTlRSQUNULCBUT1JUIE9SIE9USEVSV0lTRSwgQVJJU0lORyBGUk9NLFxuLy8gT1VUIE9GIE9SIElOIENPTk5FQ1RJT04gV0lUSCBUSEUgU09GVFdBUkUgT1IgVEhFIFVTRSBPUiBPVEhFUiBERUFMSU5HUyBJTiBUSEVcbi8vIFNPRlRXQVJFLlxuXG5pbXBvcnQge09ic2VydmFibGUsIFN1YmplY3R9IGZyb20gJ3J4anMnO1xuXG4vLyBUaGlzIHNob3VsZCBiZSB7IHR5cGU6IHJlYWRvbmx5IHN0cmluZyB9IHdoZW4gd2UgZ2V0IHJlYWRvbmx5IHByb3BzLiBCZWNhdXNlIHRoaXMgaXMgdXNlZCB3aXRoXG4vLyBkaXNqb2ludCB1bmlvbnMgd2UgY2FuJ3QgdXNlIGBzdHJpbmdgIGhlcmUgZHVlIHRvIG11dGF0aW9uIGNvbmNlcm5zLiBGbG93IGRvZXNuJ3Qga25vdyB0aGF0IHdlXG4vLyBhcmVuJ3QgZ29pbmcgdG8gbXV0YXRlIHRoZSBvYmplY3RzIHdpdGggYSByYW5kb20gc3RyaW5nIHZhbHVlIHNvIGl0IGNhbid0IGFsbG93IHVzIHRvIHBhc3MgYVxuLy8gc3BlY2lmaWMgYWN0aW9uIHR5cGUgaW50byBzb21ldGhpbmcgb2YgdHlwZSB7IHR5cGU6IHN0cmluZyB9XG50eXBlIEFjdGlvbiA9IHt0eXBlOiBhbnl9O1xudHlwZSBTdG9yZTxUOiBBY3Rpb24sIFU+ID0ge1xuICBkaXNwYXRjaChhY3Rpb246IFQpOiB2b2lkLFxuICBnZXRTdGF0ZSgpOiBVLFxufTtcbnR5cGUgTmV4dDxUOiBBY3Rpb24+ID0gKGFjdGlvbjogVCkgPT4gVDtcbmV4cG9ydCB0eXBlIEVwaWM8VDogQWN0aW9uLCBVLCBFPiA9IChcbiAgYWN0aW9uczogQWN0aW9uc09ic2VydmFibGU8VD4sXG4gIHN0b3JlOiBTdG9yZTxULCBVPixcbiAgZXh0cmE6IEUsXG4pID0+IE9ic2VydmFibGU8VD47XG5cbmV4cG9ydCBmdW5jdGlvbiBjb21iaW5lRXBpY3M8VDogQWN0aW9uLCBVLCBFPihcbiAgLi4uZXBpY3M6IEFycmF5PEVwaWM8VCwgVSwgRT4+XG4pOiBFcGljPFQsIFUsIEU+IHtcbiAgcmV0dXJuIChhY3Rpb25zOiBBY3Rpb25zT2JzZXJ2YWJsZTxUPiwgc3RvcmU6IFN0b3JlPFQsIFU+LCBleHRyYTogRSkgPT4ge1xuICAgIGNvbnN0IHN0cmVhbXM6IEFycmF5PE9ic2VydmFibGU8VD4+ID0gZXBpY3MubWFwKGVwaWMgPT5cbiAgICAgIGVwaWMoYWN0aW9ucywgc3RvcmUsIGV4dHJhKSxcbiAgICApO1xuICAgIHJldHVybiBPYnNlcnZhYmxlLm1lcmdlKC4uLnN0cmVhbXMpO1xuICB9O1xufVxuXG5leHBvcnQgZnVuY3Rpb24gY3JlYXRlRXBpY01pZGRsZXdhcmU8VDogQWN0aW9uLCBVPihcbiAgcm9vdEVwaWM/OiBFcGljPFQsIFUsIHZvaWQ+LFxuKSB7XG4gIGNvbnN0IGFjdGlvbnMgPSBuZXcgU3ViamVjdCgpO1xuICBjb25zdCBhY3Rpb25zT2JzID0gbmV3IEFjdGlvbnNPYnNlcnZhYmxlKGFjdGlvbnMpO1xuXG4gIHJldHVybiAoc3RvcmU6IFN0b3JlPFQsIFU+KSA9PiAobmV4dDogTmV4dDxUPikgPT4ge1xuICAgIGlmIChyb290RXBpYyAhPSBudWxsKSB7XG4gICAgICByb290RXBpYyhhY3Rpb25zT2JzLCBzdG9yZSkuc3Vic2NyaWJlKHN0b3JlLmRpc3BhdGNoKTtcbiAgICB9XG4gICAgcmV0dXJuIChhY3Rpb246IFQpID0+IHtcbiAgICAgIGNvbnN0IHJlc3VsdCA9IG5leHQoYWN0aW9uKTtcbiAgICAgIGFjdGlvbnMubmV4dChhY3Rpb24pO1xuICAgICAgcmV0dXJuIHJlc3VsdDtcbiAgICB9O1xuICB9O1xufVxuXG5leHBvcnQgY2xhc3MgQWN0aW9uc09ic2VydmFibGU8VDogQWN0aW9uPiBleHRlbmRzIE9ic2VydmFibGU8VD4ge1xuICBvcGVyYXRvcjogYW55O1xuXG4gIGNvbnN0cnVjdG9yKGFjdGlvbnNTdWJqZWN0OiBPYnNlcnZhYmxlPGFueT4pIHtcbiAgICBzdXBlcigpO1xuICAgIHRoaXMuc291cmNlID0gYWN0aW9uc1N1YmplY3Q7XG4gIH1cblxuICBsaWZ0KG9wZXJhdG9yOiBhbnkpOiBPYnNlcnZhYmxlPFQ+IHtcbiAgICBjb25zdCBvYnNlcnZhYmxlID0gbmV3IEFjdGlvbnNPYnNlcnZhYmxlKHRoaXMpO1xuICAgIG9ic2VydmFibGUub3BlcmF0b3IgPSBvcGVyYXRvcjtcbiAgICByZXR1cm4gb2JzZXJ2YWJsZTtcbiAgfVxuXG4gIG9mVHlwZSguLi5rZXlzOiBBcnJheTxhbnk+KTogQWN0aW9uc09ic2VydmFibGU8VD4ge1xuICAgIGNvbnN0IHJlc3VsdCA9IHRoaXMuZmlsdGVyKCh7dHlwZX0pID0+IHtcbiAgICAgIGNvbnN0IGxlbiA9IGtleXMubGVuZ3RoO1xuICAgICAgaWYgKGxlbiA9PT0gMSkge1xuICAgICAgICByZXR1cm4gdHlwZSA9PT0ga2V5c1swXTtcbiAgICAgIH0gZWxzZSB7XG4gICAgICAgIGZvciAobGV0IGkgPSAwOyBpIDwgbGVuOyBpKyspIHtcbiAgICAgICAgICBpZiAoa2V5c1tpXSA9PT0gdHlwZSkge1xuICAgICAgICAgICAgcmV0dXJuIHRydWU7XG4gICAgICAgICAgfVxuICAgICAgICB9XG4gICAgICB9XG4gICAgICByZXR1cm4gZmFsc2U7XG4gICAgfSk7XG4gICAgcmV0dXJuICgocmVzdWx0OiBhbnkpOiBBY3Rpb25zT2JzZXJ2YWJsZTxUPik7XG4gIH1cbn1cbiJdfQ==

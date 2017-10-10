@@ -1,3 +1,11 @@
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
+
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -6,7 +14,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * 
  * @format
  */
 
@@ -15,25 +23,25 @@
  * Each individual loaded package's config is a subconfig of the root package.
  */
 
-import invariant from 'assert';
-import {Observable} from 'rxjs';
-
 let packageName = null;
 
 /**
  * Sets the root package name.
  * This gets automatically called from FeatureLoader.
  */
-function setPackageName(name: string): void {
+function setPackageName(name) {
   packageName = name;
 }
 
-function getPackageName(): string {
-  invariant(packageName != null, 'No package name available');
+function getPackageName() {
+  if (!(packageName != null)) {
+    throw new Error('No package name available');
+  }
+
   return packageName;
 }
 
-function formatKeyPath(keyPath: string): string {
+function formatKeyPath(keyPath) {
   if (packageName == null) {
     return keyPath;
   }
@@ -52,32 +60,14 @@ function formatKeyPath(keyPath: string): string {
  * Example:
  *   const config: MyConfigType = (featureConfig.get('config-name'): any);
  */
-function get(
-  keyPath: string,
-  options?: {
-    excludeSources?: Array<string>,
-    sources?: Array<string>,
-    scope?: Object,
-  },
-): mixed {
+function get(keyPath, options) {
   // atom.config.get will crash if the second arg is present and undefined.
   // It does not crash if the second arg is missing.
-  return atom.config.get(
-    formatKeyPath(keyPath),
-    ...(options == null ? [] : [options]),
-  );
+  return atom.config.get(formatKeyPath(keyPath), ...(options == null ? [] : [options]));
 }
 
-function getWithDefaults<T>(
-  keyPath: string,
-  defaults: T,
-  options?: {
-    excludeSources?: Array<string>,
-    sources?: Array<string>,
-    scope?: Object,
-  },
-): T {
-  const current: any = get(keyPath, options);
+function getWithDefaults(keyPath, defaults, options) {
+  const current = get(keyPath, options);
   return current == null ? defaults : current;
 }
 
@@ -85,7 +75,7 @@ function getWithDefaults<T>(
  * Gets the schema of a setting for a Nuclide feature key. Takes and returns the same types as
  * `atom.config.getSchema`.
  */
-function getSchema(keyPath: string): atom$ConfigSchema {
+function getSchema(keyPath) {
   return atom.config.getSchema(formatKeyPath(keyPath));
 }
 
@@ -94,10 +84,7 @@ function getSchema(keyPath: string): atom$ConfigSchema {
  *
  * To observe changes on the entire config, use `atom.config.observe`.
  */
-function observe(
-  keyPath: string,
-  callback: (value: any) => mixed,
-): IDisposable {
+function observe(keyPath, callback) {
   return atom.config.observe(formatKeyPath(keyPath), callback);
 }
 
@@ -105,8 +92,8 @@ function observe(
  * Behaves similarly to the `observe` function, but returns a stream of values, rather
  * then receiving a callback.
  */
-function observeAsStream(keyPath: string): Observable<mixed> {
-  return Observable.create(observer => {
+function observeAsStream(keyPath) {
+  return _rxjsBundlesRxMinJs.Observable.create(observer => {
     const disposable = observe(keyPath, observer.next.bind(observer));
     return disposable.dispose.bind(disposable);
   });
@@ -116,78 +103,46 @@ function observeAsStream(keyPath: string): Observable<mixed> {
  * Takes and returns the same types as `atom.config.onDidChange` except `keyPath` is not optional.
  * To listen to changes on all key paths, use `atom.config.onDidChange`.
  */
-function onDidChange(
-  keyPath: string,
-  optionsOrCallback: Object | ((event: Object) => void),
-  callback?: (event: Object) => void,
-): IDisposable {
-  return atom.config.onDidChange(
-    formatKeyPath(keyPath),
-    ...Array.prototype.slice.call(arguments, 1),
-  );
+function onDidChange(keyPath, optionsOrCallback, callback) {
+  return atom.config.onDidChange(formatKeyPath(keyPath), ...Array.prototype.slice.call(arguments, 1));
 }
 
 /*
  * Sets the value of a setting for a Nuclide feature key. Takes and returns the same types as
  * `atom.config.set`.
  */
-function set(
-  keyPath: string,
-  value: ?mixed,
-  options?: {
-    scopeSelector?: string,
-    source?: string,
-  },
-): boolean {
-  return atom.config.set(
-    formatKeyPath(keyPath),
-    ...Array.prototype.slice.call(arguments, 1),
-  );
+function set(keyPath, value, options) {
+  return atom.config.set(formatKeyPath(keyPath), ...Array.prototype.slice.call(arguments, 1));
 }
 
 /*
  * Sets the schema of a setting for a Nuclide feature key. Takes and returns the same types as
  * `atom.config.setSchema`.
  */
-function setSchema(keyPath: string, schema: Object): void {
-  return atom.config.setSchema(
-    formatKeyPath(keyPath),
-    ...Array.prototype.slice.call(arguments, 1),
-  );
+function setSchema(keyPath, schema) {
+  return atom.config.setSchema(formatKeyPath(keyPath), ...Array.prototype.slice.call(arguments, 1));
 }
 
 /*
  * Restores a setting for a Nuclide feature key to its default value. Takes and returns the same
  * types as `atom.config.set`.
  */
-function unset(
-  keyPath: string,
-  options?: {
-    scopeSelector?: string,
-    source?: string,
-  },
-): void {
-  return atom.config.unset(
-    formatKeyPath(keyPath),
-    ...Array.prototype.slice.call(arguments, 1),
-  );
+function unset(keyPath, options) {
+  return atom.config.unset(formatKeyPath(keyPath), ...Array.prototype.slice.call(arguments, 1));
 }
 
 /**
  * Returns `true` if the feature with the given name is disabled either directly or because the
  * container package itself is disabled.
  */
-function isFeatureDisabled(name: string): boolean {
+function isFeatureDisabled(name) {
   if (packageName == null) {
     return atom.packages.isPackageDisabled(name);
   }
-  return (
-    atom.packages.isPackageDisabled(packageName) ||
-    !atom.config.get(`${packageName}.use.${name}`)
-  );
+  return atom.packages.isPackageDisabled(packageName) || !atom.config.get(`${packageName}.use.${name}`);
 }
 
-export default {
+exports.default = {
   formatKeyPath,
   setPackageName,
   getPackageName,
@@ -200,5 +155,6 @@ export default {
   set,
   setSchema,
   unset,
-  isFeatureDisabled,
+  isFeatureDisabled
 };
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImZlYXR1cmUtY29uZmlnLmpzIl0sIm5hbWVzIjpbInBhY2thZ2VOYW1lIiwic2V0UGFja2FnZU5hbWUiLCJuYW1lIiwiZ2V0UGFja2FnZU5hbWUiLCJmb3JtYXRLZXlQYXRoIiwia2V5UGF0aCIsImdldCIsIm9wdGlvbnMiLCJhdG9tIiwiY29uZmlnIiwiZ2V0V2l0aERlZmF1bHRzIiwiZGVmYXVsdHMiLCJjdXJyZW50IiwiZ2V0U2NoZW1hIiwib2JzZXJ2ZSIsImNhbGxiYWNrIiwib2JzZXJ2ZUFzU3RyZWFtIiwiY3JlYXRlIiwib2JzZXJ2ZXIiLCJkaXNwb3NhYmxlIiwibmV4dCIsImJpbmQiLCJkaXNwb3NlIiwib25EaWRDaGFuZ2UiLCJvcHRpb25zT3JDYWxsYmFjayIsIkFycmF5IiwicHJvdG90eXBlIiwic2xpY2UiLCJjYWxsIiwiYXJndW1lbnRzIiwic2V0IiwidmFsdWUiLCJzZXRTY2hlbWEiLCJzY2hlbWEiLCJ1bnNldCIsImlzRmVhdHVyZURpc2FibGVkIiwicGFja2FnZXMiLCJpc1BhY2thZ2VEaXNhYmxlZCJdLCJtYXBwaW5ncyI6Ijs7Ozs7O0FBa0JBOztBQWxCQTs7Ozs7Ozs7Ozs7O0FBWUE7Ozs7O0FBUUEsSUFBSUEsY0FBYyxJQUFsQjs7QUFFQTs7OztBQUlBLFNBQVNDLGNBQVQsQ0FBd0JDLElBQXhCLEVBQTRDO0FBQzFDRixnQkFBY0UsSUFBZDtBQUNEOztBQUVELFNBQVNDLGNBQVQsR0FBa0M7QUFBQSxRQUN0QkgsZUFBZSxJQURPO0FBQUEsb0JBQ0QsMkJBREM7QUFBQTs7QUFFaEMsU0FBT0EsV0FBUDtBQUNEOztBQUVELFNBQVNJLGFBQVQsQ0FBdUJDLE9BQXZCLEVBQWdEO0FBQzlDLE1BQUlMLGVBQWUsSUFBbkIsRUFBeUI7QUFDdkIsV0FBT0ssT0FBUDtBQUNEO0FBQ0QsU0FBUSxHQUFFTCxXQUFZLElBQUdLLE9BQVEsRUFBakM7QUFDRDs7QUFFRDs7Ozs7Ozs7Ozs7O0FBWUEsU0FBU0MsR0FBVCxDQUNFRCxPQURGLEVBRUVF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Q1EsS0FBS0MsTUFBTCxDQUFZSCxHQUFaLENBQWlCLEdBQUVOLFdBQVksUUFBT0UsSUFBSyxFQUEzQyxDQUZIO0FBSUQ7O2tCQUVjO0FBQ2JFLGVBRGE7QUFFYkgsZ0JBRmE7QUFHYkUsZ0JBSGE7QUFJYkcsS0FKYTtBQUtiSSxpQkFMYTtBQU1iRyxXQU5hO0FBT2JDLFNBUGE7QUFRYkUsaUJBUmE7QUFTYk8sYUFUYTtBQVViTyxLQVZhO0FBV2JFLFdBWGE7QUFZYkUsT0FaYTtBQWFiQztBQWJhLEMiLCJmaWxlIjoiZmVhdHVyZS1jb25maWcuanMiLCJzb3VyY2VzQ29udGVudCI6WyIvKipcbiAqIENvcHlyaWdodCAoYykgMjAxNy1wcmVzZW50LCBGYWNlYm9vaywgSW5jLlxuICogQWxsIHJpZ2h0cyByZXNlcnZlZC5cbiAqXG4gKiBUaGlzIHNvdXJjZSBjb2RlIGlzIGxpY2Vuc2VkIHVuZGVyIHRoZSBCU0Qtc3R5bGUgbGljZW5zZSBmb3VuZCBpbiB0aGVcbiAqIExJQ0VOU0UgZmlsZSBpbiB0aGUgcm9vdCBkaXJlY3Rvcnkgb2YgdGhpcyBzb3VyY2UgdHJlZS4gQW4gYWRkaXRpb25hbCBncmFudFxuICogb2YgcGF0ZW50IHJpZ2h0cyBjYW4gYmUgZm91bmQgaW4gdGhlIFBBVEVOVFMgZmlsZSBpbiB0aGUgc2FtZSBkaXJlY3RvcnkuXG4gKlxuICogQGZsb3dcbiAqIEBmb3JtYXRcbiAqL1xuXG4vKipcbiAqIEEgd3JhcHBlciBvdmVyIEF0b20ncyBjb25maWcgZnVuY3Rpb25zIGZvciB1c2Ugd2l0aCBGZWF0dXJlTG9hZGVyLlxuICogRWFjaCBpbmRpdmlkdWFsIGxvYWRlZCBwYWNrYWdlJ3MgY29uZmlnIGlzIGEgc3ViY29uZmlnIG9mIHRoZSByb290IHBhY2thZ2UuXG4gKi9cblxuaW1wb3J0IGludmFyaWFudCBmcm9tICdhc3NlcnQnO1xuaW1wb3J0IHtPYnNlcnZhYmxlfSBmcm9tICdyeGpzJztcblxubGV0IHBhY2thZ2VOYW1lID0gbnVsbDtcblxuLyoqXG4gKiBTZXRzIHRoZSByb290IHBhY2thZ2UgbmFtZS5cbiAqIFRoaXMgZ2V0cyBhdXRvbWF0aWNhbGx5IGNhbGxlZCBmcm9tIEZlYXR1cmVMb2FkZXIuXG4gKi9cbmZ1bmN0aW9uIHNldFBhY2thZ2VOYW1lKG5hbWU6IHN0cmluZyk6IHZvaWQge1xuICBwYWNrYWdlTmFtZSA9IG5hbWU7XG59XG5cbmZ1bmN0aW9uIGdldFBhY2thZ2VOYW1lKCk6IHN0cmluZyB7XG4gIGludmFyaWFudChwYWNrYWdlTmFtZSAhPSBudWxsLCAnTm8gcGFja2FnZSBuYW1lIGF2YWlsYWJsZScpO1xuICByZXR1cm4gcGFja2FnZU5hbWU7XG59XG5cbmZ1bmN0aW9uIGZvcm1hdEtleVBhdGgoa2V5UGF0aDogc3RyaW5nKTogc3RyaW5nIHtcbiAgaWYgKHBhY2thZ2VOYW1lID09IG51bGwpIHtcbiAgICByZXR1cm4ga2V5UGF0aDtcbiAgfVxuICByZXR1cm4gYCR7cGFja2FnZU5hbWV9LiR7a2V5UGF0aH1gO1xufVxuXG4vKlxuICogUmV0dXJucyB0aGUgdmFsdWUgb2YgYSBzZXR0aW5nIGZvciBhIE51Y2xpZGUgZmVhdHVyZSBrZXkuIFRha2VzIGFuZCByZXR1cm5zIHRoZSBzYW1lIHR5cGVzIGFzXG4gKiBgYXRvbS5jb25maWcuZ2V0YCBleGNlcHRpb24gYGtleVBhdGhgIGlzIG5vdCBvcHRpb25hbC4gVG8gZ2V0IHRoZSBlbnRpcmUgY29uZmlnIG9iamVjdCwgdXNlXG4gKiBgYXRvbS5jb25maWcuZ2V0YC5cbiAqXG4gKiBOb3RlOiBUaGlzIGlzIGludGVudGlvbmFsbHkgdHlwZWQgYXMgbWl4ZWQsIHRoaXMgd2F5IGVhY2ggY2FsbCBzaXRlIGhhcyB0b1xuICogZmlyc3QgY2FzdCBpdCBhcyBhbnkgYW5kIGl0IGlzIG9idmlvdXMgdGhhdCB0aGlzIGlzIGFuIGFyZWEgdGhhdCBpcyBub3Qgc2FmZVxuICogYW5kIGZsb3cgd2lsbCBub3QgcHJvY2VlZCBpZiB0aGUgY2FsbHNpdGUgZG9lc24ndCBkbyBpdC5cbiAqXG4gKiBFeGFtcGxlOlxuICogICBjb25zdCBjb25maWc6IE15Q29uZmlnVHlwZSA9IChmZWF0dXJlQ29uZmlnLmdldCgnY29uZmlnLW5hbWUnKTogYW55KTtcbiAqL1xuZnVuY3Rpb24gZ2V0KFxuICBrZXlQYXRoOiBzdHJpbmcsXG4gIG9wdGlvbnM/OiB7XG4gICAgZXhjbHVkZVNvdXJjZXM/OiBBcnJheTxzdHJpbmc+LFxuICAgIHNvdXJjZXM/OiBBcnJheTxzdHJpbmc+LFxuICAgIHNjb3BlPzogT2JqZWN0LFxuICB9LFxuKTogbWl4ZWQge1xuICAvLyBhdG9tLmNvbmZpZy5nZXQgd2lsbCBjcmFzaCBpZiB0aGUgc2Vjb25kIGFyZyBpcyBwcmVzZW50IGFuZCB1bmRlZmluZWQuXG4gIC8vIEl0IGRvZXMgbm90IGNyYXNoIGlmIHRoZSBzZWNvbmQgYXJnIGlzIG1pc3NpbmcuXG4gIHJldHVybiBhdG9tLmNvbmZpZy5nZXQoXG4gICAgZm9ybWF0S2V5UGF0aChrZXlQYXRoKSxcbiAgICAuLi4ob3B0aW9ucyA9PSBudWxsID8gW10gOiBbb3B0aW9uc10pLFxuICApO1xufVxuXG5mdW5jdGlvbiBnZXRXaXRoRGVmYXVsdHM8VD4oXG4gIGtleVBhdGg6IHN0cmluZyxcbiAgZGVmYXVsdHM6IFQsXG4gIG9wdGlvbnM/OiB7XG4gICAgZXhjbHVkZVNvdXJjZXM/OiBBcnJheTxzdHJpbmc+LFxuICAgIHNvdXJjZXM/OiBBcnJheTxzdHJpbmc+LFxuICAgIHNjb3BlPzogT2JqZWN0LFxuICB9LFxuKTogVCB7XG4gIGNvbnN0IGN1cnJlbnQ6IGFueSA9IGdldChrZXlQYXRoLCBvcHRpb25zKTtcbiAgcmV0dXJuIGN1cnJlbnQgPT0gbnVsbCA/IGRlZmF1bHRzIDogY3VycmVudDtcbn1cblxuLypcbiAqIEdldHMgdGhlIHNjaGVtYSBvZiBhIHNldHRpbmcgZm9yIGEgTnVjbGlkZSBmZWF0dXJlIGtleS4gVGFrZXMgYW5kIHJldHVybnMgdGhlIHNhbWUgdHlwZXMgYXNcbiAqIGBhdG9tLmNvbmZpZy5nZXRTY2hlbWFgLlxuICovXG5mdW5jdGlvbiBnZXRTY2hlbWEoa2V5UGF0aDogc3RyaW5nKTogYXRvbSRDb25maWdTY2hlbWEge1xuICByZXR1cm4gYXRvbS5jb25maWcuZ2V0U2NoZW1hKGZvcm1hdEtleVBhdGgoa2V5UGF0aCkpO1xufVxuXG4vKlxuICogU2ltaWxhciB0byBgYXRvbS5jb25maWcub2JzZXJ2ZWAgZXhjZXB0IGFyZ3VtZW50cyBhcmUgcmVxdWlyZWQsIGFuZCBvcHRpb25zIGNhbm5vdCBiZSBnaXZlbi5cbiAqXG4gKiBUbyBvYnNlcnZlIGNoYW5nZXMgb24gdGhlIGVudGlyZSBjb25maWcsIHVzZSBgYXRvbS5jb25maWcub2JzZXJ2ZWAuXG4gKi9cbmZ1bmN0aW9uIG9ic2VydmUoXG4gIGtleVBhdGg6IHN0cmluZyxcbiAgY2FsbGJhY2s6ICh2YWx1ZTogYW55KSA9PiBtaXhlZCxcbik6IElEaXNwb3NhYmxlIHtcbiAgcmV0dXJuIGF0b20uY29uZmlnLm9ic2VydmUoZm9ybWF0S2V5UGF0aChrZXlQYXRoKSwgY2FsbGJhY2spO1xufVxuXG4vKlxuICogQmVoYXZlcyBzaW1pbGFybHkgdG8gdGhlIGBvYnNlcnZlYCBmdW5jdGlvbiwgYnV0IHJldHVybnMgYSBzdHJlYW0gb2YgdmFsdWVzLCByYXRoZXJcbiAqIHRoZW4gcmVjZWl2aW5nIGEgY2FsbGJhY2suXG4gKi9cbmZ1bmN0aW9uIG9ic2VydmVBc1N0cmVhbShrZXlQYXRoOiBzdHJpbmcpOiBPYnNlcnZhYmxlPG1peGVkPiB7XG4gIHJldHVybiBPYnNlcnZhYmxlLmNyZWF0ZShvYnNlcnZlciA9PiB7XG4gICAgY29uc3QgZGlzcG9zYWJsZSA9IG9ic2VydmUoa2V5UGF0aCwgb2JzZXJ2ZXIubmV4dC5iaW5kKG9ic2VydmVyKSk7XG4gICAgcmV0dXJuIGRpc3Bvc2FibGUuZGlzcG9zZS5iaW5kKGRpc3Bvc2FibGUpO1xuICB9KTtcbn1cblxuLypcbiAqIFRha2VzIGFuZCByZXR1cm5zIHRoZSBzYW1lIHR5cGVzIGFzIGBhdG9tLmNvbmZpZy5vbkRpZENoYW5nZWAgZXhjZXB0IGBrZXlQYXRoYCBpcyBub3Qgb3B0aW9uYWwuXG4gKiBUbyBsaXN0ZW4gdG8gY2hhbmdlcyBvbiBhbGwga2V5IHBhdGhzLCB1c2UgYGF0b20uY29uZmlnLm9uRGlkQ2hhbmdlYC5cbiAqL1xuZnVuY3Rpb24gb25EaWRDaGFuZ2UoXG4gIGtleVBhdGg6IHN0cmluZyxcbiAgb3B0aW9uc09yQ2FsbGJhY2s6IE9iamVjdCB8ICgoZXZlbnQ6IE9iamVjdCkgPT4gdm9pZCksXG4gIGNhbGxiYWNrPzogKGV2ZW50OiBPYmplY3QpID0+IHZvaWQsXG4pOiBJRGlzcG9zYWJsZSB7XG4gIHJldHVybiBhdG9tLmNvbmZpZy5vbkRpZENoYW5nZShcbiAgICBmb3JtYXRLZXlQYXRoKGtleVBhdGgpLFxuICAgIC4uLkFycmF5LnByb3RvdHlwZS5zbGljZS5jYWxsKGFyZ3VtZW50cywgMSksXG4gICk7XG59XG5cbi8qXG4gKiBTZXRzIHRoZSB2YWx1ZSBvZiBhIHNldHRpbmcgZm9yIGEgTnVjbGlkZSBmZWF0dXJlIGtleS4gVGFrZXMgYW5kIHJldHVybnMgdGhlIHNhbWUgdHlwZXMgYXNcbiAqIGBhdG9tLmNvbmZpZy5zZXRgLlxuICovXG5mdW5jdGlvbiBzZXQoXG4gIGtleVBhdGg6IHN0cmluZyxcbiAgdmFsdWU6ID9taXhlZCxcbiAgb3B0aW9ucz86IHtcbiAgICBzY29wZVNlbGVjdG9yPzogc3RyaW5nLFxuICAgIHNvdXJjZT86IHN0cmluZyxcbiAgfSxcbik6IGJvb2xlYW4ge1xuICByZXR1cm4gYXRvbS5jb25maWcuc2V0KFxuICAgIGZvcm1hdEtleVBhdGgoa2V5UGF0aCksXG4gICAgLi4uQXJyYXkucHJvdG90eXBlLnNsaWNlLmNhbGwoYXJndW1lbnRzLCAxKSxcbiAgKTtcbn1cblxuLypcbiAqIFNldHMgdGhlIHNjaGVtYSBvZiBhIHNldHRpbmcgZm9yIGEgTnVjbGlkZSBmZWF0dXJlIGtleS4gVGFrZXMgYW5kIHJldHVybnMgdGhlIHNhbWUgdHlwZXMgYXNcbiAqIGBhdG9tLmNvbmZpZy5zZXRTY2hlbWFgLlxuICovXG5mdW5jdGlvbiBzZXRTY2hlbWEoa2V5UGF0aDogc3RyaW5nLCBzY2hlbWE6IE9iamVjdCk6IHZvaWQge1xuICByZXR1cm4gYXRvbS5jb25maWcuc2V0U2NoZW1hKFxuICAgIGZvcm1hdEtleVBhdGgoa2V5UGF0aCksXG4gICAgLi4uQXJyYXkucHJvdG90eXBlLnNsaWNlLmNhbGwoYXJndW1lbnRzLCAxKSxcbiAgKTtcbn1cblxuLypcbiAqIFJlc3RvcmVzIGEgc2V0dGluZyBmb3IgYSBOdWNsaWRlIGZlYXR1cmUga2V5IHRvIGl0cyBkZWZhdWx0IHZhbHVlLiBUYWtlcyBhbmQgcmV0dXJucyB0aGUgc2FtZVxuICogdHlwZXMgYXMgYGF0b20uY29uZmlnLnNldGAuXG4gKi9cbmZ1bmN0aW9uIHVuc2V0KFxuICBrZXlQYXRoOiBzdHJpbmcsXG4gIG9wdGlvbnM/OiB7XG4gICAgc2NvcGVTZWxlY3Rvcj86IHN0cmluZyxcbiAgICBzb3VyY2U/OiBzdHJpbmcsXG4gIH0sXG4pOiB2b2lkIHtcbiAgcmV0dXJuIGF0b20uY29uZmlnLnVuc2V0KFxuICAgIGZvcm1hdEtleVBhdGgoa2V5UGF0aCksXG4gICAgLi4uQXJyYXkucHJvdG90eXBlLnNsaWNlLmNhbGwoYXJndW1lbnRzLCAxKSxcbiAgKTtcbn1cblxuLyoqXG4gKiBSZXR1cm5zIGB0cnVlYCBpZiB0aGUgZmVhdHVyZSB3aXRoIHRoZSBnaXZlbiBuYW1lIGlzIGRpc2FibGVkIGVpdGhlciBkaXJlY3RseSBvciBiZWNhdXNlIHRoZVxuICogY29udGFpbmVyIHBhY2thZ2UgaXRzZWxmIGlzIGRpc2FibGVkLlxuICovXG5mdW5jdGlvbiBpc0ZlYXR1cmVEaXNhYmxlZChuYW1lOiBzdHJpbmcpOiBib29sZWFuIHtcbiAgaWYgKHBhY2thZ2VOYW1lID09IG51bGwpIHtcbiAgICByZXR1cm4gYXRvbS5wYWNrYWdlcy5pc1BhY2thZ2VEaXNhYmxlZChuYW1lKTtcbiAgfVxuICByZXR1cm4gKFxuICAgIGF0b20ucGFja2FnZXMuaXNQYWNrYWdlRGlzYWJsZWQocGFja2FnZU5hbWUpIHx8XG4gICAgIWF0b20uY29uZmlnLmdldChgJHtwYWNrYWdlTmFtZX0udXNlLiR7bmFtZX1gKVxuICApO1xufVxuXG5leHBvcnQgZGVmYXVsdCB7XG4gIGZvcm1hdEtleVBhdGgsXG4gIHNldFBhY2thZ2VOYW1lLFxuICBnZXRQYWNrYWdlTmFtZSxcbiAgZ2V0LFxuICBnZXRXaXRoRGVmYXVsdHMsXG4gIGdldFNjaGVtYSxcbiAgb2JzZXJ2ZSxcbiAgb2JzZXJ2ZUFzU3RyZWFtLFxuICBvbkRpZENoYW5nZSxcbiAgc2V0LFxuICBzZXRTY2hlbWEsXG4gIHVuc2V0LFxuICBpc0ZlYXR1cmVEaXNhYmxlZCxcbn07XG4iXX0=

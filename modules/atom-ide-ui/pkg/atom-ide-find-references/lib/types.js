@@ -1,59 +1,27 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
+var cov_x7odmsr31 = function () {
+  var path = '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-find-references/lib/types.js',
+      hash = 'edb3d12d069f6543626495f7b35b19431b00fee0',
+      global = new Function('return this')(),
+      gcv = '__coverage__',
+      coverageData = {
+    path: '/Users/hansonw/atom-ide-ui/modules/atom-ide-ui/pkg/atom-ide-find-references/lib/types.js',
+    statementMap: {},
+    fnMap: {},
+    branchMap: {},
+    s: {},
+    f: {},
+    b: {},
+    _coverageSchema: '332fd63041d2c1bcb487cc26dd0d5f7d97098a6c'
+  },
+      coverage = global[gcv] || (global[gcv] = {});
 
-export type FindReferencesProvider = {
-  // Return true if your provider supports finding references for the provided TextEditor.
-  isEditorSupported(editor: TextEditor): Promise<boolean>,
+  if (coverage[path] && coverage[path].hash === hash) {
+    return coverage[path];
+  }
 
-  // `findReferences` will only be called if `isEditorSupported` previously returned true
-  // for the given TextEditor.
-  findReferences(
-    editor: TextEditor,
-    position: atom$Point,
-  ): Promise<?FindReferencesReturn>,
-};
-
-export type Reference = {
-  uri: NuclideUri, // Nuclide URI of the file path
-  name: ?string, // name of calling method/function/symbol
-  range: atom$Range,
-};
-
-export type FindReferencesData = {
-  type: 'data',
-  baseUri: NuclideUri,
-  referencedSymbolName: string,
-  references: Array<Reference>,
-};
-
-export type FindReferencesError = {
-  type: 'error',
-  message: string,
-};
-
-export type FindReferencesReturn = FindReferencesData | FindReferencesError;
-
-export type ReferenceGroup = {
-  references: Array<Reference>,
-  // Start and end range of the preview text.
-  startLine: number,
-  endLine: number,
-};
-
-export type FileReferences = {
-  uri: string,
-  grammar: Object /* atom$Grammar */,
-  previewText: Array<string>,
-  refGroups: Array<ReferenceGroup>,
-};
+  coverageData.hash = hash;
+  return coverage[path] = coverageData;
+}();
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJ0eXBlcy5qcyIsInNvdXJjZXNDb250ZW50IjpbXX0=
