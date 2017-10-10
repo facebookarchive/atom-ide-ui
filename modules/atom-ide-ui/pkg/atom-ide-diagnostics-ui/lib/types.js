@@ -14,9 +14,11 @@ import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {
   DiagnosticMessage,
   DiagnosticMessageKind,
+  UiConfig,
 } from '../../atom-ide-diagnostics/lib/types';
 
-export type FilterType = 'errors' | 'warnings' | 'review';
+// We group diagnostics based on kind and severity.
+export type DiagnosticGroup = 'errors' | 'warnings' | 'info' | 'review';
 
 // State that's shared between every diagnostics panel instance.
 export type GlobalViewState = {
@@ -28,4 +30,5 @@ export type GlobalViewState = {
   showTraces: boolean,
   onShowTracesChange: (isChecked: boolean) => mixed,
   supportedMessageKinds: Set<DiagnosticMessageKind>,
+  uiConfig: UiConfig,
 };
