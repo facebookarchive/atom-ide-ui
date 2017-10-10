@@ -5,6 +5,7 @@
 /.flowconfig export-ignore
 /.gitattributes export-ignore
 /.gitignore export-ignore
+/.nycrc export-ignore
 /CONTRIBUTING.md export-ignore
 /DEVELOPMENT export-ignore
 /ISSUE_TEMPLATE.md export-ignore
