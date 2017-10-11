@@ -14,6 +14,7 @@ import fs from 'fs';
 import fsPlus from 'fs-plus';
 import globLib from 'glob';
 import mkdirpLib from 'mkdirp';
+import mvLib from 'mv';
 import rimraf from 'rimraf';
 import temp from 'temp';
 
@@ -240,18 +241,6 @@ function copy(source: string, dest: string): Promise<void> {
   });
 }
 
-function move(source: string, dest: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    fsPlus.move(source, dest, (err, result) => {
-      if (err == null) {
-        resolve(result);
-      } else {
-        reject(err);
-      }
-    });
-  });
-}
-
 /**
  * TODO: the fs-plus `writeFile` implementation runs `mkdirp` first.
  * We should use `fs.writeFile` and have callsites explicitly opt-in to this behaviour.
@@ -324,6 +313,35 @@ function mkdir(path: string, mode?: number): Promise<void> {
   });
 }
 
+export type MvOptions = {
+  // Run mkdirp for the directory first. Defaults to false.
+  mkdirp?: boolean,
+  // Overwrite the file if it exists. Defaults to true.
+  clobber?: boolean,
+  // Optional: the concurrency limit when moving a directory.
+  limit?: number,
+};
+
+/**
+ * The key difference between 'mv' and 'rename' is that 'mv' works across devices.
+ * It's not uncommon to have temporary files in a different disk, for instance.
+ */
+function mv(
+  sourcePath: string,
+  destinationPath: string,
+  options?: MvOptions = {},
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    mvLib(sourcePath, destinationPath, options, error => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 // `fs.readFile` returns a Buffer unless an encoding is specified.
 // This workaround is adapted from the Flow declarations.
 type ReadFileType = ((filename: string, encoding: string) => Promise<string>) &
@@ -373,18 +391,6 @@ function readlink(path: string): Promise<string> {
 function realpath(path: string, cache?: Object): Promise<string> {
   return new Promise((resolve, reject) => {
     fs.realpath(path, cache, (err, result) => {
-      if (err == null) {
-        resolve(result);
-      } else {
-        reject(err);
-      }
-    });
-  });
-}
-
-function rename(oldPath: string, newPath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    fs.rename(oldPath, newPath, (err, result) => {
       if (err == null) {
         resolve(result);
       } else {
@@ -444,18 +450,17 @@ export default {
   isNonNfsDirectory,
 
   copy,
-  move,
   writeFile,
 
   chmod,
   chown,
   lstat,
   mkdir,
+  mv,
   readFile,
   readdir,
   readlink,
   realpath,
-  rename,
   stat,
   symlink,
   unlink,
