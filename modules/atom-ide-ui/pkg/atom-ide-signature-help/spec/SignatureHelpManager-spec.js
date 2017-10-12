@@ -1,3 +1,29 @@
+'use strict';
+
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
+
+var _atom = require('atom');
+
+var _testHelpers;
+
+function _load_testHelpers() {
+  return _testHelpers = require('nuclide-commons-atom/test-helpers');
+}
+
+var _promise;
+
+function _load_promise() {
+  return _promise = require('nuclide-commons/promise');
+}
+
+var _UniversalDisposable;
+
+function _load_UniversalDisposable() {
+  return _UniversalDisposable = _interopRequireDefault(require('nuclide-commons/UniversalDisposable'));
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -6,25 +32,17 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * 
  * @format
  */
 
-import type {DatatipService} from '../../atom-ide-datatip/lib/types';
-import type {SignatureHelp, SignatureHelpProvider} from '../lib/types';
-
-import {Point, Range} from 'atom';
-import {jasmineAttachWorkspace} from 'nuclide-commons-atom/test-helpers';
-import {nextTick} from 'nuclide-commons/promise';
-import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
-
 describe('SignatureHelpManager', () => {
-  let disposable: IDisposable;
-  let testProvider: SignatureHelpProvider;
-  let mockDatatipService: DatatipService;
+  let disposable;
+  let testProvider;
+  let mockDatatipService;
 
   beforeEach(() => {
-    jasmineAttachWorkspace();
+    (0, (_testHelpers || _load_testHelpers()).jasmineAttachWorkspace)();
     jasmine.Clock.useMock();
     atom.packages.activatePackage('atom-ide-signature-help');
 
@@ -32,17 +50,11 @@ describe('SignatureHelpManager', () => {
       priority: 1,
       grammarScopes: ['text.plain.null-grammar'],
       triggerCharacters: new Set(['(']),
-      getSignatureHelp: jasmine.createSpy().andReturn(
-        Promise.resolve(
-          ({
-            signatures: [
-              {
-                label: 'test signature',
-              },
-            ],
-          }: SignatureHelp),
-        ),
-      ),
+      getSignatureHelp: jasmine.createSpy().andReturn(Promise.resolve({
+        signatures: [{
+          label: 'test signature'
+        }]
+      }))
     };
     mockDatatipService = {
       addProvider() {
@@ -51,9 +63,7 @@ describe('SignatureHelpManager', () => {
       addModifierProvider() {
         throw Error();
       },
-      createPinnedDataTip: jasmine
-        .createSpy()
-        .andReturn(new UniversalDisposable()),
+      createPinnedDataTip: jasmine.createSpy().andReturn(new (_UniversalDisposable || _load_UniversalDisposable()).default())
     };
     atom.packages.serviceHub.consume('signature-help', '0.1.0', registry => {
       disposable = registry(testProvider);
@@ -66,8 +76,8 @@ describe('SignatureHelpManager', () => {
   });
 
   it('responds to manual triggers', () => {
-    waitsForPromise(async () => {
-      const editor = await atom.workspace.open();
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const editor = yield atom.workspace.open();
       editor.insertText('test');
       // Active editor debounce.
       jasmine.Clock.tick(500);
@@ -76,32 +86,28 @@ describe('SignatureHelpManager', () => {
 
       const signatureSpy = testProvider.getSignatureHelp;
       expect(signatureSpy.callCount).toBe(1);
-      expect(signatureSpy.calls[0].args).toEqual([editor, new Point(0, 4)]);
+      expect(signatureSpy.calls[0].args).toEqual([editor, new _atom.Point(0, 4)]);
 
       // Wait for promise to be resolved.
-      await nextTick();
+      yield (0, (_promise || _load_promise()).nextTick)();
 
       const datatipSpy = mockDatatipService.createPinnedDataTip;
       expect(datatipSpy.callCount).toBe(1);
-      expect(datatipSpy.calls[0].args[0].range).toEqual(
-        new Range([0, 4], [0, 4]),
-      );
+      expect(datatipSpy.calls[0].args[0].range).toEqual(new _atom.Range([0, 4], [0, 4]));
 
       // Moving the cursor should immediately move the datatip and query again.
       editor.setCursorBufferPosition([0, 3]);
 
       expect(datatipSpy.callCount).toBe(2);
-      expect(datatipSpy.calls[1].args[0].range).toEqual(
-        new Range([0, 3], [0, 3]),
-      );
+      expect(datatipSpy.calls[1].args[0].range).toEqual(new _atom.Range([0, 3], [0, 3]));
 
       // Compensate for the debounce.
       jasmine.Clock.tick(500);
       expect(signatureSpy.callCount).toBe(2);
-      expect(signatureSpy.calls[1].args).toEqual([editor, new Point(0, 3)]);
+      expect(signatureSpy.calls[1].args).toEqual([editor, new _atom.Point(0, 3)]);
 
       // Wait for promise to be resolved.
-      await nextTick();
+      yield (0, (_promise || _load_promise()).nextTick)();
       expect(datatipSpy.callCount).toBe(3);
 
       // Once the signature returns null, abort the flow.
@@ -115,18 +121,18 @@ describe('SignatureHelpManager', () => {
       jasmine.Clock.tick(500);
       expect(signatureSpy.callCount).toBe(3);
 
-      await nextTick();
+      yield (0, (_promise || _load_promise()).nextTick)();
       expect(datatipSpy.callCount).toBe(3);
 
       editor.setCursorBufferPosition([0, 1]);
       jasmine.Clock.tick(500);
       expect(signatureSpy.callCount).toBe(3);
-    });
+    }));
   });
 
   it('responds to typing trigger characters', () => {
-    waitsForPromise(async () => {
-      const editor = await atom.workspace.open();
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const editor = yield atom.workspace.open();
       // Active editor debounce.
       jasmine.Clock.tick(500);
 
@@ -138,24 +144,24 @@ describe('SignatureHelpManager', () => {
       editor.insertText('(');
       jasmine.Clock.tick(1); // debounce
       expect(signatureSpy.callCount).toBe(1);
-      expect(signatureSpy.calls[0].args).toEqual([editor, new Point(0, 2)]);
+      expect(signatureSpy.calls[0].args).toEqual([editor, new _atom.Point(0, 2)]);
 
       // We've tested the regular flow above; test cancellation too.
       /* global KeyboardEvent */
       const escape = new KeyboardEvent('keydown');
       // No APi to set keyCode :(
-      Object.defineProperty(escape, 'keyCode', {value: 27});
+      Object.defineProperty(escape, 'keyCode', { value: 27 });
       editor.getElement().dispatchEvent(escape);
 
       editor.insertText('x');
       jasmine.Clock.tick(500); // debounce
       expect(signatureSpy.callCount).toBe(1);
-    });
+    }));
   });
 
   it('responds to typing over a selection', () => {
-    waitsForPromise(async () => {
-      const editor = await atom.workspace.open();
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const editor = yield atom.workspace.open();
       // Active editor debounce.
       jasmine.Clock.tick(500);
 
@@ -164,12 +170,12 @@ describe('SignatureHelpManager', () => {
       const signatureSpy = testProvider.getSignatureHelp;
       expect(signatureSpy.callCount).toBe(0);
 
-      editor.setSelectedBufferRange(new Range([0, 0], [0, 1]));
+      editor.setSelectedBufferRange(new _atom.Range([0, 0], [0, 1]));
       editor.insertText('(');
       expect(editor.getText()).toBe('(abcdef');
       jasmine.Clock.tick(1); // debounce
       expect(signatureSpy.callCount).toBe(1);
-      expect(signatureSpy.calls[0].args).toEqual([editor, new Point(0, 1)]);
-    });
+      expect(signatureSpy.calls[0].args).toEqual([editor, new _atom.Point(0, 1)]);
+    }));
   });
 });

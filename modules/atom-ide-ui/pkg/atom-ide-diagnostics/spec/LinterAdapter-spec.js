@@ -1,3 +1,19 @@
+'use strict';
+
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
+
+var _atom = require('atom');
+
+var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
+
+var _LinterAdapter;
+
+function _load_LinterAdapter() {
+  return _LinterAdapter = require('../lib/services/LinterAdapter');
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -6,26 +22,13 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * 
  * @format
  */
 
-import type {LinterProvider} from '../lib/types';
-
-import {Disposable, Range} from 'atom';
-import invariant from 'assert';
-import {Subject} from 'rxjs';
-
-import {
-  LinterAdapter,
-  linterMessageToDiagnosticMessage,
-  linterMessageV2ToDiagnosticMessage,
-  linterMessagesToDiagnosticUpdate,
-} from '../lib/services/LinterAdapter';
-
 const grammar = 'testgrammar';
 
-function makePromise<T>(ret: T, timeout: number): Promise<T> {
+function makePromise(ret, timeout) {
   return new Promise(resolve => {
     setTimeout(() => {
       resolve(ret);
@@ -34,44 +37,41 @@ function makePromise<T>(ret: T, timeout: number): Promise<T> {
 }
 
 describe('LinterAdapter', () => {
-  let fakeLinter: any;
-  let linterAdapter: any;
-  let linterReturn: any;
-  let fakeEditor: any;
-  let bufferDestroyCallback: any;
+  let fakeLinter;
+  let linterAdapter;
+  let linterReturn;
+  let fakeEditor;
+  let bufferDestroyCallback;
   let textEventSubject;
   let textEventSpy;
   let busySpy;
   let busyDisposeSpy;
 
-  function newLinterAdapter(linter: LinterProvider) {
-    return new LinterAdapter(linter, busySpy);
+  function newLinterAdapter(linter) {
+    return new (_LinterAdapter || _load_LinterAdapter()).LinterAdapter(linter, busySpy);
   }
 
   beforeEach(() => {
-    textEventSubject = new Subject();
-    textEventSpy = spyOn(
-      require('nuclide-commons-atom/text-event'),
-      'observeTextEditorEvents',
-    ).andReturn(textEventSubject.asObservable());
+    textEventSubject = new _rxjsBundlesRxMinJs.Subject();
+    textEventSpy = spyOn(require('nuclide-commons-atom/text-event'), 'observeTextEditorEvents').andReturn(textEventSubject.asObservable());
 
     const fakeBuffer = {
       onDidDestroy(callback) {
         bufferDestroyCallback = callback;
-        return new Disposable(() => {});
+        return new _atom.Disposable(() => {});
       },
-      isDestroyed: () => false,
+      isDestroyed: () => false
     };
     fakeEditor = {
       getPath() {
         return 'foo';
       },
       getGrammar() {
-        return {scopeName: grammar};
+        return { scopeName: grammar };
       },
       getBuffer() {
         return fakeBuffer;
-      },
+      }
     };
     linterReturn = Promise.resolve([]);
     fakeLinter = {
@@ -79,12 +79,12 @@ describe('LinterAdapter', () => {
       grammarScopes: [grammar],
       scope: 'file',
       lintsOnChange: true,
-      lint: () => linterReturn,
+      lint: () => linterReturn
     };
     spyOn(fakeLinter, 'lint').andCallThrough();
     busyDisposeSpy = jasmine.createSpy('busyDispose');
     busySpy = jasmine.createSpy('reportBusy').andReturn({
-      dispose: busyDisposeSpy,
+      dispose: busyDisposeSpy
     });
     linterAdapter = newLinterAdapter(fakeLinter);
   });
@@ -108,47 +108,45 @@ describe('LinterAdapter', () => {
       grammarScopes: ['*'],
       scope: 'file',
       lintsOnChange: true,
-      lint: () => linterReturn,
+      lint: () => linterReturn
     });
     expect(textEventSpy).toHaveBeenCalledWith('all', 'changes');
   });
 
   it('should work when the linter is synchronous', () => {
-    waitsForPromise(async () => {
-      linterReturn = [{type: 'Error', filePath: 'foo'}];
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      linterReturn = [{ type: 'Error', filePath: 'foo' }];
       textEventSubject.next(fakeEditor);
-      const message = await linterAdapter
-        .getUpdates()
-        .take(1)
-        .toPromise();
+      const message = yield linterAdapter.getUpdates().take(1).toPromise();
       expect(message.filePathToMessages.has('foo')).toBe(true);
       expect(busySpy).toHaveBeenCalledWith('fakeLinter: running on "foo"');
       expect(busyDisposeSpy).toHaveBeenCalled();
-    });
+    }));
   });
 
   function shouldNotInvalidate(value) {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const spy = jasmine.createSpy();
-      linterAdapter.getInvalidations().subscribe(() => spy());
+      linterAdapter.getInvalidations().subscribe(function () {
+        return spy();
+      });
 
-      const promise = linterAdapter
-        .getUpdates()
-        .take(1)
-        .toPromise();
+      const promise = linterAdapter.getUpdates().take(1).toPromise();
 
       // Populate the result.
-      linterReturn = [{type: 'Error', filePath: 'foo'}];
+      linterReturn = [{ type: 'Error', filePath: 'foo' }];
       textEventSubject.next(fakeEditor);
-      await promise;
+      yield promise;
 
       linterReturn = value;
       textEventSubject.next(fakeEditor);
 
       // This is tricky - the result resolves on the next tick.
-      await new Promise(resolve => process.nextTick(resolve));
+      yield new Promise(function (resolve) {
+        return process.nextTick(resolve);
+      });
       expect(spy).not.toHaveBeenCalled();
-    });
+    }));
   }
 
   it('should not invalidate previous result when linter resolves to null', () => {
@@ -175,54 +173,37 @@ describe('LinterAdapter', () => {
       lastMessage = message;
     });
     // Dispatch two linter requests.
-    linterReturn = makePromise([{type: 'Error', filePath: 'bar'}], 50);
+    linterReturn = makePromise([{ type: 'Error', filePath: 'bar' }], 50);
     textEventSubject.next(fakeEditor);
-    linterReturn = makePromise([{type: 'Error', filePath: 'baz'}], 10);
+    linterReturn = makePromise([{ type: 'Error', filePath: 'baz' }], 10);
     textEventSubject.next(fakeEditor);
     // If we call it once with a larger value, the first promise will resolve
     // first, even though the timeout is larger
     advanceClock(30);
     advanceClock(30);
-    waitsFor(
-      () => {
-        return (
-          numMessages === 1 &&
-          lastMessage &&
-          lastMessage.filePathToMessages.has('baz')
-        );
-      },
-      'There should be only the latest message',
-      100,
-    );
+    waitsFor(() => {
+      return numMessages === 1 && lastMessage && lastMessage.filePathToMessages.has('baz');
+    }, 'There should be only the latest message', 100);
   });
 
   it('invalidates files on close', () => {
-    linterReturn = Promise.resolve([
-      {type: 'Error', filePath: 'foo'},
-      {type: 'Error', filePath: 'bar'},
-    ]);
+    linterReturn = Promise.resolve([{ type: 'Error', filePath: 'foo' }, { type: 'Error', filePath: 'bar' }]);
     textEventSubject.next(fakeEditor);
     waitsFor(() => bufferDestroyCallback != null);
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       // Wait for the first lint to finish.
-      await linterAdapter
-        .getUpdates()
-        .take(1)
-        .toPromise();
+      yield linterAdapter.getUpdates().take(1).toPromise();
       // Start a pending lint.
       linterReturn = makePromise([], 10);
       textEventSubject.next(fakeEditor);
-      const promise = linterAdapter
-        .getInvalidations()
-        .take(1)
-        .toPromise();
+      const promise = linterAdapter.getInvalidations().take(1).toPromise();
       bufferDestroyCallback();
-      const invalidation = await promise;
+      const invalidation = yield promise;
       expect(invalidation).toEqual({
         scope: 'file',
-        filePaths: ['foo', 'bar'],
+        filePaths: ['foo', 'bar']
       });
-    });
+    }));
   });
 });
 
@@ -230,23 +211,23 @@ describe('message transformation functions', () => {
   const fileMessage = {
     type: 'Error',
     text: 'Uh oh',
-    filePath: '/fu/bar',
+    filePath: '/fu/bar'
   };
 
   const fileMessageWithName = {
     type: 'Error',
     text: 'Uh oh',
     filePath: '/fu/bar',
-    name: 'Custom Linter Name',
+    name: 'Custom Linter Name'
   };
 
   const projectMessage = {
     type: 'Warning',
-    text: 'Oh no!',
+    text: 'Oh no!'
   };
 
   let providerName;
-  let currentPath: string = (null: any);
+  let currentPath = null;
 
   beforeEach(() => {
     providerName = 'provider';
@@ -255,11 +236,11 @@ describe('message transformation functions', () => {
 
   describe('linterMessageToDiagnosticMessage', () => {
     function checkMessage(linterMessage, expected) {
-      invariant(providerName);
-      const actual = linterMessageToDiagnosticMessage(
-        linterMessage,
-        providerName,
-      );
+      if (!providerName) {
+        throw new Error('Invariant violation: "providerName"');
+      }
+
+      const actual = (0, (_LinterAdapter || _load_LinterAdapter()).linterMessageToDiagnosticMessage)(linterMessage, providerName);
       // This filters out any undefined values.
       expect(JSON.stringify(actual)).toEqual(JSON.stringify(expected));
     }
@@ -270,20 +251,17 @@ describe('message transformation functions', () => {
         providerName,
         type: fileMessage.type,
         filePath: fileMessage.filePath,
-        text: fileMessage.text,
+        text: fileMessage.text
       });
 
       // Invalid types are automatically turned into "Error".
-      checkMessage(
-        {...fileMessage, type: 'blah'},
-        {
-          scope: 'file',
-          providerName,
-          type: 'Error',
-          filePath: fileMessage.filePath,
-          text: fileMessage.text,
-        },
-      );
+      checkMessage(Object.assign({}, fileMessage, { type: 'blah' }), {
+        scope: 'file',
+        providerName,
+        type: 'Error',
+        filePath: fileMessage.filePath,
+        text: fileMessage.text
+      });
     });
 
     it('should turn a message without a filePath into a project scope diagnostic', () => {
@@ -291,108 +269,126 @@ describe('message transformation functions', () => {
         scope: 'project',
         providerName,
         type: projectMessage.type,
-        text: projectMessage.text,
+        text: projectMessage.text
       });
     });
   });
 
   describe('linterMessageV2ToDiagnosticMessage', () => {
     it('should correctly convert messages', () => {
-      expect(
-        linterMessageV2ToDiagnosticMessage(
-          {
-            location: {
-              file: 'file.txt',
-              position: [[0, 0], [0, 1]],
-            },
-            reference: {
-              file: 'ref.txt',
-              position: [1, 1],
-            },
-            excerpt: 'Error',
-            severity: 'error',
-            solutions: [
-              {
-                title: 'Solution',
-                position: [[0, 0], [0, 1]],
-                currentText: '',
-                replaceWith: 'a',
-              },
-            ],
-            description: 'Description',
-            linterName: 'test2',
-          },
-          'test',
-        ),
-      ).toEqual({
+      expect((0, (_LinterAdapter || _load_LinterAdapter()).linterMessageV2ToDiagnosticMessage)({
+        location: {
+          file: 'file.txt',
+          position: [[0, 0], [0, 1]]
+        },
+        reference: {
+          file: 'ref.txt',
+          position: [1, 1]
+        },
+        excerpt: 'Error',
+        severity: 'error',
+        solutions: [{
+          title: 'Solution',
+          position: [[0, 0], [0, 1]],
+          currentText: '',
+          replaceWith: 'a'
+        }],
+        description: 'Description',
+        linterName: 'test2'
+      }, 'test')).toEqual({
         scope: 'file',
         providerName: 'test2',
         type: 'Error',
         filePath: 'file.txt',
-        range: new Range([0, 0], [0, 1]),
+        range: new _atom.Range([0, 0], [0, 1]),
         text: 'Error\nDescription',
-        trace: [
-          {
-            type: 'Trace',
-            text: 'Reference',
-            filePath: 'ref.txt',
-            range: new Range([1, 1], [1, 1]),
-          },
-        ],
+        trace: [{
+          type: 'Trace',
+          text: 'Reference',
+          filePath: 'ref.txt',
+          range: new _atom.Range([1, 1], [1, 1])
+        }],
         fix: {
           title: 'Solution',
-          oldRange: new Range([0, 0], [0, 1]),
+          oldRange: new _atom.Range([0, 0], [0, 1]),
           oldText: '',
-          newText: 'a',
-        },
+          newText: 'a'
+        }
       });
     });
   });
 
   describe('linterMessagesToDiagnosticUpdate', () => {
     function runWith(linterMessages) {
-      return linterMessagesToDiagnosticUpdate(
-        currentPath,
-        linterMessages,
-        providerName,
-      );
+      return (0, (_LinterAdapter || _load_LinterAdapter()).linterMessagesToDiagnosticUpdate)(currentPath, linterMessages, providerName);
     }
 
     it('should invalidate diagnostics in the current file', () => {
       const result = runWith([]);
-      invariant(result.filePathToMessages);
+
+      if (!result.filePathToMessages) {
+        throw new Error('Invariant violation: "result.filePathToMessages"');
+      }
+
       expect(result.filePathToMessages.get(currentPath)).toEqual([]);
     });
 
     it('should use the LinterProvider name when one is not specified in message', () => {
       const result = runWith([fileMessage]);
-      invariant(result.filePathToMessages);
+
+      if (!result.filePathToMessages) {
+        throw new Error('Invariant violation: "result.filePathToMessages"');
+      }
+
       const messages = result.filePathToMessages.get(fileMessage.filePath);
-      invariant(messages != null);
+
+      if (!(messages != null)) {
+        throw new Error('Invariant violation: "messages != null"');
+      }
+
       const resultMessage = messages[0];
       expect(resultMessage.providerName).toEqual('provider');
     });
 
     it('should use the provider name specified in message when available', () => {
       const result = runWith([fileMessageWithName]);
-      invariant(result.filePathToMessages);
-      const messages = result.filePathToMessages.get(
-        fileMessageWithName.filePath,
-      );
-      invariant(messages != null);
+
+      if (!result.filePathToMessages) {
+        throw new Error('Invariant violation: "result.filePathToMessages"');
+      }
+
+      const messages = result.filePathToMessages.get(fileMessageWithName.filePath);
+
+      if (!(messages != null)) {
+        throw new Error('Invariant violation: "messages != null"');
+      }
+
       const resultMessage = messages[0];
       expect(resultMessage.providerName).toEqual('Custom Linter Name');
     });
 
     it('should provide both project messages and file messages', () => {
       const result = runWith([fileMessage, projectMessage]);
-      invariant(result.filePathToMessages);
+
+      if (!result.filePathToMessages) {
+        throw new Error('Invariant violation: "result.filePathToMessages"');
+      }
       // The actual message transformations are tested in the tests from
       // linterMessageToDiagnosticMessage -- no need to duplicate them here.
+
+
       const messages = result.filePathToMessages.get(fileMessage.filePath);
-      invariant(messages != null);
+
+      if (!(messages != null)) {
+        throw new Error('Invariant violation: "messages != null"');
+      }
+
       expect(messages.length).toEqual(1);
-      invariant(result.projectMessages);
+
+      if (!result.projectMessages) {
+        throw new Error('Invariant violation: "result.projectMessages"');
+      }
+
       expect(result.projectMessages.length).toEqual(1);
     });
   });

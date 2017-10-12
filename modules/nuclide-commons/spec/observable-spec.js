@@ -1,38 +1,38 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import {
-  bufferUntil,
-  diffSets,
-  cacheWhileSubscribed,
-  macrotask,
-  microtask,
-  nextAnimationFrame,
-  reconcileSetDiffs,
-  splitStream,
-  takeWhileInclusive,
-  throttle,
-  toggle,
-  concatLatest,
-} from '../observable';
-import {Disposable} from 'event-kit';
-import {Observable, Subject} from 'rxjs';
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
-const setsAreEqual = (a, b) =>
-  a.size === b.size && Array.from(a).every(b.has.bind(b));
-const diffsAreEqual = (a, b) =>
-  setsAreEqual(a.added, b.added) && setsAreEqual(a.removed, b.removed);
+var _observable;
+
+function _load_observable() {
+  return _observable = require('../observable');
+}
+
+var _eventKit;
+
+function _load_eventKit() {
+  return _eventKit = require('event-kit');
+}
+
+var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+const setsAreEqual = (a, b) => a.size === b.size && Array.from(a).every(b.has.bind(b)); /**
+                                                                                         * Copyright (c) 2017-present, Facebook, Inc.
+                                                                                         * All rights reserved.
+                                                                                         *
+                                                                                         * This source code is licensed under the BSD-style license found in the
+                                                                                         * LICENSE file in the root directory of this source tree. An additional grant
+                                                                                         * of patent rights can be found in the PATENTS file in the same directory.
+                                                                                         *
+                                                                                         * 
+                                                                                         * @format
+                                                                                         */
+
+const diffsAreEqual = (a, b) => setsAreEqual(a.added, b.added) && setsAreEqual(a.removed, b.removed);
 const createDisposable = () => {
-  const disposable = new Disposable(() => {});
+  const disposable = new (_eventKit || _load_eventKit()).Disposable(() => {});
   spyOn(disposable, 'dispose');
   return disposable;
 };
@@ -40,23 +40,21 @@ const createDisposable = () => {
 describe('nuclide-commons/observable', () => {
   describe('splitStream', () => {
     it('splits streams', () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         const input = ['foo\nbar', '\n', '\nba', 'z', '\nblar'];
-        const output = await splitStream(Observable.from(input))
-          .toArray()
-          .toPromise();
+        const output = yield (0, (_observable || _load_observable()).splitStream)(_rxjsBundlesRxMinJs.Observable.from(input)).toArray().toPromise();
         expect(output).toEqual(['foo\n', 'bar\n', '\n', 'baz\n', 'blar']);
-      });
+      }));
     });
   });
 
   describe('takeWhileInclusive', () => {
     it('completes the stream when something matches the predicate', () => {
-      const source = new Subject();
-      const result = takeWhileInclusive(source, x => x !== 2);
-      const next: (n: number) => mixed = jasmine.createSpy();
-      const complete: () => mixed = jasmine.createSpy();
-      result.subscribe({next, complete});
+      const source = new _rxjsBundlesRxMinJs.Subject();
+      const result = (0, (_observable || _load_observable()).takeWhileInclusive)(source, x => x !== 2);
+      const next = jasmine.createSpy();
+      const complete = jasmine.createSpy();
+      result.subscribe({ next, complete });
       source.next(1);
       source.next(2);
       source.next(3);
@@ -66,15 +64,15 @@ describe('nuclide-commons/observable', () => {
   });
 
   describe('cacheWhileSubscribed', () => {
-    let input: Subject<number> = (null: any);
-    let output: Observable<number> = (null: any);
+    let input = null;
+    let output = null;
 
-    function subscribeArray(arr: Array<number>): rxjs$ISubscription {
+    function subscribeArray(arr) {
       return output.subscribe(x => arr.push(x));
     }
     beforeEach(() => {
-      input = new Subject();
-      output = cacheWhileSubscribed(input);
+      input = new _rxjsBundlesRxMinJs.Subject();
+      output = (0, (_observable || _load_observable()).cacheWhileSubscribed)(input);
     });
 
     it('should provide cached values to late subscribers', () => {
@@ -115,164 +113,150 @@ describe('nuclide-commons/observable', () => {
 
   describe('diffSets', () => {
     it('emits a diff for the first item', () => {
-      waitsForPromise(async () => {
-        const source = new Subject();
-        const diffsPromise = diffSets(source)
-          .toArray()
-          .toPromise();
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const source = new _rxjsBundlesRxMinJs.Subject();
+        const diffsPromise = (0, (_observable || _load_observable()).diffSets)(source).toArray().toPromise();
         source.next(new Set([1, 2, 3]));
         source.complete();
-        const diffs = await diffsPromise;
+        const diffs = yield diffsPromise;
         expect(diffs.length).toBe(1);
-        expect(
-          diffsAreEqual(diffs[0], {
-            added: new Set([1, 2, 3]),
-            removed: new Set(),
-          }),
-        ).toBe(true);
-      });
+        expect(diffsAreEqual(diffs[0], {
+          added: new Set([1, 2, 3]),
+          removed: new Set()
+        })).toBe(true);
+      }));
     });
 
     it('correctly identifies removed items', () => {
-      waitsForPromise(async () => {
-        const source = new Subject();
-        const diffsPromise = diffSets(source)
-          .toArray()
-          .toPromise();
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const source = new _rxjsBundlesRxMinJs.Subject();
+        const diffsPromise = (0, (_observable || _load_observable()).diffSets)(source).toArray().toPromise();
         source.next(new Set([1, 2, 3]));
         source.next(new Set([1, 2]));
         source.complete();
-        const diffs = await diffsPromise;
+        const diffs = yield diffsPromise;
         expect(setsAreEqual(diffs[1].removed, new Set([3]))).toBe(true);
-      });
+      }));
     });
 
     it('correctly identifies removed items when a hash function is used', () => {
-      waitsForPromise(async () => {
-        const source = new Subject();
-        const diffsPromise = diffSets(source, x => x.key)
-          .toArray()
-          .toPromise();
-        const firstItems = [{key: 1}, {key: 2}, {key: 3}];
-        const secondItems = [{key: 1}, {key: 2}];
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const source = new _rxjsBundlesRxMinJs.Subject();
+        const diffsPromise = (0, (_observable || _load_observable()).diffSets)(source, function (x) {
+          return x.key;
+        }).toArray().toPromise();
+        const firstItems = [{ key: 1 }, { key: 2 }, { key: 3 }];
+        const secondItems = [{ key: 1 }, { key: 2 }];
         source.next(new Set(firstItems));
         source.next(new Set(secondItems));
         source.complete();
-        const diffs = await diffsPromise;
-        expect(setsAreEqual(diffs[1].removed, new Set([firstItems[2]]))).toBe(
-          true,
-        );
-      });
+        const diffs = yield diffsPromise;
+        expect(setsAreEqual(diffs[1].removed, new Set([firstItems[2]]))).toBe(true);
+      }));
     });
 
     it('correctly identifies added items', () => {
-      waitsForPromise(async () => {
-        const source = new Subject();
-        const diffsPromise = diffSets(source)
-          .toArray()
-          .toPromise();
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const source = new _rxjsBundlesRxMinJs.Subject();
+        const diffsPromise = (0, (_observable || _load_observable()).diffSets)(source).toArray().toPromise();
         source.next(new Set([1, 2]));
         source.next(new Set([1, 2, 3]));
         source.complete();
-        const diffs = await diffsPromise;
+        const diffs = yield diffsPromise;
         expect(setsAreEqual(diffs[1].added, new Set([3]))).toBe(true);
-      });
+      }));
     });
 
     it('correctly identifies added items when a hash function is used', () => {
-      waitsForPromise(async () => {
-        const source = new Subject();
-        const diffsPromise = diffSets(source, x => x.key)
-          .toArray()
-          .toPromise();
-        const firstItems = [{key: 1}, {key: 2}];
-        const secondItems = [{key: 1}, {key: 2}, {key: 3}];
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const source = new _rxjsBundlesRxMinJs.Subject();
+        const diffsPromise = (0, (_observable || _load_observable()).diffSets)(source, function (x) {
+          return x.key;
+        }).toArray().toPromise();
+        const firstItems = [{ key: 1 }, { key: 2 }];
+        const secondItems = [{ key: 1 }, { key: 2 }, { key: 3 }];
         source.next(new Set(firstItems));
         source.next(new Set(secondItems));
         source.complete();
-        const diffs = await diffsPromise;
-        expect(setsAreEqual(diffs[1].added, new Set([secondItems[2]]))).toBe(
-          true,
-        );
-      });
+        const diffs = yield diffsPromise;
+        expect(setsAreEqual(diffs[1].added, new Set([secondItems[2]]))).toBe(true);
+      }));
     });
 
     it("doesn't emit a diff when nothing changes", () => {
-      waitsForPromise(async () => {
-        const source = new Subject();
-        const diffsPromise = diffSets(source)
-          .toArray()
-          .toPromise();
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const source = new _rxjsBundlesRxMinJs.Subject();
+        const diffsPromise = (0, (_observable || _load_observable()).diffSets)(source).toArray().toPromise();
         source.next(new Set([1, 2, 3]));
         source.next(new Set([1, 2, 3]));
         source.complete();
-        const diffs = await diffsPromise;
+        const diffs = yield diffsPromise;
         // Make sure we only get one diff (from the implicit initial empty set).
         expect(diffs.length).toBe(1);
-      });
+      }));
     });
 
     it("doesn't emit a diff when nothing changes and a hash function is used", () => {
-      waitsForPromise(async () => {
-        const source = new Subject();
-        const diffsPromise = diffSets(source, x => x.key)
-          .toArray()
-          .toPromise();
-        const firstItems = [{key: 1}, {key: 2}, {key: 3}];
-        const secondItems = [{key: 1}, {key: 2}, {key: 3}];
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const source = new _rxjsBundlesRxMinJs.Subject();
+        const diffsPromise = (0, (_observable || _load_observable()).diffSets)(source, function (x) {
+          return x.key;
+        }).toArray().toPromise();
+        const firstItems = [{ key: 1 }, { key: 2 }, { key: 3 }];
+        const secondItems = [{ key: 1 }, { key: 2 }, { key: 3 }];
         source.next(new Set(firstItems));
         source.next(new Set(secondItems));
         source.complete();
-        const diffs = await diffsPromise;
+        const diffs = yield diffsPromise;
         // Make sure we only get one diff (from the implicit initial empty set).
         expect(diffs.length).toBe(1);
-      });
+      }));
     });
   });
 
   describe('reconcileSetDiffs', () => {
     it("calls the add action for each item that's added", () => {
-      const diffs = new Subject();
-      const addAction = jasmine.createSpy().andReturn(new Disposable(() => {}));
-      reconcileSetDiffs(diffs, addAction);
+      const diffs = new _rxjsBundlesRxMinJs.Subject();
+      const addAction = jasmine.createSpy().andReturn(new (_eventKit || _load_eventKit()).Disposable(() => {}));
+      (0, (_observable || _load_observable()).reconcileSetDiffs)(diffs, addAction);
       diffs.next({
         added: new Set(['a', 'b']),
-        removed: new Set(),
+        removed: new Set()
       });
       expect(addAction.calls.map(call => call.args[0])).toEqual(['a', 'b']);
     });
 
     it("disposes for each item that's removed", () => {
-      const diffs = new Subject();
+      const diffs = new _rxjsBundlesRxMinJs.Subject();
       const disposables = {
         a: createDisposable(),
-        b: createDisposable(),
+        b: createDisposable()
       };
       const addAction = item => disposables[item];
-      reconcileSetDiffs(diffs, addAction);
+      (0, (_observable || _load_observable()).reconcileSetDiffs)(diffs, addAction);
       diffs.next({
         added: new Set(['a', 'b']),
-        removed: new Set(),
+        removed: new Set()
       });
       diffs.next({
         added: new Set(),
-        removed: new Set(['a', 'b']),
+        removed: new Set(['a', 'b'])
       });
       expect(disposables.a.dispose).toHaveBeenCalled();
       expect(disposables.b.dispose).toHaveBeenCalled();
     });
 
     it('disposes for all items when disposed', () => {
-      const diffs = new Subject();
+      const diffs = new _rxjsBundlesRxMinJs.Subject();
       const disposables = {
         a: createDisposable(),
-        b: createDisposable(),
+        b: createDisposable()
       };
       const addAction = item => disposables[item];
-      const reconciliationDisposable = reconcileSetDiffs(diffs, addAction);
+      const reconciliationDisposable = (0, (_observable || _load_observable()).reconcileSetDiffs)(diffs, addAction);
       diffs.next({
         added: new Set(['a', 'b']),
-        removed: new Set(),
+        removed: new Set()
       });
       reconciliationDisposable.dispose();
       expect(disposables.a.dispose).toHaveBeenCalled();
@@ -280,20 +264,20 @@ describe('nuclide-commons/observable', () => {
     });
 
     it("disposes for each item that's removed when a hash function is used", () => {
-      const diffs = new Subject();
+      const diffs = new _rxjsBundlesRxMinJs.Subject();
       const disposables = {
         a: createDisposable(),
-        b: createDisposable(),
+        b: createDisposable()
       };
       const addAction = item => disposables[item.key];
-      reconcileSetDiffs(diffs, addAction, x => x.key);
+      (0, (_observable || _load_observable()).reconcileSetDiffs)(diffs, addAction, x => x.key);
       diffs.next({
-        added: new Set([{key: 'a'}, {key: 'b'}]),
-        removed: new Set(),
+        added: new Set([{ key: 'a' }, { key: 'b' }]),
+        removed: new Set()
       });
       diffs.next({
         added: new Set(),
-        removed: new Set([{key: 'a'}, {key: 'b'}]),
+        removed: new Set([{ key: 'a' }, { key: 'b' }])
       });
       expect(disposables.a.dispose).toHaveBeenCalled();
       expect(disposables.b.dispose).toHaveBeenCalled();
@@ -301,22 +285,22 @@ describe('nuclide-commons/observable', () => {
   });
 
   describe('toggle', () => {
-    let toggler: Subject<boolean> = (null: any);
-    let source: Observable<number> = (null: any);
-    let output: Observable<number> = (null: any);
-    let outputArray: Array<number> = (null: any);
+    let toggler = null;
+    let source = null;
+    let output = null;
+    let outputArray = null;
 
     beforeEach(() => {
-      toggler = new Subject();
+      toggler = new _rxjsBundlesRxMinJs.Subject();
       // Deferred so individual 'it' blocks can set the source on the fly.
-      output = toggle(Observable.defer(() => source), toggler);
+      output = (0, (_observable || _load_observable()).toggle)(_rxjsBundlesRxMinJs.Observable.defer(() => source), toggler);
     });
 
     describe('with a standard source', () => {
-      let realSource: Subject<number> = (null: any);
+      let realSource = null;
 
       beforeEach(() => {
-        source = realSource = new Subject();
+        source = realSource = new _rxjsBundlesRxMinJs.Subject();
         outputArray = [];
         output.subscribe(x => outputArray.push(x));
       });
@@ -344,7 +328,7 @@ describe('nuclide-commons/observable', () => {
     // that toggling off unsubscribes and then resubscribes.
     describe('subscription behavior', () => {
       beforeEach(() => {
-        source = Observable.of(1, 2, 3);
+        source = _rxjsBundlesRxMinJs.Observable.of(1, 2, 3);
         outputArray = [];
         output.subscribe(x => outputArray.push(x));
       });
@@ -372,49 +356,41 @@ describe('nuclide-commons/observable', () => {
 
   describe('concatLatest', () => {
     it('should work with empty input', () => {
-      waitsForPromise(async () => {
-        const output = await concatLatest()
-          .toArray()
-          .toPromise();
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const output = yield (0, (_observable || _load_observable()).concatLatest)().toArray().toPromise();
         expect(output).toEqual([]);
-      });
+      }));
     });
 
     it('should work with several observables', () => {
-      waitsForPromise(async () => {
-        const output = await concatLatest(
-          Observable.of([], [1]),
-          Observable.of([2]),
-          Observable.of([3], [3, 4]),
-        )
-          .toArray()
-          .toPromise();
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const output = yield (0, (_observable || _load_observable()).concatLatest)(_rxjsBundlesRxMinJs.Observable.of([], [1]), _rxjsBundlesRxMinJs.Observable.of([2]), _rxjsBundlesRxMinJs.Observable.of([3], [3, 4])).toArray().toPromise();
         expect(output).toEqual([[], [1], [1, 2], [1, 2, 3], [1, 2, 3, 4]]);
-      });
+      }));
     });
   });
 
   describe('throttle', () => {
     it('emits the leading item immeditately by default', () => {
-      const source = Observable.of(1, 2).merge(Observable.never());
+      const source = _rxjsBundlesRxMinJs.Observable.of(1, 2).merge(_rxjsBundlesRxMinJs.Observable.never());
       const spy = jasmine.createSpy();
-      throttle(source, Observable.never()).subscribe(spy);
+      (0, (_observable || _load_observable()).throttle)(source, _rxjsBundlesRxMinJs.Observable.never()).subscribe(spy);
       expect(spy).toHaveBeenCalledWith(1);
     });
 
     it("doesn't emit the leading item twice", () => {
-      const source = Observable.of(1).merge(Observable.never());
-      const notifier = Observable.of(null); // emits immediately on subscription.
+      const source = _rxjsBundlesRxMinJs.Observable.of(1).merge(_rxjsBundlesRxMinJs.Observable.never());
+      const notifier = _rxjsBundlesRxMinJs.Observable.of(null); // emits immediately on subscription.
       const spy = jasmine.createSpy();
-      throttle(source, notifier).subscribe(spy);
+      (0, (_observable || _load_observable()).throttle)(source, notifier).subscribe(spy);
       expect(spy.callCount).toBe(1);
     });
 
     it('throttles', () => {
-      const source = new Subject();
-      const notifier = new Subject();
+      const source = new _rxjsBundlesRxMinJs.Subject();
+      const notifier = new _rxjsBundlesRxMinJs.Subject();
       const spy = jasmine.createSpy();
-      throttle(source, notifier).subscribe(spy);
+      (0, (_observable || _load_observable()).throttle)(source, notifier).subscribe(spy);
       source.next(1);
       spy.reset();
       source.next(2);
@@ -433,8 +409,8 @@ describe('nuclide-commons/observable', () => {
 
     it('subscribes to the source once per subscription', () => {
       const spy = jasmine.createSpy();
-      const source = Observable.create(spy);
-      throttle(source, Observable.of(null)).subscribe();
+      const source = _rxjsBundlesRxMinJs.Observable.create(spy);
+      (0, (_observable || _load_observable()).throttle)(source, _rxjsBundlesRxMinJs.Observable.of(null)).subscribe();
       expect(spy.callCount).toBe(1);
     });
   });
@@ -455,13 +431,13 @@ describe('nuclide-commons/observable', () => {
     });
 
     it('schedules next using requestAnimationFrame', () => {
-      const sub = nextAnimationFrame.subscribe();
+      const sub = (_observable || _load_observable()).nextAnimationFrame.subscribe();
       expect(window.requestAnimationFrame).toHaveBeenCalled();
       sub.unsubscribe();
     });
 
     it('uses cancelAnimationFrame when unsubscribed', () => {
-      const sub = nextAnimationFrame.subscribe();
+      const sub = (_observable || _load_observable()).nextAnimationFrame.subscribe();
       expect(window.cancelAnimationFrame).not.toHaveBeenCalled();
       sub.unsubscribe();
       expect(window.cancelAnimationFrame).toHaveBeenCalled();
@@ -470,51 +446,47 @@ describe('nuclide-commons/observable', () => {
 
   describe('bufferUntil', () => {
     it('buffers based on the predicate', () => {
-      waitsForPromise(async () => {
-        const chunks = await bufferUntil(
-          Observable.of(1, 2, 3, 4),
-          x => x % 2 === 0,
-        )
-          .toArray()
-          .toPromise();
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const chunks = yield (0, (_observable || _load_observable()).bufferUntil)(_rxjsBundlesRxMinJs.Observable.of(1, 2, 3, 4), function (x) {
+          return x % 2 === 0;
+        }).toArray().toPromise();
         expect(chunks).toEqual([[1, 2], [3, 4]]);
-      });
+      }));
     });
 
     it('provides the current buffer', () => {
-      waitsForPromise(async () => {
-        const chunks = await bufferUntil(
-          Observable.of(1, 2, 3, 4),
-          (x, buffer) => buffer.length === 2,
-        )
-          .toArray()
-          .toPromise();
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        const chunks = yield (0, (_observable || _load_observable()).bufferUntil)(_rxjsBundlesRxMinJs.Observable.of(1, 2, 3, 4), function (x, buffer) {
+          return buffer.length === 2;
+        }).toArray().toPromise();
         expect(chunks).toEqual([[1, 2], [3, 4]]);
-      });
+      }));
     });
   });
 
   describe('microtask', () => {
     it('is cancelable', () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         const spy = jasmine.createSpy();
-        const sub = microtask.subscribe(spy);
+        const sub = (_observable || _load_observable()).microtask.subscribe(spy);
         let resolve;
-        const promise = new Promise(r => (resolve = r));
+        const promise = new Promise(function (r) {
+          return resolve = r;
+        });
         sub.unsubscribe();
-        process.nextTick(() => {
+        process.nextTick(function () {
           expect(spy).not.toHaveBeenCalled();
           resolve();
         });
         return promise;
-      });
+      }));
     });
   });
 
   describe('macrotask', () => {
     it('is cancelable', () => {
       spyOn(global, 'clearImmediate').andCallThrough();
-      const sub = macrotask.subscribe(() => {});
+      const sub = (_observable || _load_observable()).macrotask.subscribe(() => {});
       sub.unsubscribe();
       expect(clearImmediate).toHaveBeenCalled();
     });
