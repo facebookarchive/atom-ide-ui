@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.1
+
+- Added config option for diagnostics status bar location (#84)
+- Reduced size of diagnostic table icons
+- Fixed EvalError while loading package (#86)
+
 ## v0.5.0
 
 - New, revamped diagnostics experience! (#39)
