@@ -52,23 +52,16 @@ export type DiagnosticInvalidationMessage =
       filePaths: Array<NuclideUri>,
     }
   | {
-      scope: 'project',
-    }
-  | {
       scope: 'all',
     };
 
-// Implicit invalidation semantics:
-//
-// - Previous 'file' scope messages are invalidated if and only if
-// filePathToMessages contains their key as a path.
-//
-// - All previous 'project' scope messages are invalidated whenever
-// projectMessages is populated.
-export type DiagnosticProviderUpdate = {
-  filePathToMessages?: Map<NuclideUri, Array<FileDiagnosticMessage>>,
-  projectMessages?: Array<ProjectDiagnosticMessage>,
-};
+/**
+ * Note: All provided map keys will be automatically invalidated on update.
+ */
+export type DiagnosticProviderUpdate = Map<
+  NuclideUri,
+  Array<FileDiagnosticMessage>,
+>;
 
 export type DiagnosticMessageKind = 'lint' | 'review';
 export type DiagnosticMessageType = 'Error' | 'Warning' | 'Info';
@@ -91,9 +84,8 @@ export type DiagnosticFix = TextEdit & {
   title?: string,
 };
 
-export type FileDiagnosticMessage = {
+export type FileDiagnosticMessage = {|
   kind?: DiagnosticMessageKind,
-  scope: 'file',
   providerName: string,
   type: DiagnosticMessageType, // TODO: Rename to severity.
   filePath: NuclideUri,
@@ -105,28 +97,14 @@ export type FileDiagnosticMessage = {
   // Indicates that the message should still be displayed, but there should be some UI indicating
   // that it is out of date. TODO(matthewwithanm) implement this UI.
   stale?: boolean,
-};
-
-export type ProjectDiagnosticMessage = {
-  kind?: DiagnosticMessageKind,
-  scope: 'project',
-  providerName: string,
-  type: DiagnosticMessageType,
-  text?: string,
-  html?: string,
-  range?: atom$Range,
-  trace?: Array<DiagnosticTrace>,
-  stale?: boolean,
-};
+|};
 
 export type FileDiagnosticMessages = {
   filePath: NuclideUri,
   messages: Array<FileDiagnosticMessage>,
 };
 
-export type DiagnosticMessage =
-  | FileDiagnosticMessage
-  | ProjectDiagnosticMessage;
+export type DiagnosticMessage = FileDiagnosticMessage;
 
 export type {default as DiagnosticUpdater} from './services/DiagnosticUpdater';
 
@@ -242,7 +220,6 @@ export type {IndieLinterDelegate} from './services/IndieLinterRegistry';
 
 export type AppState = {
   messages: MessagesState,
-  projectMessages: ProjectMessagesState,
   codeActionFetcher: ?CodeActionFetcher,
   codeActionsForMessage: CodeActionsState,
   providers: Set<ObservableDiagnosticProvider>,
@@ -251,11 +228,6 @@ export type AppState = {
 export type MessagesState = Map<
   ObservableDiagnosticProvider,
   Map<NuclideUri, Array<FileDiagnosticMessage>>,
->;
-
-export type ProjectMessagesState = Map<
-  ObservableDiagnosticProvider,
-  Array<ProjectDiagnosticMessage>,
 >;
 
 export type CodeActionsState = Map<
