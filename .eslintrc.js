@@ -430,78 +430,93 @@ module.exports = {
 
     // JSX Accessibility checks
     // some currently disabled to adopt incrementally, annotated 'incremental'
-   'jsx-a11y/accessible-emoji': 0,
-   'jsx-a11y/alt-text': 0, // incremental: error
-   'jsx-a11y/anchor-has-content': 0,
-   'jsx-a11y/aria-activedescendant-has-tabindex': 0,
-   'jsx-a11y/aria-props': 1,
-   'jsx-a11y/aria-proptypes': 0,
-   'jsx-a11y/aria-role': 0,
-   'jsx-a11y/aria-unsupported-elements': 0,
-   'jsx-a11y/click-events-have-key-events': 0,
-   'jsx-a11y/heading-has-content': 0,
-   'jsx-a11y/href-no-hash': 0,
-   'jsx-a11y/html-has-lang': 0,
-   'jsx-a11y/iframe-has-title': 0,
-   'jsx-a11y/img-has-alt': 0,
-   'jsx-a11y/img-redundant-alt': 0,
-   'jsx-a11y/interactive-supports-focus': [
-     1,
-     {
-       tabbable: [
-         'button',
-         'checkbox',
-         'link',
-         'searchbox',
-         'spinbutton',
-         'switch',
-         'textbox',
-       ],
-     },
-   ],
-   'jsx-a11y/label-has-for': 0,
-   'jsx-a11y/lang': 0,
-   'jsx-a11y/mouse-events-have-key-events': 0,
-   'jsx-a11y/no-access-key': 0,
-   'jsx-a11y/no-autofocus': 0,
-   'jsx-a11y/no-distracting-elements': 0,
-   'jsx-a11y/no-interactive-element-to-noninteractive-role': [
-     1,
-     {
-       tr: ['none', 'presentation'],
-     },
-   ],
-   'jsx-a11y/no-noninteractive-element-interactions': [
-     0, // incremental: warning
-     {
-       handlers: ['onClick'],
-     },
-   ],
-   'jsx-a11y/no-noninteractive-element-to-interactive-role': [
-     1,
-     {
-       ul: ['listbox', 'menu', 'menubar',
-         'radiogroup', 'tablist', 'tree', 'treegrid'],
-       ol: ['listbox', 'menu', 'menubar',
-         'radiogroup', 'tablist', 'tree', 'treegrid'],
-       li: ['menuitem', 'option', 'row', 'tab', 'treeitem'],
-       table: ['grid'],
-       td: ['gridcell'],
-     },
-   ],
-   'jsx-a11y/no-noninteractive-tabindex': 0, // incremental: error
-   'jsx-a11y/no-onchange': 0,
-   'jsx-a11y/no-redundant-roles': 0,
-   'jsx-a11y/no-static-element-interactions': [
-     0, // incremental: warning
-     {
-       handlers: ['onClick'],
-     },
-   ],
-   'jsx-a11y/role-has-required-aria-props': 0,
-   'jsx-a11y/role-supports-aria-props': 0,
-   'jsx-a11y/scope': 0,
-   'jsx-a11y/tabindex-no-positive': 0,
+    'jsx-a11y/accessible-emoji': 0,
+    'jsx-a11y/alt-text': 0, // incremental: error
+    'jsx-a11y/anchor-has-content': 0,
+    'jsx-a11y/anchor-is-valid': 0, // incremental: error
+    'jsx-a11y/aria-activedescendant-has-tabindex': 0,
+    'jsx-a11y/aria-props': 1,
+    'jsx-a11y/aria-proptypes': 0,
+    'jsx-a11y/aria-role': 0,
+    'jsx-a11y/aria-unsupported-elements': 0,
+    'jsx-a11y/click-events-have-key-events': 0,
+    'jsx-a11y/heading-has-content': 0,
+    'jsx-a11y/href-no-hash': 0,
+    'jsx-a11y/html-has-lang': 0,
+    'jsx-a11y/iframe-has-title': 0,
+    'jsx-a11y/img-has-alt': 0,
+    'jsx-a11y/img-redundant-alt': 0,
+    'jsx-a11y/interactive-supports-focus': [
+      1,
+      {
+        tabbable: [
+          'button',
+          'checkbox',
+          'link',
+          'searchbox',
+          'spinbutton',
+          'switch',
+          'textbox',
+        ],
+      },
+    ],
+    'jsx-a11y/label-has-for': 0,
+    'jsx-a11y/lang': 0,
+    'jsx-a11y/mouse-events-have-key-events': 0,
+    'jsx-a11y/no-access-key': 0,
+    'jsx-a11y/no-autofocus': 0,
+    'jsx-a11y/no-distracting-elements': 0,
+    'jsx-a11y/no-interactive-element-to-noninteractive-role': [
+      1,
+      {
+        tr: ['none', 'presentation'],
+      },
+    ],
+    'jsx-a11y/no-noninteractive-element-interactions': [
+      0, // incremental: warning
+      {
+        handlers: ['onClick'],
+      },
+    ],
+    'jsx-a11y/no-noninteractive-element-to-interactive-role': [
+      1,
+      {
+        ul: [
+          'listbox',
+          'menu',
+          'menubar',
+          'radiogroup',
+          'tablist',
+          'tree',
+          'treegrid',
+        ],
+        ol: [
+          'listbox',
+          'menu',
+          'menubar',
+          'radiogroup',
+          'tablist',
+          'tree',
+          'treegrid',
+        ],
+        li: ['menuitem', 'option', 'row', 'tab', 'treeitem'],
+        table: ['grid'],
+        td: ['gridcell'],
+      },
+    ],
+    'jsx-a11y/no-noninteractive-tabindex': 0, // incremental: error
+    'jsx-a11y/no-onchange': 0,
+    'jsx-a11y/no-redundant-roles': 0,
+    'jsx-a11y/no-static-element-interactions': [
+      0, // incremental: warning
+      {
+        handlers: ['onClick'],
+      },
+    ],
+    'jsx-a11y/role-has-required-aria-props': 0,
+    'jsx-a11y/role-supports-aria-props': 0,
+    'jsx-a11y/scope': 0,
+    'jsx-a11y/tabindex-no-positive': 0,
   },
 
   plugins: [
