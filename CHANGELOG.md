@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.2
+
+- Diagnostics: gutter icons now match the table icons.
+- Datatips: Added a max-height to prevent datatips from filling the screen.
+- Outlines: Added a `landingPosition` property to the outline API.
+- Signature Help: Signatures no longer persist for a moment after deleting a line.
+
 ## v0.5.1
 
 - Added config option for diagnostics status bar location (#84)
