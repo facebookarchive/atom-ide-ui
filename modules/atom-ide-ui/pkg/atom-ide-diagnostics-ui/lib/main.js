@@ -17,8 +17,7 @@ import type {
 
 import type {
   DiagnosticMessage,
-  FileDiagnosticMessage,
-  FileDiagnosticMessages,
+  DiagnosticMessages,
   DiagnosticUpdater,
 } from '../../atom-ide-diagnostics/lib/types';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
@@ -66,7 +65,7 @@ class Activation {
   _subscriptions: UniversalDisposable;
   _model: Model<DiagnosticsState>;
   _statusBarTile: ?StatusBarTile;
-  _fileDiagnostics: WeakMap<atom$TextEditor, Array<FileDiagnosticMessage>>;
+  _fileDiagnostics: WeakMap<atom$TextEditor, Array<DiagnosticMessage>>;
   _globalViewStates: ?Observable<GlobalViewState>;
 
   constructor(state: ?Object): void {
@@ -216,6 +215,12 @@ class Activation {
         'atom-ide-diagnostics-ui.showDirectoryColumn',
       ): any);
 
+      const autoVisibilityStream: Observable<
+        boolean,
+      > = (featureConfig.observeAsStream(
+        'atom-ide-diagnostics-ui.autoVisibility',
+      ): any);
+
       const pathToActiveTextEditorStream = getActiveEditorPaths();
 
       const filterByActiveTextEditorStream = packageStates
@@ -245,12 +250,14 @@ class Activation {
               ),
       );
 
+      // $FlowFixMe: exceeds number of args defined in flow-typed definition
       this._globalViewStates = Observable.combineLatest(
         diagnosticsStream,
         filterByActiveTextEditorStream,
         pathToActiveTextEditorStream,
         showTracesStream,
         showDirectoryColumnStream,
+        autoVisibilityStream,
         supportedMessageKindsStream,
         uiConfigStream,
         (
@@ -259,6 +266,7 @@ class Activation {
           pathToActiveTextEditor,
           showTraces,
           showDirectoryColumn,
+          autoVisibility,
           supportedMessageKinds,
           uiConfig,
         ) => ({
@@ -267,6 +275,7 @@ class Activation {
           pathToActiveTextEditor,
           showTraces,
           showDirectoryColumn,
+          autoVisibility,
           onShowTracesChange: setShowTraces,
           onFilterByActiveTextEditorChange: setFilterByActiveTextEditor,
           supportedMessageKinds,
@@ -336,7 +345,7 @@ class Activation {
   _getMessagesAtPosition(
     editor: atom$TextEditor,
     position: atom$Point,
-  ): Array<FileDiagnosticMessage> {
+  ): Array<DiagnosticMessage> {
     const messagesForFile = this._fileDiagnostics.get(editor);
     if (messagesForFile == null) {
       return [];
@@ -475,7 +484,7 @@ function getActiveEditorPaths(): Observable<?NuclideUri> {
 function getEditorDiagnosticUpdates(
   editor: atom$TextEditor,
   diagnosticUpdater: DiagnosticUpdater,
-): Observable<FileDiagnosticMessages> {
+): Observable<DiagnosticMessages> {
   return observableFromSubscribeFunction(editor.onDidChangePath.bind(editor))
     .startWith(editor.getPath())
     .switchMap(

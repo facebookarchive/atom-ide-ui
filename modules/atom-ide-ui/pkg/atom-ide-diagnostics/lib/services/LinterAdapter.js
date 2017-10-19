@@ -17,7 +17,6 @@ import type {
   DiagnosticMessage,
   DiagnosticMessageType,
   DiagnosticProviderUpdate,
-  FileDiagnosticMessage,
   LinterMessage,
   LinterMessageV1,
   LinterMessageV2,
@@ -103,7 +102,7 @@ function convertLinterType(type: string): DiagnosticMessageType {
 export function linterMessageV2ToDiagnosticMessage(
   msg: LinterMessageV2,
   providerName: string,
-): FileDiagnosticMessage {
+): DiagnosticMessage {
   let trace;
   if (msg.trace != null) {
     trace = msg.trace.map(component => ({...component}));
@@ -121,20 +120,31 @@ export function linterMessageV2ToDiagnosticMessage(
       },
     ];
   }
-  // TODO: handle multiple solutions and priority.
   let fix;
+  const actions = [];
   const {solutions} = msg;
   if (solutions != null && solutions.length > 0) {
-    const solution = solutions[0];
-    if (solution.replaceWith !== undefined) {
-      fix = {
-        oldRange: Range.fromObject(solution.position),
-        oldText: solution.currentText,
-        newText: solution.replaceWith,
-        title: solution.title,
-      };
-    }
-    // TODO: support the callback version.
+    const sortedSolutions = Array.from(solutions).sort(
+      (a, b) => (a.priority || 0) - (b.priority || 0),
+    );
+    sortedSolutions.forEach((solution, i) => {
+      if (solution.replaceWith !== undefined) {
+        // TODO: support multiple fixes.
+        if (fix == null) {
+          fix = {
+            oldRange: Range.fromObject(solution.position),
+            oldText: solution.currentText,
+            newText: solution.replaceWith,
+            title: solution.title,
+          };
+        }
+      } else {
+        actions.push({
+          title: solution.title != null ? solution.title : `Solution ${i + 1}`,
+          apply: solution.apply.bind(solution),
+        });
+      }
+    });
   }
   let text = msg.excerpt;
   // TODO: use markdown + handle callback-based version.
@@ -150,6 +160,7 @@ export function linterMessageV2ToDiagnosticMessage(
     range: Range.fromObject(msg.location.position),
     trace,
     fix,
+    actions,
   };
 }
 
@@ -160,7 +171,7 @@ export function linterMessagesToDiagnosticUpdate(
 ): DiagnosticProviderUpdate {
   const filePathToMessages: Map<
     NuclideUri,
-    Array<FileDiagnosticMessage>,
+    Array<DiagnosticMessage>,
   > = new Map();
   // flowlint-next-line sketchy-null-string:off
   if (currentPath) {

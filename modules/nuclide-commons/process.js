@@ -50,6 +50,7 @@
 
 import child_process from 'child_process';
 import idx from 'idx';
+import {getLogger} from 'log4js';
 import invariant from 'assert';
 import {Observable} from 'rxjs';
 
@@ -61,6 +62,8 @@ import {observableFromSubscribeFunction} from './event';
 import {observeStream} from './stream';
 import {splitStream, takeWhileInclusive} from './observable';
 import {shellQuote} from './string';
+
+const logger = getLogger('nuclide-commons/process');
 
 /**
  * Run a command, accumulate the output. Errors are surfaced as stream errors and unsubscribing will
@@ -308,15 +311,13 @@ export function getOutputStream(
 
     // Accumulate the first `exitErrorBufferSize` bytes of stderr so that we can give feedback about
     // about exit errors (then stop so we don't fill up memory with it).
-    const accumulatedStderr = takeWhileInclusive(
-      stderrEvents
-        .scan(
-          (acc, event) => (acc + event.data).slice(0, exitErrorBufferSize),
-          '',
-        )
-        .startWith(''),
-      acc => acc.length < exitErrorBufferSize,
-    );
+    const accumulatedStderr = stderrEvents
+      .scan(
+        (acc, event) => (acc + event.data).slice(0, exitErrorBufferSize),
+        '',
+      )
+      .startWith('')
+      .let(takeWhileInclusive(acc => acc.length < exitErrorBufferSize));
 
     // We need to start listening for the exit event immediately, but defer emitting it until the
     // (buffered) output streams end.
@@ -348,12 +349,16 @@ export function getOutputStream(
       .publishReplay();
     const exitSub = closeEvents.connect();
 
-    return takeWhileInclusive(
-      Observable.merge(stdoutEvents, stderrEvents).concat(closeEvents),
-      event => event.kind !== 'error' && event.kind !== 'exit',
-    ).finally(() => {
-      exitSub.unsubscribe();
-    });
+    return Observable.merge(stdoutEvents, stderrEvents)
+      .concat(closeEvents)
+      .let(
+        takeWhileInclusive(
+          event => event.kind !== 'error' && event.kind !== 'exit',
+        ),
+      )
+      .finally(() => {
+        exitSub.unsubscribe();
+      });
   });
 }
 
@@ -764,7 +769,7 @@ export class ProcessTimeoutError extends Error {
 const DEFAULT_MAX_BUFFER = 100 * 1024 * 1024;
 
 const MAX_LOGGED_CALLS = 100;
-const PREVERVED_HISTORY_CALLS = 50;
+const NUM_PRESERVED_HISTORY_CALLS = 50;
 
 const noopDisposable = {dispose: () => {}};
 const whenShellEnvironmentLoaded =
@@ -776,21 +781,24 @@ const whenShellEnvironmentLoaded =
       };
 
 export const loggedCalls = [];
-function logCall(duration, command, args) {
+function logCall(duration: number, command: string, args: Array<string>) {
   // Trim the history once in a while, to avoid doing expensive array
   // manipulation all the time after we reached the end of the history
   if (loggedCalls.length > MAX_LOGGED_CALLS) {
-    loggedCalls.splice(0, loggedCalls.length - PREVERVED_HISTORY_CALLS, {
-      time: new Date(),
-      duration: 0,
+    loggedCalls.splice(0, loggedCalls.length - NUM_PRESERVED_HISTORY_CALLS, {
       command: '... history stripped ...',
+      duration: 0,
+      time: new Date(),
     });
   }
+
+  const fullCommand = [command, ...args].join(' ');
   loggedCalls.push({
+    command: fullCommand,
     duration,
-    command: [command, ...args].join(' '),
     time: new Date(),
   });
+  logger.info(`${duration}ms: ${fullCommand}`);
 }
 
 function logError(...args) {
