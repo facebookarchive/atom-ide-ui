@@ -32,7 +32,7 @@ const {getModules} = require('./util');
 const modulePaths = getModules();
 const moduleNames = new Set(modulePaths.map(p => path.basename(p)));
 
-function addDependencies(pkgDeps, moduleDeps) {
+function addDependencies(pkgDeps, moduleDeps, assertMatching = true) {
   Object.keys(moduleDeps).forEach(dep => {
     // Internal dependencies should be ignored.
     if (moduleNames.has(dep)) {
@@ -40,10 +40,12 @@ function addDependencies(pkgDeps, moduleDeps) {
     }
     const currentDep = pkgDeps[dep];
     const moduleDep = moduleDeps[dep];
-    assert(
-      currentDep == null || currentDep === moduleDep,
-      `Mismatched dependency ${dep}: ${currentDep} vs ${moduleDep}`
-    );
+    if (assertMatching) {
+      assert(
+        currentDep == null || currentDep === moduleDep,
+        `Mismatched dependency ${dep}: ${currentDep} vs ${moduleDep}`
+      );
+    }
     pkgDeps[dep] = moduleDep;
   });
 }
@@ -58,7 +60,7 @@ function sortObject(obj) {
 
 // Core dev dependencies.
 const devDependencies = require(path.join(__dirname, 'devDependencies.json'));
-addDependencies(pkgJson.devDependencies, devDependencies);
+addDependencies(pkgJson.devDependencies, devDependencies, false);
 
 // Pull in dependencies from modules.
 modulePaths.forEach(dirpath => {
