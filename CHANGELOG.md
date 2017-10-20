@@ -13,11 +13,12 @@
 - Fixed flickering on Windows (#20)
 
 ### Outlines
-- Added a `landingPosition` property to the outline API.
 - The search box now gets focus when the panel is toggled.
+- Added a `landingPosition` property to the outline API.
 
 ### Other
 - Signature Help: Signatures no longer persist for a moment after deleting a line.
+- Improved performance of debounced events throughout the package (#93)
 
 ## v0.5.1
 
