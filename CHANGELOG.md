@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.5.3
+
+### Datatips
+- Datatips now appear at the cursor rather than the beginning of the range (#19)
+- Scrollable datatips now always capture scroll events (#71)
+- Datatip highlights no longer obscure Hyperclick underlines.
+
+### Diagnostics
+- Restored colors to diagnostic icons.
+- The editor is now focused after double-clicking a diagnostic message.
+- Fixed handling of Linter traces (#102)
+- Fixed previous/next diagnostic keyboard shortcuts.
+- Fixed code action context menus throwing exceptions on Windows.
+
+### Outlines
+- Auto-focus is less aggressive now.
+
 ## v0.5.2
 
 ### Diagnostics
