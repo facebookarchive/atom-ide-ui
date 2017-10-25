@@ -1,3 +1,52 @@
+'use strict';
+
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
+
+let captureParallelismHistory = (() => {
+  var _ref34 = (0, _asyncToGenerator.default)(function* (asyncFunction, args) {
+    const parallelismHistory = [];
+    let parralelism = 0;
+    const result = yield asyncFunction(...args.map(function (arg) {
+      if (typeof arg !== 'function') {
+        return arg;
+      }
+      const func = arg;
+      return (() => {
+        var _ref35 = (0, _asyncToGenerator.default)(function* (item) {
+          ++parralelism;
+          parallelismHistory.push(parralelism);
+          const value = yield func(item);
+          --parralelism;
+          return value;
+        });
+
+        return function (_x4) {
+          return _ref35.apply(this, arguments);
+        };
+      })();
+    }));
+    return { result, parallelismHistory };
+  });
+
+  return function captureParallelismHistory(_x2, _x3) {
+    return _ref34.apply(this, arguments);
+  };
+})();
+
+var _promise;
+
+function _load_promise() {
+  return _promise = require('../promise');
+}
+
+var _testHelpers;
+
+function _load_testHelpers() {
+  return _testHelpers = require('../test-helpers');
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -6,28 +55,11 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * 
  * @format
  */
 
 /* eslint-disable prefer-promise-reject-errors */
-
-import {
-  asyncFind,
-  denodeify,
-  serializeAsyncCall,
-  asyncLimit,
-  asyncFilter,
-  asyncObjFilter,
-  asyncSome,
-  lastly,
-  retryLimit,
-  RequestSerializer,
-  TimedOutError,
-  timeoutPromise,
-} from '../promise';
-import invariant from 'assert';
-import {expectAsyncFailure} from '../test-helpers';
 
 describe('promises::asyncFind()', () => {
   it('Empty list of items should resolve to null.', () => {
@@ -42,15 +74,13 @@ describe('promises::asyncFind()', () => {
     };
 
     runs(() => {
-      asyncFind(args, test)
-        .then(result => {
-          observedResult = result;
-          isResolved = true;
-        })
-        .catch(error => {
-          observedError = error;
-          isRejected = true;
-        });
+      (0, (_promise || _load_promise()).asyncFind)(args, test).then(result => {
+        observedResult = result;
+        isResolved = true;
+      }).catch(error => {
+        observedError = error;
+        isRejected = true;
+      });
     });
 
     waitsFor(() => isResolved || isRejected);
@@ -81,15 +111,13 @@ describe('promises::asyncFind()', () => {
     };
 
     runs(() => {
-      asyncFind(args, test)
-        .then(result => {
-          observedResult = result;
-          isResolved = true;
-        })
-        .catch(error => {
-          observedError = error;
-          isRejected = true;
-        });
+      (0, (_promise || _load_promise()).asyncFind)(args, test).then(result => {
+        observedResult = result;
+        isResolved = true;
+      }).catch(error => {
+        observedError = error;
+        isRejected = true;
+      });
     });
 
     waitsFor(() => isResolved || isRejected);
@@ -116,7 +144,7 @@ describe('promises::denodeify()', () => {
    * rather than at the end. The type signature of this function cannot be
    * expressed in Flow.
    */
-  function asyncProduct(...factors): void {
+  function asyncProduct(...factors) {
     const callback = factors.pop();
     const product = factors.reduce((previousValue, currentValue) => {
       return previousValue * currentValue;
@@ -130,26 +158,23 @@ describe('promises::denodeify()', () => {
   }
 
   it('resolves Promise when callback succeeds', () => {
-    const denodeifiedAsyncProduct = denodeify(asyncProduct);
-    waitsForPromise(async () => {
-      const trivialProduct = await denodeifiedAsyncProduct();
+    const denodeifiedAsyncProduct = (0, (_promise || _load_promise()).denodeify)(asyncProduct);
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const trivialProduct = yield denodeifiedAsyncProduct();
       expect(trivialProduct).toBe(1);
 
-      const product = await denodeifiedAsyncProduct(1, 2, 3, 4, 5);
+      const product = yield denodeifiedAsyncProduct(1, 2, 3, 4, 5);
       expect(product).toBe(120);
-    });
+    }));
   });
 
   it('rejects Promise when callback fails', () => {
-    const denodeifiedAsyncProduct = denodeify(asyncProduct);
-    waitsForPromise(async () => {
-      await expectAsyncFailure(
-        denodeifiedAsyncProduct('a', 'b'),
-        (error: Error) => {
-          expect(error.message).toBe('product was NaN');
-        },
-      );
-    });
+    const denodeifiedAsyncProduct = (0, (_promise || _load_promise()).denodeify)(asyncProduct);
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      yield (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(denodeifiedAsyncProduct('a', 'b'), function (error) {
+        expect(error.message).toBe('product was NaN');
+      });
+    }));
   });
 
   function checksReceiver(expectedReceiver, callback) {
@@ -161,23 +186,20 @@ describe('promises::denodeify()', () => {
   }
 
   it('result of denodeify propagates receiver as expected', () => {
-    const denodeifiedChecksReceiver = denodeify(checksReceiver);
+    const denodeifiedChecksReceiver = (0, (_promise || _load_promise()).denodeify)(checksReceiver);
 
-    waitsForPromise(async () => {
-      const receiver = {denodeifiedChecksReceiver};
-      const result = await receiver.denodeifiedChecksReceiver(receiver);
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const receiver = { denodeifiedChecksReceiver };
+      const result = yield receiver.denodeifiedChecksReceiver(receiver);
       expect(result).toBe('winner');
-    });
+    }));
 
-    waitsForPromise(async () => {
-      const receiver = {denodeifiedChecksReceiver};
-      await expectAsyncFailure(
-        receiver.denodeifiedChecksReceiver(null),
-        (error: Error) => {
-          expect(error.message).toBe('unexpected receiver');
-        },
-      );
-    });
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const receiver = { denodeifiedChecksReceiver };
+      yield (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(receiver.denodeifiedChecksReceiver(null), function (error) {
+        expect(error.message).toBe('unexpected receiver');
+      });
+    }));
   });
 });
 
@@ -185,7 +207,7 @@ describe('promises::serializeAsyncCall()', () => {
   it('Returns the same result when called after scheduled', () => {
     let i = 0;
     const asyncFunSpy = jasmine.createSpy('async');
-    const oneAsyncCallAtATime = serializeAsyncCall(() => {
+    const oneAsyncCallAtATime = (0, (_promise || _load_promise()).serializeAsyncCall)(() => {
       i++;
       const resultPromise = waitPromise(10, i);
       asyncFunSpy();
@@ -202,21 +224,17 @@ describe('promises::serializeAsyncCall()', () => {
     // Wait for the promise to call the next chain
     // That isn't synchrnously guranteed because it happens on `process.nextTick`.
     waitsFor(() => asyncFunSpy.callCount === 2);
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       advanceClock(11);
-      const results = await Promise.all([
-        result1Promise,
-        result2Promise,
-        result3Promise,
-      ]);
+      const results = yield Promise.all([result1Promise, result2Promise, result3Promise]);
       expect(results).toEqual([1, 2, 2]);
-    });
+    }));
   });
 
   it('Calls and returns (even if errors) the same number of times if serially called', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       let i = 0;
-      const oneAsyncCallAtATime = serializeAsyncCall(() => {
+      const oneAsyncCallAtATime = (0, (_promise || _load_promise()).serializeAsyncCall)(function () {
         i++;
         if (i === 4) {
           return Promise.reject('ERROR');
@@ -225,27 +243,27 @@ describe('promises::serializeAsyncCall()', () => {
       });
       const result1Promise = oneAsyncCallAtATime();
       advanceClock(11);
-      const result1 = await result1Promise;
+      const result1 = yield result1Promise;
 
       const result2Promise = oneAsyncCallAtATime();
       advanceClock(11);
-      const result2 = await result2Promise;
+      const result2 = yield result2Promise;
 
       const result3Promise = oneAsyncCallAtATime();
       advanceClock(11);
-      const result3 = await result3Promise;
+      const result3 = yield result3Promise;
 
       const errorPromoise = oneAsyncCallAtATime();
       advanceClock(11);
-      await expectAsyncFailure(errorPromoise, error => {
+      yield (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(errorPromoise, function (error) {
         expect(error).toBe('ERROR');
       });
 
       const result5Promise = oneAsyncCallAtATime();
       advanceClock(11);
-      const result5 = await result5Promise;
+      const result5 = yield result5Promise;
       expect([result1, result2, result3, result5]).toEqual([1, 2, 3, 5]);
-    });
+    }));
   });
 });
 
@@ -255,62 +273,63 @@ describe('promises::asyncLimit()', () => {
   });
 
   it('runs in series if limit is 1', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const {
         result,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncLimit, [
-        [1, 2, 3],
-        1,
-        item => waitPromise(10, item + 1),
-      ]);
+        parallelismHistory
+      } = yield captureParallelismHistory((_promise || _load_promise()).asyncLimit, [[1, 2, 3], 1, function (item) {
+        return waitPromise(10, item + 1);
+      }]);
       expect(parallelismHistory).toEqual([1, 1, 1]);
       expect(result).toEqual([2, 3, 4]);
-    });
+    }));
   });
 
   it('runs with the specified limit, until finishing', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const {
         result,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncLimit, [
-        [1, 2, 3, 4, 5, 6, 7, 8, 9],
-        3,
-        item => waitPromise(10 + item, item - 1),
-      ]);
+        parallelismHistory
+      } = yield captureParallelismHistory((_promise || _load_promise()).asyncLimit, [[1, 2, 3, 4, 5, 6, 7, 8, 9], 3, function (item) {
+        return waitPromise(10 + item, item - 1);
+      }]);
       expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
       expect(parallelismHistory).toEqual([1, 2, 3, 3, 3, 3, 3, 3, 3]);
-    });
+    }));
   });
 
   it('works when the limit is bigger than the array length', () => {
-    waitsForPromise(async () => {
-      const result = await asyncLimit([1, 2, 3], 10, item =>
-        waitPromise(10, item * 2),
-      );
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const result = yield (0, (_promise || _load_promise()).asyncLimit)([1, 2, 3], 10, function (item) {
+        return waitPromise(10, item * 2);
+      });
       expect(result).toEqual([2, 4, 6]);
-    });
+    }));
   });
 
   it('a rejected promise rejects the whole call with the error', () => {
-    waitsForPromise(async () => {
-      await expectAsyncFailure(
-        asyncLimit([1], 1, async item => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      yield (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)((0, (_promise || _load_promise()).asyncLimit)([1], 1, (() => {
+        var _ref11 = (0, _asyncToGenerator.default)(function* (item) {
           throw new Error('rejected iterator promise');
-        }),
-        (error: Error) => {
-          expect(error.message).toBe('rejected iterator promise');
-        },
-      );
-    });
+        });
+
+        return function (_x) {
+          return _ref11.apply(this, arguments);
+        };
+      })()), function (error) {
+        expect(error.message).toBe('rejected iterator promise');
+      });
+    }));
   });
 
   it('works when the array is empty', () => {
-    waitsForPromise(async () => {
-      const result = await asyncLimit([], 1, () => Promise.resolve());
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const result = yield (0, (_promise || _load_promise()).asyncLimit)([], 1, function () {
+        return Promise.resolve();
+      });
       expect(result).toEqual([]);
-    });
+    }));
   });
 });
 
@@ -321,33 +340,30 @@ describe('promises::asyncFilter()', () => {
 
   // eslint-disable-next-line max-len
   it('filters an array with an async iterator and maximum parallelization when no limit is specified', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const {
         result: filtered,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncFilter, [
-        [1, 2, 3, 4, 5],
-        item => waitPromise(10 + item, item > 2),
-      ]);
+        parallelismHistory
+      } = yield captureParallelismHistory((_promise || _load_promise()).asyncFilter, [[1, 2, 3, 4, 5], function (item) {
+        return waitPromise(10 + item, item > 2);
+      }]);
       expect(filtered).toEqual([3, 4, 5]);
       expect(parallelismHistory).toEqual([1, 2, 3, 4, 5]);
-    });
+    }));
   });
 
   it('filters an array with a limit on parallelization', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const {
         result: filtered,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncFilter, [
-        [1, 2, 3, 4, 5],
-        item => waitPromise(10 + item, item > 2),
-        3,
-      ]);
+        parallelismHistory
+      } = yield captureParallelismHistory((_promise || _load_promise()).asyncFilter, [[1, 2, 3, 4, 5], function (item) {
+        return waitPromise(10 + item, item > 2);
+      }, 3]);
       expect(filtered).toEqual([3, 4, 5]);
       // Increasing promise resolve time will gurantee maximum parallelization.
       expect(parallelismHistory).toEqual([1, 2, 3, 3, 3]);
-    });
+    }));
   });
 });
 
@@ -358,33 +374,30 @@ describe('promises::asyncObjFilter()', () => {
 
   // eslint-disable-next-line max-len
   it('filters an object with an async iterator and maximum parallelization when no limit is specified', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const {
         result: filtered,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncObjFilter, [
-        {a: 1, b: 2, c: 3, d: 4, e: 5},
-        (value, key) => waitPromise(5 + value, value > 2),
-      ]);
-      expect(filtered).toEqual({c: 3, d: 4, e: 5});
+        parallelismHistory
+      } = yield captureParallelismHistory((_promise || _load_promise()).asyncObjFilter, [{ a: 1, b: 2, c: 3, d: 4, e: 5 }, function (value, key) {
+        return waitPromise(5 + value, value > 2);
+      }]);
+      expect(filtered).toEqual({ c: 3, d: 4, e: 5 });
       expect(parallelismHistory).toEqual([1, 2, 3, 4, 5]);
-    });
+    }));
   });
 
   it('filters an array with a limit on parallelization', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const {
         result: filtered,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncObjFilter, [
-        {a: 1, b: 2, c: 3, d: 4, e: 5},
-        (value, key) => waitPromise(5 + value, value > 2),
-        3,
-      ]);
-      expect(filtered).toEqual({c: 3, d: 4, e: 5});
+        parallelismHistory
+      } = yield captureParallelismHistory((_promise || _load_promise()).asyncObjFilter, [{ a: 1, b: 2, c: 3, d: 4, e: 5 }, function (value, key) {
+        return waitPromise(5 + value, value > 2);
+      }, 3]);
+      expect(filtered).toEqual({ c: 3, d: 4, e: 5 });
       // Increasing promise resolve time will gurantee maximum parallelization.
       expect(parallelismHistory).toEqual([1, 2, 3, 3, 3]);
-    });
+    }));
   });
 });
 
@@ -395,64 +408,61 @@ describe('promises::asyncSome()', () => {
 
   // eslint-disable-next-line max-len
   it('some an array with an async iterator and maximum parallelization when no limit is specified', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const {
         result,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncSome, [
-        [1, 2, 3, 4, 5],
-        item => waitPromise(10, item === 6),
-      ]);
+        parallelismHistory
+      } = yield captureParallelismHistory((_promise || _load_promise()).asyncSome, [[1, 2, 3, 4, 5], function (item) {
+        return waitPromise(10, item === 6);
+      }]);
       expect(result).toEqual(false);
       expect(parallelismHistory).toEqual([1, 2, 3, 4, 5]);
-    });
+    }));
   });
 
   it('some an array with a limit on parallelization', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const {
         result,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncSome, [
-        [1, 2, 3, 4, 5],
-        item => waitPromise(10 + item, item === 5),
-        3,
-      ]);
+        parallelismHistory
+      } = yield captureParallelismHistory((_promise || _load_promise()).asyncSome, [[1, 2, 3, 4, 5], function (item) {
+        return waitPromise(10 + item, item === 5);
+      }, 3]);
       expect(result).toEqual(true);
       expect(parallelismHistory).toEqual([1, 2, 3, 3, 3]);
-    });
+    }));
   });
 });
 
 describe('promises::lastly', () => {
   it('executes after a resolved promise', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const spy = jasmine.createSpy('spy');
-      const result = await lastly(Promise.resolve(1), spy);
+      const result = yield (0, (_promise || _load_promise()).lastly)(Promise.resolve(1), spy);
       expect(result).toBe(1);
       expect(spy).toHaveBeenCalled();
-    });
+    }));
   });
 
   it('executes after a rejected promise', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const spy = jasmine.createSpy('spy');
-      await expectAsyncFailure(lastly(Promise.reject(2), spy), err => {
+      yield (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)((0, (_promise || _load_promise()).lastly)(Promise.reject(2), spy), function (err) {
         expect(err).toBe(2);
       });
       expect(spy).toHaveBeenCalled();
-    });
+    }));
   });
 
   it('works for async functions', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const spy = jasmine.createSpy('spy');
-      const result = await lastly(Promise.resolve(1), async () => {
+      const result = yield (0, (_promise || _load_promise()).lastly)(Promise.resolve(1), (0, _asyncToGenerator.default)(function* () {
         spy();
-      });
+      }));
       expect(result).toBe(1);
       expect(spy).toHaveBeenCalled();
-    });
+    }));
   });
 });
 
@@ -462,204 +472,174 @@ describe('promises::retryLimit()', () => {
   });
 
   it('retries and fails 2 times before resolving to an acceptable result where limit = 5', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       let succeedAfter = 2;
       let calls = 0;
       let validationCalls = 0;
-      const retrialsResult = await retryLimit(
-        () => {
-          return new Promise((resolve, reject) => {
-            calls++;
-            if (succeedAfter-- === 0) {
-              resolve('RESULT');
-            } else {
-              reject('ERROR');
-            }
-          });
-        },
-        result => {
-          validationCalls++;
-          return result === 'RESULT';
-        },
-        5,
-      );
+      const retrialsResult = yield (0, (_promise || _load_promise()).retryLimit)(function () {
+        return new Promise(function (resolve, reject) {
+          calls++;
+          if (succeedAfter-- === 0) {
+            resolve('RESULT');
+          } else {
+            reject('ERROR');
+          }
+        });
+      }, function (result) {
+        validationCalls++;
+        return result === 'RESULT';
+      }, 5);
       expect(calls).toBe(3);
       expect(validationCalls).toBe(1);
       expect(retrialsResult).toBe('RESULT');
-    });
+    }));
   });
 
   it('retries and fails consistently', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       let calls = 0;
       let validationCalls = 0;
-      const failRetriesPromise = retryLimit(
-        () => {
-          calls++;
-          return Promise.reject('ERROR');
-        },
-        result => {
-          validationCalls++;
-          return result != null;
-        },
-        2,
-      );
-      await expectAsyncFailure(failRetriesPromise, error => {
+      const failRetriesPromise = (0, (_promise || _load_promise()).retryLimit)(function () {
+        calls++;
+        return Promise.reject('ERROR');
+      }, function (result) {
+        validationCalls++;
+        return result != null;
+      }, 2);
+      yield (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(failRetriesPromise, function (error) {
         expect(error).toBe('ERROR');
       });
       expect(calls).toBe(2);
       expect(validationCalls).toBe(0);
-    });
+    }));
   });
 
   it('accepts a null response', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       let succeedAfter = 2;
       let calls = 0;
       let validationCalls = 0;
-      const retryResult = await retryLimit(
-        () => {
-          calls++;
-          if (succeedAfter-- === 0) {
-            return Promise.resolve(null);
-          } else {
-            return Promise.resolve('NOT_GOOD');
-          }
-        },
-        result => {
-          validationCalls++;
-          return result == null;
-        },
-        5,
-      );
+      const retryResult = yield (0, (_promise || _load_promise()).retryLimit)(function () {
+        calls++;
+        if (succeedAfter-- === 0) {
+          return Promise.resolve(null);
+        } else {
+          return Promise.resolve('NOT_GOOD');
+        }
+      }, function (result) {
+        validationCalls++;
+        return result == null;
+      }, 5);
       expect(retryResult).toBe(null);
       expect(calls).toBe(3);
       expect(validationCalls).toBe(3);
-    });
+    }));
   });
 
   it('no valid response is ever got', () => {
-    waitsForPromise(async () => {
-      const nonValidRetriesPromise = retryLimit(
-        () => {
-          return Promise.resolve('A');
-        },
-        result => {
-          return result === 'B';
-        },
-        2,
-      );
-      await expectAsyncFailure(nonValidRetriesPromise, error => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const nonValidRetriesPromise = (0, (_promise || _load_promise()).retryLimit)(function () {
+        return Promise.resolve('A');
+      }, function (result) {
+        return result === 'B';
+      }, 2);
+      yield (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(nonValidRetriesPromise, function (error) {
         expect(error.message).toBe('No valid response found!');
       });
-    });
+    }));
   });
 });
 
 describe('promises::RequestSerializer()', () => {
-  let requestSerializer: RequestSerializer<any> = (null: any);
+  let requestSerializer = null;
 
   beforeEach(() => {
     jasmine.useRealClock();
-    requestSerializer = new RequestSerializer();
+    requestSerializer = new (_promise || _load_promise()).RequestSerializer();
   });
 
   it('gets outdated result for old promises resolving after newer calls', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const oldPromise = requestSerializer.run(waitPromise(10, 'OLD'));
       const newPromise = requestSerializer.run(waitPromise(5, 'NEW'));
-      const {status: oldStatus} = await oldPromise;
+      const { status: oldStatus } = yield oldPromise;
       expect(oldStatus).toBe('outdated');
-      const newResult = await newPromise;
-      invariant(newResult.status === 'success');
+      const newResult = yield newPromise;
+
+      if (!(newResult.status === 'success')) {
+        throw new Error('Invariant violation: "newResult.status === \'success\'"');
+      }
+
       expect(newResult.result).toBe('NEW');
-    });
+    }));
   });
 
   it('waitForLatestResult: waits for the latest result', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       requestSerializer.run(waitPromise(5, 'OLD'));
       requestSerializer.run(waitPromise(10, 'NEW'));
-      const latestResult = await requestSerializer.waitForLatestResult();
+      const latestResult = yield requestSerializer.waitForLatestResult();
       expect(latestResult).toBe('NEW');
-    });
+    }));
   });
 
   it('waitForLatestResult: waits even if the first run did not kick off', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const latestResultPromise = requestSerializer.waitForLatestResult();
       requestSerializer.run(waitPromise(10, 'RESULT'));
-      const latestResult = await latestResultPromise;
+      const latestResult = yield latestResultPromise;
       expect(latestResult).toBe('RESULT');
-    });
+    }));
   });
 
   it('waitForLatestResult: does not wait for the first, if the second resolves faster', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       requestSerializer.run(waitPromise(1000000, 'OLD')); // This will never resolve.
       requestSerializer.run(waitPromise(10, 'NEW'));
-      const latestResult = await requestSerializer.waitForLatestResult();
+      const latestResult = yield requestSerializer.waitForLatestResult();
       expect(latestResult).toBe('NEW');
-    });
+    }));
   });
 });
 
 describe('timeoutPromise', () => {
   it('should resolve normally if within the timeout', () => {
-    waitsForPromise(async () => {
-      const inputPromise = new Promise(resolve => resolve('foo'));
-      const outputPromise = timeoutPromise(inputPromise, 1000);
-      expect(await outputPromise).toBe('foo');
-    });
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const inputPromise = new Promise(function (resolve) {
+        return resolve('foo');
+      });
+      const outputPromise = (0, (_promise || _load_promise()).timeoutPromise)(inputPromise, 1000);
+      expect((yield outputPromise)).toBe('foo');
+    }));
   });
 
   it('should reject if the given promise rejects', () => {
-    waitsForPromise(async () => {
-      const inputPromise = new Promise((resolve, reject) => reject('foo'));
-      const outputPromise = timeoutPromise(inputPromise, 1000).catch(
-        value => `rejected with ${value}`,
-      );
-      expect(await outputPromise).toBe('rejected with foo');
-    });
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const inputPromise = new Promise(function (resolve, reject) {
+        return reject('foo');
+      });
+      const outputPromise = (0, (_promise || _load_promise()).timeoutPromise)(inputPromise, 1000).catch(function (value) {
+        return `rejected with ${value}`;
+      });
+      expect((yield outputPromise)).toBe('rejected with foo');
+    }));
   });
 
   it('should reject if the given promise takes too long', () => {
-    waitsForPromise(async () => {
-      const inputPromise = new Promise(resolve => setTimeout(resolve, 2000));
-      const outputPromise = timeoutPromise(inputPromise, 1000).catch(
-        value => value,
-      );
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const inputPromise = new Promise(function (resolve) {
+        return setTimeout(resolve, 2000);
+      });
+      const outputPromise = (0, (_promise || _load_promise()).timeoutPromise)(inputPromise, 1000).catch(function (value) {
+        return value;
+      });
       advanceClock(1500);
-      expect(await outputPromise).toEqual(new TimedOutError(1000));
-    });
+      expect((yield outputPromise)).toEqual(new (_promise || _load_promise()).TimedOutError(1000));
+    }));
   });
 });
 
-async function captureParallelismHistory(
-  asyncFunction: (...args: Array<any>) => Promise<mixed>,
-  args: Array<mixed>,
-): Promise<{result: mixed, parallelismHistory: Array<number>}> {
-  const parallelismHistory = [];
-  let parralelism = 0;
-  const result = await asyncFunction(
-    ...args.map(arg => {
-      if (typeof arg !== 'function') {
-        return arg;
-      }
-      const func = arg;
-      return async item => {
-        ++parralelism;
-        parallelismHistory.push(parralelism);
-        const value = await func(item);
-        --parralelism;
-        return value;
-      };
-    }),
-  );
-  return {result, parallelismHistory};
-}
-
-function waitPromise(timeoutMs: number, value: any): Promise<any> {
+function waitPromise(timeoutMs, value) {
   return new Promise((resolve, reject) => {
     setTimeout(() => resolve(value), timeoutMs);
   });
