@@ -27,7 +27,9 @@ import {
   collect,
   MultiMap,
   objectEntries,
+  objectFromPairs,
   objectFromMap,
+  objectMapValues,
   objectValues,
   concatIterators,
   areSetsEqual,
@@ -39,6 +41,7 @@ import {
   mapGetWithDefault,
   count,
   range,
+  mapFromObject,
 } from '../collection';
 
 describe('ensureArray', () => {
@@ -624,5 +627,35 @@ describe('range', () => {
   it('is empty if stop is less than, or equal to, start', () => {
     expect([...range(2, 1)]).toEqual([]);
     expect([...range(1, 1)]).toEqual([]);
+  });
+});
+
+describe('objectFromPairs', () => {
+  it('creates an object with the keys and values of the iterable', () => {
+    function* gen() {
+      yield ['a', 1];
+      yield ['b', 2];
+    }
+    expect(objectFromPairs(gen())).toEqual({a: 1, b: 2});
+  });
+});
+
+describe('objectMapValues', () => {
+  it('maps values', () => {
+    const mapped = objectMapValues({a: 1, b: 2}, v => v + 1);
+    expect(mapped).toEqual({a: 2, b: 3});
+  });
+
+  it('can project keys too', () => {
+    const mapped = objectMapValues({a: 1, b: 2}, (v, k) => k);
+    expect(mapped).toEqual({a: 'a', b: 'b'});
+  });
+});
+
+describe('mapFromObject', () => {
+  it('converts a object to an map', () => {
+    expect(
+      mapEqual(mapFromObject({a: 1, b: 2}), new Map([['a', 1], ['b', 2]])),
+    ).toEqual(true);
   });
 });
