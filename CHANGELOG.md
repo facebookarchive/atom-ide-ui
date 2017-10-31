@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.4
+
+### Diagnostics
+
+- Line numbers are now visible when filtering to the current file (#101)
+- Improved table resizing logic.
+
 ## v0.5.3
 
 ### Datatips
