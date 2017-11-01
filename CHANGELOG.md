@@ -3,9 +3,14 @@
 ## v0.5.4
 
 ### Diagnostics
-
 - Line numbers are now visible when filtering to the current file (#101)
 - Improved table resizing logic.
+
+### Hyperclick
+- Fixed some minor bugs around loading indicators, caching, and async races.
+
+### Outlines
+- Fixed auto-focus again (for real this time... #105)
 
 ## v0.5.3
 
