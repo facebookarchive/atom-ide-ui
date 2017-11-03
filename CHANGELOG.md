@@ -4,7 +4,7 @@
 
 ### Diagnostics
 - Line numbers are now visible when filtering to the current file (#101)
-- Improved table resizing logic.
+- Improved table resizing logic, and added several performance optimizations.
 
 ### Hyperclick
 - Fixed some minor bugs around loading indicators, caching, and async races.
