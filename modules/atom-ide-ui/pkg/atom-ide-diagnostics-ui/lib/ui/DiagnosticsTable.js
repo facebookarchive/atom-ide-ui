@@ -24,7 +24,7 @@ import invariant from 'assert';
 import idx from 'idx';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import humanizePath from 'nuclide-commons-atom/humanizePath';
-import {insideOut} from 'nuclide-commons/collection';
+import {insideOut, arrayEqual} from 'nuclide-commons/collection';
 import * as React from 'react';
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import {goToLocation} from 'nuclide-commons-atom/go-to-location';
@@ -34,6 +34,9 @@ import {DiagnosticsMessageNoHeader} from './DiagnosticsMessage';
 import {DiagnosticsMessageText} from './DiagnosticsMessageText';
 import {Icon} from 'nuclide-commons-ui/Icon';
 import {Subject, BehaviorSubject} from 'rxjs';
+
+const DIAGNOSTICS_TO_ROWS_TRACES_MAP = new WeakMap();
+const DIAGNOSTICS_TO_ROWS_NO_TRACES_MAP = new WeakMap();
 
 // text is always used for sorting, while we render the element.
 type DescriptionField = {
@@ -229,26 +232,6 @@ export default class DiagnosticsTable extends React.PureComponent<
       descriptionWidth -= LINE_NUMBER_WIDTH;
     }
 
-    // False positive for this lint rule?
-    // eslint-disable-next-line react/no-unused-prop-types
-    const DescriptionComponent = (props: {data: DescriptionField}) => {
-      const {showTraces, diagnostic, text, isPlainText} = props.data;
-      const expanded =
-        showTraces ||
-        (this.state.focused && diagnostic === this.state.selectedMessage);
-      return expanded
-        ? DiagnosticsMessageNoHeader({
-            message: diagnostic,
-            goToLocation: (file: string, line: number) =>
-              goToLocation(file, {line}),
-            fixer: () => {},
-          })
-        : DiagnosticsMessageText({
-            preserveNewlines: showTraces,
-            message: {text, html: isPlainText ? undefined : text},
-          });
-    };
-
     return [
       {
         component: TypeComponent,
@@ -265,7 +248,7 @@ export default class DiagnosticsTable extends React.PureComponent<
         minWidth: 100,
       },
       {
-        component: DescriptionComponent,
+        component: this._renderDescription,
         key: 'description',
         title: 'Description',
         width: descriptionWidth,
@@ -274,6 +257,26 @@ export default class DiagnosticsTable extends React.PureComponent<
       ...filePathColumns,
     ];
   }
+
+  // False positive for this lint rule?
+  // eslint-disable-next-line react/no-unused-prop-types
+  _renderDescription = (props: {data: DescriptionField}) => {
+    const {showTraces, diagnostic, text, isPlainText} = props.data;
+    const expanded =
+      showTraces ||
+      (this.state.focused && diagnostic === this.state.selectedMessage);
+    return expanded
+      ? DiagnosticsMessageNoHeader({
+          message: diagnostic,
+          goToLocation: (file: string, line: number) =>
+            goToLocation(file, {line}),
+          fixer: () => {},
+        })
+      : DiagnosticsMessageText({
+          preserveNewlines: showTraces,
+          message: {text, html: isPlainText ? undefined : text},
+        });
+  };
 
   _getSortOptions(
     columns: Array<Column<DisplayDiagnostic>>,
@@ -393,32 +396,61 @@ export default class DiagnosticsTable extends React.PureComponent<
     return bestRankedIndex;
   }
 
-  // TODO: Memoize this so we don't recompute unnecessarily.
+  // Used ONLY for memoizing `_getRows()`
+  _previousGetRowsCall = {
+    args: {
+      diagnostics: [],
+      showTraces: false,
+    },
+    result: [],
+  };
+
   _getRows(
     diagnostics: Array<DiagnosticMessage>,
     showTraces: boolean,
   ): Array<Row<DisplayDiagnostic>> {
-    return diagnostics.map(diagnostic => {
-      const {dir, location} = getLocation(diagnostic);
-      return {
-        data: {
-          classification: {
-            kind: diagnostic.kind || 'lint',
-            severity: diagnostic.type,
-          },
-          providerName: diagnostic.providerName,
-          description: {
-            showTraces,
+    if (
+      showTraces === this._previousGetRowsCall.args.showTraces &&
+      arrayEqual(diagnostics, this._previousGetRowsCall.args.diagnostics)
+    ) {
+      return this._previousGetRowsCall.result;
+    }
+
+    const diagnosticsToRows = showTraces
+      ? DIAGNOSTICS_TO_ROWS_TRACES_MAP
+      : DIAGNOSTICS_TO_ROWS_NO_TRACES_MAP;
+    const rows = diagnostics.map(diagnostic => {
+      let row = diagnosticsToRows.get(diagnostic);
+      if (row == null) {
+        const {dir, location} = getLocation(diagnostic);
+        row = {
+          data: {
+            classification: {
+              kind: diagnostic.kind || 'lint',
+              severity: diagnostic.type,
+            },
+            providerName: diagnostic.providerName,
+            description: {
+              showTraces,
+              diagnostic,
+              ...getMessageContent(diagnostic, showTraces),
+            },
+            dir,
+            location,
             diagnostic,
-            ...getMessageContent(diagnostic, showTraces),
+            line: idx(location, _ => _.locationInFile.line),
           },
-          dir,
-          location,
-          diagnostic,
-          line: idx(location, _ => _.locationInFile.line),
-        },
-      };
+        };
+        diagnosticsToRows.set(diagnostic, row);
+      }
+      return row;
     });
+
+    this._previousGetRowsCall = {
+      args: {diagnostics, showTraces},
+      result: rows,
+    };
+    return rows;
   }
 
   // TODO: Memoize this so we don't recompute unnecessarily.
