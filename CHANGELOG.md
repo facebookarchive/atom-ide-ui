@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.6.0
+
+### Hyperclick
+
+- Hyperclick providers are no longer triggered past the end of lines.
+- Fixed a minor race condition around loading indicators.
+
+### Code Actions
+
+- Fix "null is not iterable" exception with null results (#120)
+- Providers may now safely return a null result (equivalent to an empty array).
+
 ## v0.5.4
 
 ### Diagnostics
