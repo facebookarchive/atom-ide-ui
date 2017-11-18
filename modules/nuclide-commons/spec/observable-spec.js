@@ -30,6 +30,7 @@ import {
   toggle,
 } from '../observable';
 import {Disposable} from 'event-kit';
+import nullthrows from 'nullthrows';
 import {Observable, Subject} from 'rxjs';
 
 const setsAreEqual = (a, b) =>
@@ -51,6 +52,16 @@ describe('nuclide-commons/observable', () => {
           .toArray()
           .toPromise();
         expect(output).toEqual(['foo\n', 'bar\n', '\n', 'baz\n', 'blar']);
+      });
+    });
+
+    it('splits streams without the newline', () => {
+      waitsForPromise(async () => {
+        const input = ['foo\nbar', '\n', '\nba', 'z', '\nblar'];
+        const output = await splitStream(Observable.from(input), false)
+          .toArray()
+          .toPromise();
+        expect(output).toEqual(['foo', 'bar', '', 'baz', 'blar']);
       });
     });
   });
@@ -556,7 +567,7 @@ describe('nuclide-commons/observable', () => {
         advanceClock(20);
 
         expect(await promise).toEqual([2, 4]);
-        expect(nextSpy.callCount).toBe(2);
+        expect(nullthrows(nextSpy).callCount).toBe(2);
       });
     });
 

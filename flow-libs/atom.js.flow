@@ -90,6 +90,7 @@ type atom$CommandDescriptor = {
   name: string,
   displayName: string,
   description?: string,
+  hiddenInCommandPalette?: boolean,
   tags?: Array<string>,
 };
 
@@ -354,8 +355,8 @@ declare class atom$PackageManager {
 
   // (Undocumented.)
   activate(): Promise<any>,
-  deactivatePackages(): void,
-  deactivatePackage(name: string, suppressSerialization?: boolean): void,
+  deactivatePackages(): Promise<void>,
+  deactivatePackage(name: string, suppressSerialization?: boolean): Promise<void>,
   emitter: atom$Emitter,
   loadPackage(name: string): void,
   loadPackages(): void,
@@ -753,6 +754,7 @@ type ChangeSelectionRangeEvent = {|
 
 declare class atom$TextEditor extends atom$Model {
   id: number,
+  verticalScrollMargin: number,
 
   // Event Subscription
   onDidChange(callback: () => void): IDisposable,
@@ -839,7 +841,9 @@ declare class atom$TextEditor extends atom$Model {
     },
   ): atom$Point,
   getEofBufferPosition(): atom$Point,
-  getVisibleRowRange(): ?[number, number],
+  getVisibleRowRange(): [number, number],
+  bufferRowForScreenRow(screenRow: number): number,
+  screenRangeForBufferRange(bufferRange: atom$RangeLike): atom$Range,
 
   // Decorations
   decorateMarker(marker: atom$Marker, decorationParams: DecorateMarkerParams): atom$Decoration,
@@ -971,6 +975,7 @@ declare class atom$TextEditor extends atom$Model {
     position: atom$Point | [?number, ?number],
     options?: {center?: boolean}
   ): void,
+  scrollToScreenRange(screenRange: atom$Range, options?: {clip?: boolean}): void,
   scrollToCursorPosition(
     options?: {center?: boolean}
   ): void,
@@ -1087,6 +1092,8 @@ declare class atom$TextEditorElement extends HTMLElement {
   // Called when the editor is detached from the DOM.
   onDidDetach(callback: () => mixed): IDisposable,
 
+  measureDimensions(): void,
+
   // Undocumented Methods
 
   // Returns a promise that resolves after the next update.
@@ -1157,6 +1164,7 @@ declare class atom$Workspace {
   // Event Subscription
   observePanes(cb: (pane: atom$Pane) => void): IDisposable,
   observeTextEditors(callback: (editor: atom$TextEditor) => mixed): IDisposable,
+  observeActiveTextEditor(callback: (editor: atom$TextEditor) => mixed): IDisposable,
   onDidAddTextEditor(callback: (event: AddTextEditorEvent) => mixed): IDisposable,
   onDidChangeActivePaneItem(callback: (item: mixed) => mixed): IDisposable,
   onDidDestroyPaneItem(callback: (event: DestroyPaneItemEvent) => mixed): IDisposable,
