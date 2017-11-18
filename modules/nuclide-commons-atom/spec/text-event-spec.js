@@ -1,32 +1,41 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import {Disposable} from 'atom';
-import {sleep} from 'nuclide-commons/promise';
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
-import {
-  TextEventDispatcher,
-  observeTextEditorEvents,
-  __TEST__,
-} from '../text-event';
+var _atom = require('atom');
 
-const grammar = 'testgrammar';
+var _promise;
+
+function _load_promise() {
+  return _promise = require('nuclide-commons/promise');
+}
+
+var _textEvent;
+
+function _load_textEvent() {
+  return _textEvent = require('../text-event');
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+const grammar = 'testgrammar'; /**
+                                * Copyright (c) 2017-present, Facebook, Inc.
+                                * All rights reserved.
+                                *
+                                * This source code is licensed under the BSD-style license found in the
+                                * LICENSE file in the root directory of this source tree. An additional grant
+                                * of patent rights can be found in the PATENTS file in the same directory.
+                                *
+                                * 
+                                * @format
+                                */
 
 describe('TextCallbackContainer', () => {
-  let textCallbackContainer: any;
-  let callback: any;
+  let textCallbackContainer;
+  let callback;
 
   beforeEach(() => {
-    textCallbackContainer = new __TEST__.TextCallbackContainer();
+    textCallbackContainer = new (_textEvent || _load_textEvent()).__TEST__.TextCallbackContainer();
     callback = jasmine.createSpy();
   });
 
@@ -59,33 +68,29 @@ describe('TextCallbackContainer', () => {
 
   it('should properly remove a callback', () => {
     textCallbackContainer.addCallback([grammar], ['did-change'], callback);
-    expect(textCallbackContainer.getCallbacks(grammar, 'did-change')).toEqual(
-      new Set([callback]),
-    );
+    expect(textCallbackContainer.getCallbacks(grammar, 'did-change')).toEqual(new Set([callback]));
     checkInvariant();
     textCallbackContainer.removeCallback([grammar], ['did-change'], callback);
-    expect(textCallbackContainer.getCallbacks(grammar, 'did-change')).toEqual(
-      new Set(),
-    );
+    expect(textCallbackContainer.getCallbacks(grammar, 'did-change')).toEqual(new Set());
   });
 });
 
 describe('TextEventDispatcher', () => {
-  let textEventDispatcher: any;
-  let fakeTextEditor: any;
-  let fakeTextEditor2: any;
-  let activeEditor: any;
+  let textEventDispatcher;
+  let fakeTextEditor;
+  let fakeTextEditor2;
+  let activeEditor;
   // Stores callbacks that have subscribed to Atom text events. Can be called to simulate
-  let textEventCallbacks: any;
-  let paneSwitchCallbacks: any;
+  let textEventCallbacks;
+  let paneSwitchCallbacks;
 
   function fakeObserveEditors(callback) {
     callback(fakeTextEditor);
     callback(fakeTextEditor2);
-    return new Disposable(() => {});
+    return new _atom.Disposable(() => {});
   }
 
-  function makeFakeEditor(path?: string = '') {
+  function makeFakeEditor(path = '') {
     // Register a callback for this fake editor.
     const registerCallback = callback => {
       let set = textEventCallbacks.get(editor);
@@ -94,14 +99,14 @@ describe('TextEventDispatcher', () => {
         textEventCallbacks.set(editor, set);
       }
       set.add(callback);
-      return new Disposable(() => {
+      return new _atom.Disposable(() => {
         set.delete(callback);
       });
     };
     const buffer = {
       onDidStopChanging: registerCallback,
       onDidSave: registerCallback,
-      onDidReload: registerCallback,
+      onDidReload: registerCallback
     };
     const editor = {
       getBuffer() {
@@ -109,13 +114,13 @@ describe('TextEventDispatcher', () => {
       },
       getGrammar() {
         return {
-          scopeName: grammar,
+          scopeName: grammar
         };
       },
       // getPath is nice for debugging tests
       getPath() {
         return path;
-      },
+      }
     };
     return editor;
   }
@@ -135,18 +140,13 @@ describe('TextEventDispatcher', () => {
     activeEditor = fakeTextEditor;
     spyOn(atom.workspace, 'isTextEditor').andReturn(true);
     spyOn(atom.workspace, 'observeTextEditors').andCallFake(fakeObserveEditors);
-    spyOn(atom.workspace, 'getActiveTextEditor').andCallFake(
-      () => activeEditor,
-    );
-    spyOn(atom.workspace, 'getTextEditors').andReturn([
-      fakeTextEditor,
-      fakeTextEditor2,
-    ]);
+    spyOn(atom.workspace, 'getActiveTextEditor').andCallFake(() => activeEditor);
+    spyOn(atom.workspace, 'getTextEditors').andReturn([fakeTextEditor, fakeTextEditor2]);
     spyOn(atom.workspace, 'onDidChangeActivePaneItem').andCallFake(callback => {
       paneSwitchCallbacks.add(callback);
-      return new Disposable(() => {});
+      return new _atom.Disposable(() => {});
     });
-    textEventDispatcher = new TextEventDispatcher();
+    textEventDispatcher = new (_textEvent || _load_textEvent()).TextEventDispatcher();
   });
 
   afterEach(() => {
@@ -165,9 +165,7 @@ describe('TextEventDispatcher', () => {
 
   it('should work with observeTextEditorEvents', () => {
     const spy = jasmine.createSpy();
-    observeTextEditorEvents([grammar], 'changes').subscribe(editor =>
-      spy(editor),
-    );
+    (0, (_textEvent || _load_textEvent()).observeTextEditorEvents)([grammar], 'changes').subscribe(editor => spy(editor));
     triggerAtomEvent(fakeTextEditor);
     expect(spy).toHaveBeenCalledWith(fakeTextEditor);
   });
@@ -197,27 +195,29 @@ describe('TextEventDispatcher', () => {
 
   it('should register simultaneous open events as pending', () => {
     jasmine.useRealClock();
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       const callback = jasmine.createSpy();
 
       // Initially, both fakeTextEditor/fakeTextEditor2 are opened.
       textEventDispatcher.onFileChange([grammar], callback);
 
       // Open events need a tick to process.
-      await sleep(0);
+      yield (0, (_promise || _load_promise()).sleep)(0);
 
       // Only fakeTextEditor should have opened; the other one should be pending.
       expect(callback).toHaveBeenCalledWith(fakeTextEditor);
       expect(callback).not.toHaveBeenCalledWith(fakeTextEditor2);
 
       // Prevent the next open event from being debounced.
-      await sleep(100);
+      yield (0, (_promise || _load_promise()).sleep)(100);
 
       // Switching to fakeTextEditor2 should now trigger its pending open event.
       activeEditor = fakeTextEditor2;
-      paneSwitchCallbacks.forEach(f => f());
+      paneSwitchCallbacks.forEach(function (f) {
+        return f();
+      });
       expect(callback).toHaveBeenCalledWith(fakeTextEditor2);
-    });
+    }));
   });
 
   it('should always dispatch to clients that request all changes', () => {
