@@ -13,13 +13,13 @@
 import type {DiagnosticMessage} from '../../../pkg/atom-ide-diagnostics/lib/types';
 
 export interface CodeAction {
-  apply(): Promise<void>,
-  getTitle(): Promise<string>,
-  dispose(): void,
+  apply(): Promise<void>;
+  getTitle(): Promise<string>;
+  dispose(): void;
 }
 
 export type CodeActionProvider = {
-  grammarScopes: Array<string>,
+  +grammarScopes?: Array<string>,
   priority: number,
   getCodeActions(
     editor: atom$TextEditor,
@@ -29,11 +29,11 @@ export type CodeActionProvider = {
 };
 
 /**
-* atom-ide-code-actions provides a CodeActionFetcher which offers an API to
-* request CodeActions from all CodeAction providers. For now, CodeActionFetcher
-* can only fetch CodeActions for a Diagnostic. In the future, this API can be
-* extended to provide a stream of CodeActions based on the cursor position.
-*/
+ * atom-ide-code-actions provides a CodeActionFetcher which offers an API to
+ * request CodeActions from all CodeAction providers. For now, CodeActionFetcher
+ * can only fetch CodeActions for a Diagnostic. In the future, this API can be
+ * extended to provide a stream of CodeActions based on the cursor position.
+ */
 export type CodeActionFetcher = {
   getCodeActionForDiagnostic: (
     diagnostic: DiagnosticMessage,

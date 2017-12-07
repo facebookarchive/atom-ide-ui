@@ -14,7 +14,9 @@ import invariant from 'assert';
 import {parse, quote} from './_shell-quote';
 
 export function stringifyError(error: Error): string {
-  return `name: ${error.name}, message: ${error.message}, stack: ${error.stack}.`;
+  return `name: ${error.name}, message: ${error.message}, stack: ${
+    error.stack
+  }.`;
 }
 
 // As of Flow v0.28, Flow does not alllow implicit string coercion of null or undefined. Use this to
@@ -216,6 +218,36 @@ export function capitalize(str: string): string {
         .charAt(0)
         .toUpperCase()
         .concat(str.slice(1));
+}
+
+type MatchRange = [/* start */ number, /* end */ number];
+
+/**
+ * Returns a list of ranges where needle occurs in haystack.
+ * This will *not* return overlapping matches; i.e. the returned list will be disjoint.
+ * This makes it easier to use for e.g. highlighting matches in a UI.
+ */
+export function getMatchRanges(
+  haystack: string,
+  needle: string,
+): Array<MatchRange> {
+  if (needle === '') {
+    // Not really a valid use.
+    return [];
+  }
+
+  const ranges = [];
+  let matchIndex = 0;
+  while ((matchIndex = haystack.indexOf(needle, matchIndex)) !== -1) {
+    const prevRange = ranges[ranges.length - 1];
+    if (prevRange != null && prevRange[1] === matchIndex) {
+      prevRange[1] += needle.length;
+    } else {
+      ranges.push([matchIndex, matchIndex + needle.length]);
+    }
+    matchIndex += needle.length;
+  }
+  return ranges;
 }
 
 // Originally copied from:

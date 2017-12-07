@@ -591,6 +591,7 @@ declare class atom$Range {
   serialize(): Array<Array<number>>,
   translate(startDelta: atom$PointLike, endDelta?: atom$PointLike): atom$Range,
   getRowCount(): number,
+  getRows(): Array<number>,
 }
 
 type RawStatusBarTile = {
@@ -1031,6 +1032,8 @@ declare class atom$TextEditorComponent {
     linesClientRect?: {top: number, left: number, bottom: number, right: number},
   ): {top: number, left: number, bottom: number, right: number},
   invalidateBlockDecorationDimensions(decoration: atom$Decoration): void,
+  element: atom$TextEditorElement,
+  didFocus(): void,
 }
 
 /**
@@ -1665,8 +1668,7 @@ declare class atom$TextBuffer {
   setFile(file: atom$Fileish): void,
 
   // Events
-  onWillChange(callback: (event: atom$TextEditEvent) => mixed): IDisposable,
-  onDidChange(callback: (event: atom$TextEditEvent) => mixed): IDisposable,
+  onWillChange(callback: () => mixed): IDisposable,
   onDidChangeText(callback: (event: atom$AggregatedTextEditEvent) => mixed): IDisposable,
   onDidStopChanging(callback: () => mixed): IDisposable,
   onDidConflict(callback: () => mixed): IDisposable,

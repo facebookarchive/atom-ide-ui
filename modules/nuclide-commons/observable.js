@@ -26,7 +26,7 @@
 
 import UniversalDisposable from './UniversalDisposable';
 import invariant from 'assert';
-import {Observable, ReplaySubject} from 'rxjs';
+import {Observable, ReplaySubject, Subject} from 'rxjs';
 import {setDifference} from './collection';
 import debounce from './debounce';
 
@@ -274,10 +274,8 @@ export function concatLatest<T>(
 ): Observable<Array<T>> {
   // First, tag all input observables with their index.
   // Flow errors with ambiguity without the explicit annotation.
-  const tagged: Array<
-    Observable<[Array<T>, number]>,
-  > = observables.map((observable, index) =>
-    observable.map(list => [list, index]),
+  const tagged: Array<Observable<[Array<T>, number]>> = observables.map(
+    (observable, index) => observable.map(list => [list, index]),
   );
   return Observable.merge(...tagged)
     .scan((accumulator, [list, index]) => {
@@ -519,4 +517,42 @@ export class SingletonExecutor<T> {
       this._currentTask = null;
     }
   }
+}
+
+/**
+ * Repeatedly subscribe to an observable every `delay` milliseconds, waiting for the observable to
+ * complete each time. This is preferable to, say, `Observable.interval(d).switchMap(() => source)`
+ * because, in the case that `source` takes longer than `d` milliseconds to produce a value, that
+ * formulation will never produce a value (while continuing to incur the overhead of subscribing to
+ * source).
+ *
+ * Example:
+ *
+ *    // Ask what time it is every second until it's Friday.
+ *    runCommand('date')
+ *      .let(poll(1000))
+ *      .filter(output => output.startsWith('Fri'))
+ *      .take(1)
+ *      .subscribe(() => {
+ *        console.log("IT'S FRIDAY!!")
+ *      });
+ *
+ */
+export function poll<T>(delay: number): (Observable<T>) => Observable<T> {
+  return (source: Observable<T>) =>
+    Observable.defer(() => {
+      const delays = new Subject();
+      return delays
+        .switchMap(n => Observable.timer(n))
+        .startWith(null)
+        .switchMap(() => {
+          const subscribedAt = Date.now();
+          return source.do({
+            complete: () => {
+              const timeElapsed = Date.now() - subscribedAt;
+              delays.next(Math.max(0, delay - timeElapsed));
+            },
+          });
+        });
+    });
 }
