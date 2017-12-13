@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.7.0
+
+### General
+
+- Fixed some memory leaks in our core UI components.
+- React components no longer use string refs (#123).
+- Removed all uses of `TextBuffer::onDidChange` (#111).
+
+### Diagnostics
+
+- Auto show/hide respects the 'current file only' option (#124).
+- Allow escaped characters in diagnostic message URLs.
+- Minor fixes for diagnostic tooltips.
+
+### Find References
+
+- Added a new `find-references-view` API to display external information in the Find References UI.
+
+### Signature Help
+
+- Signature help datatips now drag in the correct direction (#128).
+
 ## v0.6.0
 
 ### Hyperclick
