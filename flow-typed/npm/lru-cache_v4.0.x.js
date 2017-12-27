@@ -10,6 +10,7 @@ declare module 'lru-cache' {
     del: (key: K) => void;
     reset: () => void;
     has: (key: K) => boolean;
+    dump: () => Array<{k: K, v: V}>,
     // TODO add the rest of the things documented at https://www.npmjs.com/package/lru-cache
   };
 
@@ -22,5 +23,5 @@ declare module 'lru-cache' {
   };
 
   // TODO You can supply just an integer (max size), or even nothing at all.
-  declare var exports: <K, V>(options: Options<K, V>) => LRUCache<K, V>;
+  declare module.exports: <K, V>(options: Options<K, V>) => LRUCache<K, V>;
 }

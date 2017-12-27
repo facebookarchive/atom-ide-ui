@@ -16,13 +16,17 @@ import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {arrayCompact, arrayFlatten} from 'nuclide-commons/collection';
 import {Observable} from 'rxjs';
+import {getLogger} from 'log4js';
 
 import type {
   RegisterIndieLinter,
   IndieLinterDelegate,
   LinterMessageV2,
 } from '../../../index';
-import type {DiagnosticMessage} from '../../atom-ide-diagnostics/lib/types';
+import type {
+  DiagnosticMessage,
+  DiagnosticUpdater,
+} from '../../atom-ide-diagnostics/lib/types';
 import type {CodeAction, CodeActionProvider, CodeActionFetcher} from './types';
 
 const TIP_DELAY_MS = 500;
@@ -50,6 +54,7 @@ export class CodeActionManager {
   _providerRegistry: ProviderRegistry<CodeActionProvider>;
   _disposables: UniversalDisposable;
   _linterDelegate: ?IndieLinterDelegate;
+  _diagnosticUpdater: ?DiagnosticUpdater;
 
   constructor() {
     this._providerRegistry = new ProviderRegistry();
@@ -66,8 +71,18 @@ export class CodeActionManager {
     return disposable;
   }
 
+  consumeDiagnosticUpdates(diagnosticUpdater: DiagnosticUpdater): IDisposable {
+    this._diagnosticUpdater = diagnosticUpdater;
+    return new UniversalDisposable(() => {
+      this._diagnosticUpdater = null;
+    });
+  }
+
   consumeIndie(register: RegisterIndieLinter): IDisposable {
-    const linterDelegate = register({name: 'Code Actions'});
+    const linterDelegate = register({
+      name: 'Code Actions',
+      supportedMessageKinds: ['action'],
+    });
     this._disposables.add(linterDelegate);
     this._linterDelegate = linterDelegate;
     return new UniversalDisposable(() => {
@@ -123,13 +138,14 @@ export class CodeActionManager {
           )
             .switchMap(
               event =>
-                Observable.of(event.newBufferRange)
-                  .delay(TIP_DELAY_MS) // Delay the emission of the range.
-                  .startWith(null), // null the range immediately when selection changes.
+                // Remove 0-character selections since it's just cursor movement.
+                event.newBufferRange.isEmpty()
+                  ? Observable.of(null)
+                  : Observable.of(event.newBufferRange)
+                      .delay(TIP_DELAY_MS) // Delay the emission of the range.
+                      .startWith(null), // null the range immediately when selection changes.
             )
             .distinctUntilChanged()
-            // Remove 0-character selections since it's just cursor movement.
-            .filter(range => range == null || !range.isEmpty())
             .takeUntil(destroyEvents);
           return selections.map(
             range => (range == null ? null : {editor, range}),
@@ -147,8 +163,17 @@ export class CodeActionManager {
           if (file == null) {
             return Observable.empty();
           }
+          const diagnostics =
+            this._diagnosticUpdater == null
+              ? []
+              : this._diagnosticUpdater
+                  .getFileMessageUpdates(file)
+                  .messages.filter(
+                    message =>
+                      message.range && message.range.intersectsWith(range),
+                  );
           return Observable.fromPromise(
-            this._genAllCodeActions(editor, range, []),
+            this._genAllCodeActions(editor, range, diagnostics),
           ).switchMap(actions => {
             // Only produce a message if we have actions to display.
             if (actions.length > 0) {
@@ -160,6 +185,13 @@ export class CodeActionManager {
         },
       )
       .distinctUntilChanged()
+      .catch((e, caught) => {
+        getLogger('code-actions').error(
+          'Error getting code actions on selection',
+          e,
+        );
+        return caught;
+      })
       .subscribe(message => {
         if (this._linterDelegate == null) {
           return;
