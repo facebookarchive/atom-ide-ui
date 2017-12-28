@@ -5,7 +5,9 @@
 - Datatips
   - In the case of multiple available datatips (e.g. hover + diagnostic), now all of them will be displayed.
   - Fixed scrolling inside pinned datatips.
+- Code actions are now retrieved upon selection.
 - Code highlights: increased debounce duration after keystrokes.
+- Updated to React v16.2.0 and RxJS v5.5.5.
 
 ## v0.7.0
 
