@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.7.1
+
+- Datatips
+  - In the case of multiple available datatips (e.g. hover + diagnostic), now all of them will be displayed.
+  - Fixed scrolling inside pinned datatips.
+- Code highlights: increased debounce duration after keystrokes.
+
 ## v0.7.0
 
 ### General
