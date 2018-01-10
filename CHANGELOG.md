@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.7.2
+
+- Fixed "Failed to load resource" error in console (#100).
+- Update `marked` dependency to prevent security issues.
+
 ## v0.7.1
 
 - Datatips
