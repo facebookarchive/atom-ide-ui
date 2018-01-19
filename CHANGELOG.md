@@ -4,6 +4,7 @@
 
 - Fixed "Failed to load resource" error in console (#100).
 - Update `marked` dependency to prevent security issues.
+- Prevent errors when having both `atom-ide-ui` and `nuclide` installed.
 
 ## v0.7.1
 
