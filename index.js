@@ -30,7 +30,7 @@ const features = fs
         'utf8',
       );
       return {
-        dirname,
+        path: dirname,
         pkg: JSON.parse(pkgJson),
       };
     } catch (err) {
@@ -48,7 +48,7 @@ const features = fs
  */
 let disposables: ?UniversalDisposable;
 const featureLoader = new FeatureLoader({
-  pkgName: 'atom-ide-ui',
+  path: __dirname,
   config: {},
   features,
 });
