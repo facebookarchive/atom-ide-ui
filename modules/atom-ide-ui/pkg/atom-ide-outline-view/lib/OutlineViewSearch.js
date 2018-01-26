@@ -55,7 +55,7 @@ export class OutlineViewSearchComponent extends React.Component<Props, State> {
     };
   }
 
-  SEARCH_PLACEHOLDER = 'Search Outline';
+  SEARCH_PLACEHOLDER = 'Filter';
   DEBOUNCE_TIME = 100;
 
   _handleInputRef = (element: ?React.ElementRef<typeof AtomInput>) => {
@@ -152,7 +152,6 @@ export class OutlineViewSearchComponent extends React.Component<Props, State> {
   render(): React.Node {
     return (
       <div className="outline-view-search-bar">
-        <Icon icon="search" className="outline-view-search-icon" />
         <AtomInput
           className="outline-view-search-pane"
           onConfirm={this._onConfirm}

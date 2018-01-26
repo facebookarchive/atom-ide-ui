@@ -73,6 +73,7 @@ declare class atom$Package {
   onDidDeactivate(cb: () => mixed): IDisposable,
   activateNow(): void,
   // Undocumented
+  bundledPackage: boolean,
   getCanDeferMainModuleRequireStorageKey(): string,
 }
 
@@ -462,6 +463,8 @@ declare class atom$Pane {
 
   // Undocumented Methods
   constructor(params: atom$PaneParams): atom$Pane,
+  getPendingItem(): atom$PaneItem,
+  setPendingItem(item: atom$PaneItem): void,
   clearPendingItem(): void,
   getFlexScale(): number,
   getParent(): Object,
@@ -479,7 +482,7 @@ declare interface atom$PaneItem {
   +getTitle: () => string,
   +getLongTitle?: () => string,
   +getIconName?: () => string,
-  +getURI?: () => string,
+  +getURI?: () => ?string,
   +onDidChangeIcon?: (cb: (icon: string) => void) => IDisposable,
   +onDidChangeTitle?: (cb: (title: string) => void) => IDisposable,
   +serialize?: () => Object,
@@ -798,6 +801,9 @@ declare class atom$TextEditor extends atom$Model {
   setEncoding(encoding: string): void,
   getTabLength() : number,
   getSoftTabs(): boolean,
+  getIconName(): string,
+  onDidChangeIcon(cb: (icon: string) => void): IDisposable,
+  onDidChangeTitle(cb: (title: string) => void): IDisposable,
 
   // File Operations
   save(): Promise<void>,
@@ -1011,7 +1017,7 @@ declare class atom$TextEditor extends atom$Model {
   moveToTop(): void,
   tokenForBufferPosition(position: atom$Point | [?number, ?number]): atom$Token,
   onDidConflict(callback: () => void): IDisposable,
-  serialize: () => mixed,
+  serialize(): Object,
   foldBufferRowRange(startRow: number, endRow: number): void,
   getNonWordCharacters(scope?: atom$ScopeDescriptor): string,
 }
@@ -1041,6 +1047,11 @@ declare class atom$TextEditorComponent {
   invalidateBlockDecorationDimensions(decoration: atom$Decoration): void,
   element: atom$TextEditorElement,
   didFocus(): void,
+  setScrollTop(scrollTop: number): void,
+  getScrollTop(): number,
+
+  setScrollLeft(scrollLeft: number): void,
+  getScrollLeft(): number,
 }
 
 /**
@@ -1510,6 +1521,8 @@ declare class atom$GrammarRegistry {
   removeGrammarForScopeName(scopeName: string): ?atom$Grammar,
   loadGrammarSync(grammarPath: string): atom$Grammar,
   selectGrammar(filePath: string, fileContents: string): atom$Grammar,
+  autoAssignLanguageMode(buffer: atom$TextBuffer): void,
+  assignLanguageMode(buffer: atom$TextBuffer, languageId: string): void,
 
   // Private API
   clear(): IDisposable,
@@ -1665,6 +1678,10 @@ type atom$AggregatedTextEditEvent = {
   changes: Array<atom$TextEditEvent>,
 };
 
+declare class atom$LanguageMode {
+  getLanguageId(): string,
+}
+
 declare class atom$TextBuffer {
   constructor(text?: string): atom$TextBuffer,
   constructor(params?: {
@@ -1706,6 +1723,7 @@ declare class atom$TextBuffer {
   getEncoding(): string,
   getUri(): string,
   getId(): string,
+  getLanguageMode(): atom$LanguageMode,
 
   // Reading Text
   isEmpty(): boolean,
