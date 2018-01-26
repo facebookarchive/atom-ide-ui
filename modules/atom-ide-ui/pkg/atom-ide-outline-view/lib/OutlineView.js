@@ -12,12 +12,15 @@
 
 import type {OutlineForUi, OutlineTreeForUi} from './createOutlines';
 import type {TextToken} from 'nuclide-commons/tokenized-text';
+import type {TreeNode, NodePath} from 'nuclide-commons-ui/SelectableTree';
+
 import HighlightedText from 'nuclide-commons-ui/HighlightedText';
+import {arrayEqual} from 'nuclide-commons/collection';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 
 import * as React from 'react';
 import invariant from 'assert';
-import classnames from 'classnames';
+import nullthrows from 'nullthrows';
 
 import matchIndexesToRanges from 'nuclide-commons/matchIndexesToRanges';
 import analytics from 'nuclide-commons-atom/analytics';
@@ -30,7 +33,7 @@ import {
   LoadingSpinnerSizes,
 } from 'nuclide-commons-ui/LoadingSpinner';
 import {EmptyState} from 'nuclide-commons-ui/EmptyState';
-import {NestedTreeItem, Tree, TreeItem} from 'nuclide-commons-ui/Tree';
+import {Tree} from 'nuclide-commons-ui/SelectableTree';
 
 import type {SearchResult} from './OutlineViewSearch';
 import {OutlineViewSearchComponent} from './OutlineViewSearch';
@@ -101,7 +104,7 @@ export class OutlineView extends React.PureComponent<Props, State> {
 
   focus() {
     if (this._outlineViewRef != null) {
-      this._outlineViewRef.focus();
+      this._outlineViewRef.focusSearch();
     }
   }
 
@@ -151,9 +154,9 @@ class OutlineViewComponent extends React.PureComponent<
     this._outlineViewCoreRef = element;
   };
 
-  focus() {
+  focusSearch() {
     if (this._outlineViewCoreRef != null) {
-      this._outlineViewCoreRef.focus();
+      this._outlineViewCoreRef.focusSearch();
     }
   }
 
@@ -234,25 +237,133 @@ class OutlineViewCore extends React.PureComponent<
   OutlineViewCoreProps,
   {
     searchResults: Map<OutlineTreeForUi, SearchResult>,
+    collapsedPaths: Array<NodePath>,
   },
 > {
-  state: {
-    searchResults: Map<OutlineTreeForUi, SearchResult>,
-  } = {
+  _scrollerNode: ?HTMLDivElement;
+  _searchRef: ?React.ElementRef<typeof OutlineViewSearchComponent>;
+  _subscriptions: ?UniversalDisposable;
+  state = {
+    collapsedPaths: [],
     searchResults: new Map(),
   };
 
-  _searchRef: ?React.ElementRef<typeof OutlineViewSearchComponent>;
+  componentDidMount() {
+    this._subscriptions = new UniversalDisposable(
+      atom.commands.add(nullthrows(this._scrollerNode), 'atom-ide:filter', () =>
+        this.focusSearch(),
+      ),
+    );
+  }
+
+  componentWillUnmount() {
+    nullthrows(this._subscriptions).dispose();
+  }
+
+  _setScrollerNode = node => {
+    this._scrollerNode = node;
+  };
 
   _setSearchRef = element => {
     this._searchRef = element;
   };
 
-  focus() {
+  focusSearch() {
     if (this._searchRef != null) {
       this._searchRef.focus();
     }
   }
+
+  _handleCollapse = (nodePath: NodePath) => {
+    this.setState(prevState => {
+      const existing = this.state.collapsedPaths.find(path =>
+        arrayEqual(path, nodePath),
+      );
+      if (existing == null) {
+        return {
+          collapsedPaths: [...this.state.collapsedPaths, nodePath],
+        };
+      }
+    });
+  };
+
+  _handleExpand = (nodePath: NodePath) => {
+    this.setState(prevState => ({
+      collapsedPaths: prevState.collapsedPaths.filter(
+        path => !arrayEqual(path, nodePath),
+      ),
+    }));
+  };
+
+  _handleSelect = (nodePath: NodePath) => {
+    analytics.track('atom-ide-outline-view:go-to-location');
+
+    invariant(this.props.outline.kind === 'outline');
+    const {editor} = this.props.outline;
+    const outlineNode = selectNodeFromPath(this.props.outline, nodePath);
+
+    const landingPosition =
+      outlineNode.landingPosition != null
+        ? outlineNode.landingPosition
+        : outlineNode.startPosition;
+
+    // single click moves the cursor, but does not focus the editor
+    goToLocationInEditor(editor, {
+      line: landingPosition.row,
+      column: landingPosition.column,
+    });
+  };
+
+  _handleConfirm = () => {
+    this._focusEditor();
+  };
+
+  _handleTripleClick = (nodePath: NodePath) => {
+    invariant(this.props.outline.kind === 'outline');
+    const {editor} = this.props.outline;
+    const outlineNode = selectNodeFromPath(this.props.outline, nodePath);
+
+    // triple click selects the symbol's region
+    const endPosition = outlineNode.endPosition;
+    if (endPosition != null) {
+      editor.selectToBufferPosition(endPosition);
+    }
+    this._focusEditor();
+  };
+
+  _focusEditor = () => {
+    invariant(this.props.outline.kind === 'outline');
+    const {editor} = this.props.outline;
+    // double and triple clicks focus the editor afterwards
+    const pane = atom.workspace.paneForItem(editor);
+    if (pane == null) {
+      return;
+    }
+
+    // Assumes that the click handler has already run, which moves the
+    // cursor to the start of the symbol. Let's activate the pane now.
+    pane.activate();
+    pane.activateItem(editor);
+  };
+
+  _outlineTreeToNode = (outlineTree: OutlineTreeForUi): TreeNode => {
+    const searchResult = this.state.searchResults.get(outlineTree);
+
+    if (outlineTree.children.length === 0) {
+      return {
+        type: 'LEAF',
+        label: renderItem(outlineTree),
+        hidden: searchResult && !searchResult.visible,
+      };
+    }
+
+    return {
+      type: 'NESTED',
+      label: renderItem(outlineTree),
+      children: outlineTree.children.map(this._outlineTreeToNode),
+      hidden: searchResult && !searchResult.visible,
+    };
+  };
 
   render() {
     const {outline} = this.props;
@@ -268,103 +379,23 @@ class OutlineViewCore extends React.PureComponent<
           }}
           ref={this._setSearchRef}
         />
-        <div className="outline-view-trees-scroller">
-          <Tree className="outline-view-trees">
-            {renderTrees(
-              outline.editor,
-              outline.outlineTrees,
-              this.state.searchResults,
-            )}
-          </Tree>
+        <div
+          className="outline-view-trees-scroller"
+          ref={this._setScrollerNode}>
+          <Tree
+            className="outline-view-trees atom-ide-filterable"
+            collapsedPaths={this.state.collapsedPaths}
+            itemClassName="outline-view-item"
+            items={outline.outlineTrees.map(this._outlineTreeToNode)}
+            onCollapse={this._handleCollapse}
+            onConfirm={this._handleConfirm}
+            onExpand={this._handleExpand}
+            onSelect={this._handleSelect}
+            onTripleClick={this._handleTripleClick}
+            selectedPaths={outline.highlightedPaths}
+          />
         </div>
       </div>
-    );
-  }
-}
-
-class OutlineTree extends React.PureComponent<{
-  editor: atom$TextEditor,
-  outline: OutlineTreeForUi,
-  searchResults: Map<OutlineTreeForUi, SearchResult>,
-}> {
-  _handleSelect = () => {
-    const {editor, outline} = this.props;
-    // single click moves the cursor, but does not focus the editor
-    analytics.track('atom-ide-outline-view:go-to-location');
-    const landingPosition =
-      outline.landingPosition != null
-        ? outline.landingPosition
-        : outline.startPosition;
-    goToLocationInEditor(editor, {
-      line: landingPosition.row,
-      column: landingPosition.column,
-    });
-  };
-
-  _handleConfirm = () => {
-    this._focusEditor();
-  };
-
-  _handleTripleClick = () => {
-    const {editor, outline} = this.props;
-    // triple click selects the symbol's region
-    const endPosition = outline.endPosition;
-    if (endPosition != null) {
-      editor.selectToBufferPosition(endPosition);
-    }
-    this._focusEditor();
-  };
-
-  _focusEditor = () => {
-    const {editor} = this.props;
-    // double and triple clicks focus the editor afterwards
-    const pane = atom.workspace.paneForItem(editor);
-    if (pane == null) {
-      return;
-    }
-
-    // Assumes that the click handler has already run, which moves the
-    // cursor to the start of the symbol. Let's activate the pane now.
-    pane.activate();
-    pane.activateItem(editor);
-  };
-
-  render(): React.Node {
-    const {editor, outline, searchResults} = this.props;
-
-    const classes = classnames(
-      'outline-view-item',
-      outline.kind ? `kind-${outline.kind}` : null,
-      {
-        selected: outline.highlighted,
-      },
-    );
-
-    const childTrees = renderTrees(editor, outline.children, searchResults);
-    const itemContent = renderItem(outline, searchResults.get(outline));
-
-    if (childTrees.length === 0) {
-      return (
-        <TreeItem
-          className={classes}
-          onConfirm={this._handleConfirm}
-          onSelect={this._handleSelect}
-          onTripleClick={this._handleTripleClick}>
-          {itemContent}
-        </TreeItem>
-      );
-    }
-    return (
-      // Set fontSize for the li to make the highlighted region of selected
-      // lines (set equal to 2em) look reasonable relative to size of the font.
-      <NestedTreeItem
-        className={classes}
-        onConfirm={this._handleConfirm}
-        onSelect={this._handleSelect}
-        onTripleClick={this._handleTripleClick}
-        title={itemContent}>
-        {childTrees}
-      </NestedTreeItem>
     );
   }
 }
@@ -437,22 +468,17 @@ function renderTextToken(
   );
 }
 
-function renderTrees(
-  editor: atom$TextEditor,
-  outlines: Array<OutlineTreeForUi>,
-  searchResults: Map<OutlineTreeForUi, SearchResult>,
-): Array<?React.Element<any>> {
-  return outlines.map((outline, index) => {
-    const result = searchResults.get(outline);
-    return !result || result.visible ? (
-      <OutlineTree
-        editor={editor}
-        outline={outline}
-        key={index}
-        searchResults={searchResults}
-      />
-    ) : null;
-  });
+function selectNodeFromPath(
+  outline: OutlineForUi,
+  path: NodePath,
+): OutlineTreeForUi {
+  invariant(outline.kind === 'outline');
+
+  let node = outline.outlineTrees[path[0]];
+  for (let i = 1; i < path.length; i++) {
+    node = node.children[path[i]];
+  }
+  return node;
 }
 
 const OUTLINE_KIND_TO_ICON = {

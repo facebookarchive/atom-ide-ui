@@ -16,13 +16,13 @@
   width: 100%;
 }
 
+.outline-view-loading {
+  margin: auto;
+}
+
 .outline-view-trees-scroller {
   flex-grow: 1;
   overflow: auto;
-}
-
-.outline-view-item {
-  padding: 0 @component-padding / 2;
 }
 
 .outline-view-trees {
@@ -30,12 +30,12 @@
   min-width: 100%;
 }
 
-.outline-view-loading {
-  margin: auto;
+.outline-view-trees .list-item {
+  padding: 0 @component-padding / 2;
 }
 
-.outline-view-item {
-  padding: 0 @component-padding / 2;
+.outline-view-trees.has-collapsable-children .list-nested-item > .list-tree > .list-item {
+  padding-left: @component-padding * 4;
 }
 
 .panel-heading .outline-view-close-button {

@@ -46,9 +46,9 @@ import {applyMiddleware, createStore} from 'redux';
 import {makeToolbarButtonSpec} from 'nuclide-commons-ui/ToolbarUtils';
 
 const MAXIMUM_SERIALIZED_MESSAGES_CONFIG =
-  'nuclide-console.maximumSerializedMessages';
+  'atom-ide-console.maximumSerializedMessages';
 const MAXIMUM_SERIALIZED_HISTORY_CONFIG =
-  'nuclide-console.maximumSerializedHistory';
+  'atom-ide-console.maximumSerializedHistory';
 
 class Activation {
   _disposables: UniversalDisposable;
@@ -59,29 +59,25 @@ class Activation {
     this._rawState = rawState;
     this._disposables = new UniversalDisposable(
       atom.contextMenu.add({
-        '.nuclide-console-record': [
+        '.console-record': [
           {
             label: 'Copy Message',
-            command: 'nuclide-console:copy-message',
+            command: 'console:copy-message',
           },
         ],
       }),
-      atom.commands.add(
-        '.nuclide-console-record',
-        'nuclide-console:copy-message',
-        event => {
-          const el = event.target;
-          if (el == null || typeof el.innerText !== 'string') {
-            return;
-          }
-          atom.clipboard.write(el.innerText);
-        },
-      ),
-      atom.commands.add('atom-workspace', 'nuclide-console:clear', () =>
+      atom.commands.add('.console-record', 'console:copy-message', event => {
+        const el = event.target;
+        if (el == null || typeof el.innerText !== 'string') {
+          return;
+        }
+        atom.clipboard.write(el.innerText);
+      }),
+      atom.commands.add('atom-workspace', 'console:clear', () =>
         this._getStore().dispatch(Actions.clearRecords()),
       ),
       featureConfig.observe(
-        'nuclide-console.maximumMessageCount',
+        'atom-ide-console.maximumMessageCount',
         (maxMessageCount: any) => {
           this._getStore().dispatch(
             Actions.setMaxMessageCount(maxMessageCount),
@@ -92,7 +88,7 @@ class Activation {
         observableFromSubscribeFunction(cb =>
           atom.config.observe('editor.fontSize', cb),
         ),
-        featureConfig.observeAsStream('nuclide-console.consoleFontScale'),
+        featureConfig.observeAsStream('atom-ide-console.consoleFontScale'),
         (fontSize, consoleFontScale) => fontSize * parseFloat(consoleFontScale),
       )
         .map(Actions.setFontSize)
@@ -126,7 +122,7 @@ class Activation {
     toolBar.addButton(
       makeToolbarButtonSpec({
         icon: 'terminal',
-        callback: 'nuclide-console:toggle',
+        callback: 'console:toggle',
         tooltip: 'Toggle Console',
         priority: 700,
       }),
@@ -183,7 +179,7 @@ class Activation {
         }
       }),
       () => destroyItemWhere(item => item instanceof Console),
-      atom.commands.add('atom-workspace', 'nuclide-console:toggle', () => {
+      atom.commands.add('atom-workspace', 'console:toggle', () => {
         atom.workspace.toggle(WORKSPACE_VIEW_URI);
       }),
     );
