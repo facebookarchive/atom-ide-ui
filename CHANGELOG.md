@@ -1,8 +1,8 @@
 # Changelog
 
 ## v0.8.0
-- Nested Outline elements can now be collapsed
-- Outline is now keyboard navigable (up/down to move, left/right to collapse/expand)
+- Nested Outline elements can now be collapsed.
+- Outline is now keyboard navigable (up/down to move, left/right to collapse/expand).
 
 ## v0.7.2
 
