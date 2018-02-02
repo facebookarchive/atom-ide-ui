@@ -21,7 +21,6 @@ flow-libs/
 [options]
 emoji=true
 experimental.const_params=true
-experimental.strict_type_args=true
 module.use_strict=true
 module.system.node.resolve_dirname=node_modules
 ; 'modules' is added to the NODE_PATH via nuclide-node-transpiler.
@@ -40,4 +39,4 @@ sketchy-null=error
 sketchy-null-bool=off
 
 [version]
-0.63.1
+0.64.0
