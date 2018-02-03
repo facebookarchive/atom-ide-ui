@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.1
+
+- URL fragments/queries are now supported in diagnostic messages (#159)
+- Fixed exception at startup with various third-party themes (#160)
+
 ## v0.8.0
 
 - Added `atom-ide-console`! More information to come soon.
