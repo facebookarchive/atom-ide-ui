@@ -18,6 +18,7 @@ import type {
 
 import invariant from 'assert';
 import * as React from 'react';
+import {Observable} from 'rxjs';
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import {goToLocation} from 'nuclide-commons-atom/go-to-location';
 import {bindObservableAsProps} from 'nuclide-commons-ui/bindObservableAsProps';
@@ -31,14 +32,22 @@ function makeDatatipComponent(
 ): React.ComponentType<*> {
   const fixer = message => diagnosticUpdater.applyFix(message);
   return bindObservableAsProps(
-    observableFromSubscribeFunction(cb =>
-      diagnosticUpdater.observeCodeActionsForMessage(cb),
-    ).map(codeActionsForMessage => ({
-      messages,
-      fixer,
-      goToLocation: gotoLine,
-      codeActionsForMessage,
-    })),
+    Observable.zip(
+      observableFromSubscribeFunction(cb =>
+        diagnosticUpdater.observeCodeActionsForMessage(cb),
+      ),
+      observableFromSubscribeFunction(cb =>
+        diagnosticUpdater.observeDescriptionsForMessage(cb),
+      ),
+    ).map(([codeActionsForMessage, descriptionsForMessage]) => {
+      return {
+        messages,
+        fixer,
+        goToLocation: gotoLine,
+        codeActionsForMessage,
+        descriptionsForMessage,
+      };
+    }),
     DiagnosticsPopup,
   );
 }
@@ -56,6 +65,7 @@ export default (async function getDiagnosticDatatip(
     }
   }
   diagnosticUpdater.fetchCodeActions(editor, messagesAtPosition);
+  diagnosticUpdater.fetchDescriptions(messagesAtPosition);
   invariant(range != null);
   return {
     component: makeDatatipComponent(messagesAtPosition, diagnosticUpdater),

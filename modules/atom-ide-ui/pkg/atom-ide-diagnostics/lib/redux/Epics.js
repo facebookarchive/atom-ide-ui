@@ -173,3 +173,34 @@ export function fetchCodeActions(
       });
   });
 }
+
+export function fetchDescriptions(
+  actions: ActionsObservable<Action>,
+  store: Store,
+): Observable<Action> {
+  return actions.ofType(Actions.FETCH_DESCRIPTIONS).switchMap(action => {
+    invariant(action.type === Actions.FETCH_DESCRIPTIONS);
+    const {messages} = action.payload;
+    return forkJoinArray(
+      messages.map(message =>
+        Observable.defer(() => {
+          if (typeof message.description === 'function') {
+            return Promise.resolve(message.description());
+          } else {
+            return Promise.resolve(message.description);
+          }
+        }).map(description => [message, description || '']),
+      ),
+    )
+      .map(descriptionsForMessage =>
+        Actions.setDescriptions(new Map(descriptionsForMessage)),
+      )
+      .catch(err => {
+        getLogger('atom-ide-diagnostics').error(
+          `Error fetching description for ${messages[0].filePath}`,
+          err,
+        );
+        return Observable.empty();
+      });
+  });
+}

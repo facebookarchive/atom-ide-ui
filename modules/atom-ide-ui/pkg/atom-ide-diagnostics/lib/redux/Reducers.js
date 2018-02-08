@@ -13,6 +13,7 @@
 import type {
   Action,
   CodeActionsState,
+  DescriptionsState,
   MessagesState,
   ObservableDiagnosticProvider,
 } from '../types';
@@ -137,6 +138,16 @@ export function codeActionsForMessage(
       codeActions.forEach(codeAction => codeAction.dispose());
     });
     return action.payload.codeActionsForMessage;
+  }
+  return state;
+}
+
+export function descriptionsForMessage(
+  state: DescriptionsState = new Map(),
+  action: Action,
+): DescriptionsState {
+  if (action.type === 'SET_DESCRIPTIONS') {
+    return action.payload.descriptionsForMessage;
   }
   return state;
 }
