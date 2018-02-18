@@ -123,7 +123,7 @@ export function codeActionFetcher(
   state: ?CodeActionFetcher = null,
   action: Action,
 ): ?CodeActionFetcher {
-  if (action.type === 'SET_CODE_ACTION_FETCHER') {
+  if (action.type === Actions.SET_CODE_ACTION_FETCHER) {
     return action.payload.codeActionFetcher;
   }
   return state;
@@ -133,7 +133,7 @@ export function codeActionsForMessage(
   state: CodeActionsState = new Map(),
   action: Action,
 ): CodeActionsState {
-  if (action.type === 'SET_CODE_ACTIONS') {
+  if (action.type === Actions.SET_CODE_ACTIONS) {
     state.forEach(codeActions => {
       codeActions.forEach(codeAction => codeAction.dispose());
     });
@@ -142,12 +142,15 @@ export function codeActionsForMessage(
   return state;
 }
 
-export function descriptionsForMessage(
+export function descriptions(
   state: DescriptionsState = new Map(),
   action: Action,
 ): DescriptionsState {
-  if (action.type === 'SET_DESCRIPTIONS') {
-    return action.payload.descriptionsForMessage;
+  if (action.type === Actions.SET_DESCRIPTIONS) {
+    if (!action.payload.keepDescriptions) {
+      return action.payload.descriptions;
+    }
+    return new Map([...state, ...action.payload.descriptions]);
   }
   return state;
 }

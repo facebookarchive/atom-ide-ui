@@ -29,14 +29,14 @@ type DiagnosticsPopupProps = {
   goToLocation: (filePath: NuclideUri, line: number) => mixed,
   fixer: (message: DiagnosticMessage) => void,
   codeActionsForMessage?: CodeActionsState,
-  descriptionsForMessage?: DescriptionsState,
+  descriptions?: DescriptionsState,
 };
 
 function renderMessage(
   fixer: (message: DiagnosticMessage) => void,
   goToLocation: (filePath: NuclideUri, line: number) => mixed,
   codeActionsForMessage: ?CodeActionsState,
-  descriptionsForMessage: ?DescriptionsState,
+  descriptions: ?DescriptionsState,
   message: DiagnosticMessage,
   index: number,
 ): React.Element<any> {
@@ -51,7 +51,7 @@ function renderMessage(
     },
   );
   const codeActions = getCodeActions(message, codeActionsForMessage);
-  const description = getDescription(message, descriptionsForMessage);
+  const description = getDescription(message, descriptions);
   return (
     <div className={className} key={index} tabIndex={-1}>
       <DiagnosticsMessage
@@ -103,10 +103,10 @@ function getCodeActions(
 
 function getDescription(
   message: DiagnosticMessage,
-  descriptionsForMessage: ?DescriptionsState,
+  descriptions: ?DescriptionsState,
 ): string {
-  if (descriptionsForMessage) {
-    return descriptionsForMessage.get(message) || '';
+  if (descriptions) {
+    return descriptions.get(message) || '';
   }
   return '';
 }
@@ -117,7 +117,7 @@ export const DiagnosticsPopup = (props: DiagnosticsPopupProps) => {
     fixer,
     goToLocation,
     codeActionsForMessage,
-    descriptionsForMessage,
+    descriptions,
     messages,
     ...rest
   } = props;
@@ -129,7 +129,7 @@ export const DiagnosticsPopup = (props: DiagnosticsPopupProps) => {
           fixer,
           goToLocation,
           codeActionsForMessage,
-          descriptionsForMessage,
+          descriptions,
         ),
       )}
     </div>

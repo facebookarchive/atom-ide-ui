@@ -230,7 +230,7 @@ export type AppState = {
   messages: MessagesState,
   codeActionFetcher: ?CodeActionFetcher,
   codeActionsForMessage: CodeActionsState,
-  descriptionsForMessage: DescriptionsState,
+  descriptions: DescriptionsState,
   providers: Set<ObservableDiagnosticProvider>,
 };
 
@@ -275,11 +275,11 @@ export type Action =
   // Description
   | {
     type: 'FETCH_DESCRIPTIONS',
-    payload: {messages: Array<DiagnosticMessage>},
+    payload: {messages: Array<DiagnosticMessage>, keepDescriptions: boolean},
   }
   | {
     type: 'SET_DESCRIPTIONS',
-    payload: {descriptionsForMessage: DescriptionsState},
+    payload: {descriptions: DescriptionsState, keepDescriptions: boolean},
   }
 
   // Fixes

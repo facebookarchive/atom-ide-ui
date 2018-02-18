@@ -12,6 +12,7 @@
 
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {
+  DescriptionsState,
   DiagnosticMessage,
   DiagnosticMessageKind,
   UiConfig,
@@ -28,6 +29,7 @@ export type DiagnosticGroup =
 // State that's shared between every diagnostics panel instance.
 export type GlobalViewState = {
   diagnostics: Array<DiagnosticMessage>,
+  descriptions: DescriptionsState,
   pathToActiveTextEditor: ?NuclideUri,
   filterByActiveTextEditor: boolean,
   onFilterByActiveTextEditorChange: (isChecked: boolean) => mixed,
@@ -35,6 +37,7 @@ export type GlobalViewState = {
   autoVisibility: boolean,
   showTraces: boolean,
   onShowTracesChange: (isChecked: boolean) => mixed,
+  onSelectMessage: (message: DiagnosticMessage) => void,
   supportedMessageKinds: Set<DiagnosticMessageKind>,
   uiConfig: UiConfig,
 };

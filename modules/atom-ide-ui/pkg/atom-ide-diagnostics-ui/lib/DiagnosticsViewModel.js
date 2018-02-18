@@ -13,7 +13,10 @@
 import type {IconName} from 'nuclide-commons-ui/Icon';
 import type {Props} from './ui/DiagnosticsView';
 import type {DiagnosticGroup, GlobalViewState} from './types';
-import type {DiagnosticMessage} from '../../atom-ide-diagnostics/lib/types';
+import type {
+  DescriptionsState,
+  DiagnosticMessage,
+} from '../../atom-ide-diagnostics/lib/types';
 import type {RegExpFilterChange} from 'nuclide-commons-ui/RegExpFilter';
 
 import dockForLocation from 'nuclide-commons-atom/dock-for-location';
@@ -64,8 +67,9 @@ export class DiagnosticsViewModel {
     // Memoize `_filterDiagnostics()`
     (this: any)._filterDiagnostics = memoizeUntilChanged(
       this._filterDiagnostics,
-      (diagnostics, pattern, hiddenGroups, filterPath) => ({
+      (diagnostics, descriptions, pattern, hiddenGroups, filterPath) => ({
         diagnostics,
+        descriptions,
         pattern,
         hiddenGroups,
         filterPath,
@@ -74,7 +78,8 @@ export class DiagnosticsViewModel {
         patternsAreEqual(a.pattern, b.pattern) &&
         areSetsEqual(a.hiddenGroups, b.hiddenGroups) &&
         arrayEqual(a.diagnostics, b.diagnostics) &&
-        a.filterPath === b.filterPath,
+        a.filterPath === b.filterPath &&
+        a.descriptions === b.descriptions,
     );
 
     const {pattern, invalid} = getFilterPattern('', false);
@@ -107,15 +112,20 @@ export class DiagnosticsViewModel {
         isVisible,
         diagnostics: this._filterDiagnostics(
           globalState.diagnostics,
+          globalState.descriptions,
           instanceState.textFilter.pattern,
           instanceState.hiddenGroups,
           globalState.filterByActiveTextEditor
             ? globalState.pathToActiveTextEditor
             : null,
         ),
+        descriptions: globalState.descriptions,
         onTypeFilterChange: this._handleTypeFilterChange,
         onTextFilterChange: this._handleTextFilterChange,
-        selectMessage: this._selectMessage,
+        selectMessage: (message: DiagnosticMessage) => {
+          this._selectMessage(message);
+          globalState.onSelectMessage(message);
+        },
         gotoMessageLocation: goToDiagnosticLocation,
         supportedMessageKinds: globalState.supportedMessageKinds,
       }),
@@ -232,6 +242,7 @@ export class DiagnosticsViewModel {
 
   _filterDiagnostics(
     diagnostics: Array<DiagnosticMessage>,
+    descriptions: DescriptionsState,
     pattern: ?RegExp,
     hiddenGroups: Set<DiagnosticGroup>,
     filterByPath: ?string,
@@ -246,11 +257,13 @@ export class DiagnosticsViewModel {
       if (pattern == null) {
         return true;
       }
+      const description = descriptions.get(message);
       return (
         (message.text != null && pattern.test(message.text)) ||
         (message.html != null && pattern.test(message.html)) ||
         pattern.test(message.providerName) ||
-        pattern.test(message.filePath)
+        pattern.test(message.filePath) ||
+        (description != null && pattern.test(description))
       );
     });
   }

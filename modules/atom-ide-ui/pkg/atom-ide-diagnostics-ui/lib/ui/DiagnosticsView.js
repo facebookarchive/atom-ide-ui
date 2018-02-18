@@ -11,6 +11,7 @@
  */
 
 import type {
+  DescriptionsState,
   DiagnosticMessage,
   DiagnosticMessageKind,
   UiConfig,
@@ -37,6 +38,7 @@ import SettingsModal from './SettingsModal';
 
 export type Props = {
   diagnostics: Array<DiagnosticMessage>,
+  descriptions: DescriptionsState,
   filterByActiveTextEditor: boolean,
   onFilterByActiveTextEditorChange: (isChecked: boolean) => mixed,
   showDirectoryColumn: boolean,
@@ -71,7 +73,12 @@ export default class DiagnosticsView extends React.Component<Props> {
   }
 
   render(): React.Element<any> {
-    const {diagnostics, showDirectoryColumn, showTraces} = this.props;
+    const {
+      diagnostics,
+      descriptions,
+      showDirectoryColumn,
+      showTraces,
+    } = this.props;
 
     const groups = ['errors', 'warnings', 'info'];
     if (this.props.supportedMessageKinds.has('review')) {
@@ -83,8 +90,10 @@ export default class DiagnosticsView extends React.Component<Props> {
 
     const showFullDescriptionToggle = diagnostics.find(
       diagnostic =>
+        diagnostic.trace ||
         // flowlint-next-line sketchy-null-string:off
-        diagnostic.trace || (diagnostic.text && diagnostic.text.includes('\n')),
+        (diagnostic.text && diagnostic.text.includes('\n')) ||
+        diagnostic.description,
     );
 
     return (
@@ -153,6 +162,7 @@ export default class DiagnosticsView extends React.Component<Props> {
           }}
           showFileName={!this.props.filterByActiveTextEditor}
           diagnostics={diagnostics}
+          descriptions={descriptions}
           showDirectoryColumn={showDirectoryColumn}
           showTraces={showTraces}
           selectedMessage={this.props.selectedMessage}

@@ -83,12 +83,12 @@ export default class DiagnosticUpdater {
     );
   };
 
-  observeDescriptionsForMessage = (
+  observeDescriptions = (
     callback: (update: DescriptionsState) => mixed,
   ): IDisposable => {
     return new UniversalDisposable(
       this._states
-        .map(state => state.descriptionsForMessage)
+        .map(state => state.descriptions)
         .distinctUntilChanged()
         .subscribe(callback),
     );
@@ -123,7 +123,10 @@ export default class DiagnosticUpdater {
     this._store.dispatch(Actions.fetchCodeActions(editor, messages));
   };
 
-  fetchDescriptions = (messages: Array<DiagnosticMessage>): void => {
-    this._store.dispatch(Actions.fetchDescriptions(messages));
+  fetchDescriptions = (
+    messages: Array<DiagnosticMessage>,
+    keepDescriptions: boolean,
+  ): void => {
+    this._store.dispatch(Actions.fetchDescriptions(messages, keepDescriptions));
   };
 }

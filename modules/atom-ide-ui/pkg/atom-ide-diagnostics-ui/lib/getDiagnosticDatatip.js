@@ -37,15 +37,15 @@ function makeDatatipComponent(
         diagnosticUpdater.observeCodeActionsForMessage(cb),
       ),
       observableFromSubscribeFunction(cb =>
-        diagnosticUpdater.observeDescriptionsForMessage(cb),
+        diagnosticUpdater.observeDescriptions(cb),
       ),
-    ).map(([codeActionsForMessage, descriptionsForMessage]) => {
+    ).map(([codeActionsForMessage, descriptions]) => {
       return {
         messages,
         fixer,
         goToLocation: gotoLine,
         codeActionsForMessage,
-        descriptionsForMessage,
+        descriptions,
       };
     }),
     DiagnosticsPopup,
@@ -65,7 +65,7 @@ export default (async function getDiagnosticDatatip(
     }
   }
   diagnosticUpdater.fetchCodeActions(editor, messagesAtPosition);
-  diagnosticUpdater.fetchDescriptions(messagesAtPosition);
+  diagnosticUpdater.fetchDescriptions(messagesAtPosition, true);
   invariant(range != null);
   return {
     component: makeDatatipComponent(messagesAtPosition, diagnosticUpdater),

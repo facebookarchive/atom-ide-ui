@@ -180,11 +180,14 @@ export function fetchDescriptions(
 ): Observable<Action> {
   return actions.ofType(Actions.FETCH_DESCRIPTIONS).switchMap(action => {
     invariant(action.type === Actions.FETCH_DESCRIPTIONS);
-    const {messages} = action.payload;
+    const {messages, keepDescriptions} = action.payload;
+    const existingDescriptions = store.getState().descriptions;
     return forkJoinArray(
       messages.map(message =>
         Observable.defer(() => {
-          if (typeof message.description === 'function') {
+          if (existingDescriptions.has(message)) {
+            return Promise.resolve(existingDescriptions.get(message));
+          } else if (typeof message.description === 'function') {
             return Promise.resolve(message.description());
           } else {
             return Promise.resolve(message.description);
@@ -192,8 +195,8 @@ export function fetchDescriptions(
         }).map(description => [message, description || '']),
       ),
     )
-      .map(descriptionsForMessage =>
-        Actions.setDescriptions(new Map(descriptionsForMessage)),
+      .map(descriptions =>
+        Actions.setDescriptions(new Map(descriptions), keepDescriptions),
       )
       .catch(err => {
         getLogger('atom-ide-diagnostics').error(

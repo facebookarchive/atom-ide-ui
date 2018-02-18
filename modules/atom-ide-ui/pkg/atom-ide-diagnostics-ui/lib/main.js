@@ -16,9 +16,12 @@ import type {
 } from '../../atom-ide-datatip/lib/types';
 
 import type {
+  DescriptionsState,
+  DiagnosticMessageKind,
   DiagnosticMessage,
   DiagnosticMessages,
   DiagnosticUpdater,
+  UiConfig,
 } from '../../atom-ide-diagnostics/lib/types';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {GlobalViewState} from './types';
@@ -188,16 +191,24 @@ class Activation {
         .map(state => state.diagnosticUpdater)
         .distinctUntilChanged();
 
-      const diagnosticsStream = updaters
-        .switchMap(
-          updater =>
-            updater == null
-              ? Observable.of([])
-              : observableFromSubscribeFunction(updater.observeMessages),
-        )
+      const diagnosticsStream: Observable<Array<DiagnosticMessage>> = updaters
+        .switchMap(updater => {
+          return updater == null
+            ? Observable.of([])
+            : observableFromSubscribeFunction(updater.observeMessages);
+        })
         .map(diagnostics => diagnostics.filter(d => d.type !== 'Hint'))
         .let(fastDebounce(100))
         .startWith([]);
+
+      const descriptionsStream: Observable<DescriptionsState> = updaters
+        .switchMap(updater => {
+          return updater == null
+            ? Observable.of(new Map())
+            : observableFromSubscribeFunction(updater.observeDescriptions);
+        })
+        .let(fastDebounce(100))
+        .startWith(new Map());
 
       const showTracesStream: Observable<
         boolean,
@@ -220,14 +231,28 @@ class Activation {
 
       const pathToActiveTextEditorStream = getActiveEditorPaths();
 
-      const filterByActiveTextEditorStream = packageStates
+      const filterByActiveTextEditorStream: Observable<
+        boolean,
+      > = packageStates
         .map(state => state.filterByActiveTextEditor)
         .distinctUntilChanged();
       const setFilterByActiveTextEditor = filterByActiveTextEditor => {
         this._model.setState({filterByActiveTextEditor});
       };
 
-      const supportedMessageKindsStream = updaters
+      const setSelectedMessageStream: Observable<
+        (message: DiagnosticMessage) => void,
+      > = updaters.map(updater => {
+        return (message: DiagnosticMessage) => {
+          if (updater) {
+            updater.fetchDescriptions([message], true);
+          }
+        };
+      });
+
+      const supportedMessageKindsStream: Observable<
+        Set<DiagnosticMessageKind>,
+      > = updaters
         .switchMap(
           updater =>
             updater == null
@@ -238,7 +263,7 @@ class Activation {
         )
         .distinctUntilChanged(areSetsEqual);
 
-      const uiConfigStream = updaters.switchMap(
+      const uiConfigStream: Observable<UiConfig> = updaters.switchMap(
         updater =>
           updater == null
             ? Observable.of([])
@@ -247,27 +272,42 @@ class Activation {
               ),
       );
 
+      Observable.combineLatest(
+        updaters,
+        diagnosticsStream,
+        showTracesStream,
+      ).subscribe(([updater, messages, showTraces]) => {
+        if (updater && showTraces) {
+          updater.fetchDescriptions(messages, false);
+        }
+      });
+
       this._globalViewStates = Observable.combineLatest(
         diagnosticsStream,
+        descriptionsStream,
         filterByActiveTextEditorStream,
         pathToActiveTextEditorStream,
         showTracesStream,
         showDirectoryColumnStream,
         autoVisibilityStream,
+        setSelectedMessageStream,
         supportedMessageKindsStream,
         uiConfigStream,
         // $FlowFixMe
         (
           diagnostics,
+          descriptions,
           filterByActiveTextEditor,
           pathToActiveTextEditor,
           showTraces,
           showDirectoryColumn,
           autoVisibility,
+          setSelectedMessage,
           supportedMessageKinds,
           uiConfig,
         ) => ({
           diagnostics,
+          descriptions,
           filterByActiveTextEditor,
           pathToActiveTextEditor,
           showTraces,
@@ -275,6 +315,7 @@ class Activation {
           autoVisibility,
           onShowTracesChange: setShowTraces,
           onFilterByActiveTextEditorChange: setFilterByActiveTextEditor,
+          onSelectMessage: setSelectedMessage,
           supportedMessageKinds,
           uiConfig,
         }),

@@ -69,7 +69,7 @@ const INITIAL_STATE = {
   messages: new Map(),
   codeActionFetcher: null,
   codeActionsForMessage: new Map(),
-  descriptionsForMessage: new Map(),
+  descriptions: new Map(),
   providers: new Set(),
 };
 
