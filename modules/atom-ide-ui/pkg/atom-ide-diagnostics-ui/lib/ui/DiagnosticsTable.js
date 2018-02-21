@@ -35,7 +35,6 @@ import sortDiagnostics from '../sortDiagnostics';
 import {DiagnosticsMessageNoHeader} from './DiagnosticsMessage';
 import {DiagnosticsMessageText} from './DiagnosticsMessageText';
 import {Icon} from 'nuclide-commons-ui/Icon';
-import {Subject, BehaviorSubject} from 'rxjs';
 
 const DIAGNOSTICS_TO_ROWS_TRACES_MAP = new WeakMap();
 const DIAGNOSTICS_TO_ROWS_NO_TRACES_MAP = new WeakMap();
@@ -95,8 +94,6 @@ type Props = {
 };
 
 type State = {
-  focused: boolean,
-  selectedMessage: ?DiagnosticMessage,
   sortDescending: boolean,
   sortedColumn: ColumnName,
 };
@@ -107,8 +104,6 @@ export default class DiagnosticsTable extends React.PureComponent<
 > {
   _previousSelectedIndex: number = -1;
   _table: ?Table<DisplayDiagnostic>;
-  _focusChangeEvents: Subject<SyntheticEvent<*>> = new Subject();
-  _selectedMessages: BehaviorSubject<?DiagnosticMessage> = new BehaviorSubject();
   _disposables: ?UniversalDisposable;
 
   constructor(props: Props) {
@@ -129,55 +124,14 @@ export default class DiagnosticsTable extends React.PureComponent<
     );
 
     this.state = {
-      focused: false,
-      selectedMessage: null,
       sortDescending: true,
       sortedColumn: 'classification',
     };
   }
 
-  componentWillReceiveProps(nextProps: Props): void {
-    this._selectedMessages.next(nextProps.selectedMessage);
-  }
-
-  componentDidMount(): void {
-    const focusedStream = this._focusChangeEvents.map(
-      event => event.type === 'focus',
-    );
-    this._disposables = new UniversalDisposable(
-      // If we change the state synchronously on the focus change, the component will be
-      // re-rendered, removing the element with the click handler before the click event gets to us
-      // (via the table's `onSelect()`). This would manifest itself in rows not being selected when
-      // a click both changes the selection and focuses the table. A naive solution would be to
-      // simply delay the focus event, however, users would perceive the selection and focus styling
-      // changes (quick flashing changes). Therefore, we hold onto focus changes (i.e. don't
-      // re-render) until we hear the selection change. Because a focus change may occur without a
-      // subsequent selection change, we also always force a re-render after a certain number of
-      // milliseconds without hearing a selection change. The end result is that clicking a row when
-      // the table is not focused will immediately render the table with the correct focus and
-      // selection. Focusing the table without clicking a row will be queue a re-render in a few
-      // milliseconds.
-      this._selectedMessages
-        .distinctUntilChanged()
-        .withLatestFrom(focusedStream)
-        .subscribe(([selectedMessage, focused]) => {
-          this.setState({selectedMessage, focused});
-        }),
-      focusedStream.delay(100).subscribe(focused => this.setState({focused})),
-    );
-  }
-
   componentWillUnmount(): void {
     invariant(this._disposables != null);
     this._disposables.dispose();
-  }
-
-  componentDidUpdate(prevProps: Props, prevState: State): void {
-    if (this._table != null && this.state.focused !== prevState.focused) {
-      // The row renderers depend on this state but the Table component doesn't know it about it, so
-      // we have to force it to rerender its rows.
-      this._table.forceUpdate();
-    }
   }
 
   _handleSort = (sortedColumn: ColumnName, sortDescending: boolean): void => {
@@ -289,10 +243,7 @@ export default class DiagnosticsTable extends React.PureComponent<
   // eslint-disable-next-line react/no-unused-prop-types
   _renderDescription = (props: {data: DescriptionField}) => {
     const {showTraces, diagnostic, text, isPlainText, description} = props.data;
-    const expanded =
-      showTraces ||
-      (this.state.focused && diagnostic === this.state.selectedMessage);
-    return expanded
+    return showTraces
       ? DiagnosticsMessageNoHeader({
           message: diagnostic,
           description,
@@ -327,8 +278,7 @@ export default class DiagnosticsTable extends React.PureComponent<
   }
 
   render(): React.Node {
-    const {diagnostics, showTraces, descriptions} = this.props;
-    const {selectedMessage} = this.state;
+    const {diagnostics, selectedMessage, showTraces, descriptions} = this.props;
     const columns = this._getColumns();
     const {sortedColumn, sortDescending} = this._getSortOptions(columns);
     const diagnosticRows = this._getRows(diagnostics, showTraces, descriptions);
@@ -358,8 +308,6 @@ export default class DiagnosticsTable extends React.PureComponent<
           ref={table => {
             this._table = table;
           }}
-          onBodyFocus={this._handleFocusChangeEvent}
-          onBodyBlur={this._handleFocusChangeEvent}
           collapsable={true}
           columns={columns}
           emptyComponent={EmptyComponent}
@@ -386,10 +334,6 @@ export default class DiagnosticsTable extends React.PureComponent<
       this._table.focus();
     }
   }
-
-  _handleFocusChangeEvent = (event: SyntheticEvent<*>): void => {
-    this._focusChangeEvents.next(event);
-  };
 
   _findSelectedIndex(
     selectedMessage: ?DiagnosticMessage,

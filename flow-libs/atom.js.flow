@@ -139,7 +139,7 @@ type atom$ConfigSchema = {
   type: Array<atom$ConfigType> | atom$ConfigType,
 };
 
-  declare class atom$Config {
+declare class atom$Config {
   // Config Subscription
   observe(
     keyPath: string,
@@ -290,7 +290,7 @@ declare class atom$Marker {
 
     isValid: boolean,
     textChanged: boolean,
-  }) => void): IDisposable,
+  }) => mixed): IDisposable,
   isValid(): boolean,
   isDestroyed(): boolean,
   onDidDestroy(callback: () => mixed): IDisposable,
@@ -747,12 +747,12 @@ type ChangeCursorPositionEvent = {
   cursor: atom$Cursor,
 };
 
-type MarkerOptions = {|
+type MarkerOptions = {
   reversed?: boolean,
   tailed?: boolean,
   invalidate?: 'never' | 'surround' | 'overlap' | 'inside' | 'touch',
   exclusive?: boolean,
-|};
+};
 
 type ChangeSelectionRangeEvent = {|
   oldBufferRange: atom$Range,
@@ -834,6 +834,7 @@ declare class atom$TextEditor extends atom$Model {
   // History
   createCheckpoint(): atom$TextBufferCheckpoint,
   revertToCheckpoint(checkpoint: atom$TextBufferCheckpoint): boolean,
+  terminatePendingState(): void,
   transact(fn: () => mixed, _: void): void,
   transact(groupingInterval: number, fn: () => mixed): void,
 
@@ -873,6 +874,7 @@ declare class atom$TextEditor extends atom$Model {
   markBufferRange(range: atom$RangeLike, options?: MarkerOptions): atom$Marker,
   markScreenRange(range: atom$RangeLike, options?: MarkerOptions): atom$Marker,
   markScreenPosition(position: atom$PointLike, options?: MarkerOptions): atom$Marker,
+  findMarkers(options: MarkerOptions): Array<atom$Marker>,
   getMarkerCount(): number,
 
   // Cursors

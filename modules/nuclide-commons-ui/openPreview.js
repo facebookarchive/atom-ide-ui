@@ -14,6 +14,7 @@ import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import type {GoToLocationOptions} from 'nuclide-commons-atom/go-to-location';
 import {goToLocation} from 'nuclide-commons-atom/go-to-location';
+import {delayTime} from 'nuclide-commons/promise';
 
 type OpenablePreview = {|
   cancel: () => void,
@@ -27,6 +28,7 @@ let originalPoint: ?{
   item: atom$PaneItem,
   point: ?atom$Point,
 };
+let lastOpenablePreview: ?OpenablePreview;
 
 let activeOpenableId = 0;
 
@@ -34,7 +36,7 @@ let activeOpenableId = 0;
 // a new pane if the destination uri is not the active item. However, if the
 // user has disabled preview panes, we won't show them a preview.
 
-// previewOpenable supports being called many times, and it deallocates prior
+// openPreview supports being called many times, and it deallocates prior
 // previews on its own when this happens. It also returns the user's focus when
 // to the original destination when cancelled. This *could* be implemented using
 // a stack, but this simpler implementation just holds global references and restores
@@ -43,9 +45,14 @@ export default function openPreview(
   uri: NuclideUri,
   // $FlowIgnore
   options?: GoToLocationOptions = {},
+  openDelay?: number = 0,
 ): OpenablePreview {
   const {line, column} = options;
   const thisOpenableId = ++activeOpenableId;
+
+  if (lastOpenablePreview != null) {
+    lastOpenablePreview.cancel();
+  }
 
   let cancelled;
   let confirmed;
@@ -74,65 +81,70 @@ export default function openPreview(
 
   let promise;
   if (isWithinSameFile || arePendingPanesEnabled) {
-    promise = goToLocation(uri, {
-      line,
-      column,
-      center: true,
-      activateItem: true,
-      activatePane: false,
-      pending: true,
-      moveCursor: false,
-    }).then(newPreview => {
-      if (
-        cancelled &&
-        // don't destroy the pane if it's not new (e.g. within the same file --
-        // like a symbol within the originating file)
-        originalPoint != null &&
-        newPreview !== originalPoint.item
-      ) {
-        newPreview.destroy();
-        return;
-      }
+    promise = delayTime(openDelay).then(() => {
+      // a common case is scrolling through many results, cancelling one after
+      // the other. give things a chance to cancel before going throught the work
+      // of rendering a preview
+      if (cancelled) {
+        return Promise.resolve();
+      } else {
+        return goToLocation(uri, {
+          line,
+          column,
+          center: true,
+          activateItem: true,
+          activatePane: false,
+          pending: true,
+          moveCursor: false,
+        }).then(newPreview => {
+          if (
+            cancelled &&
+            isPending(newPreview) &&
+            // don't destroy the pane if it's not new (e.g. within the same file --
+            // like a symbol within the originating file)
+            originalPoint != null &&
+            newPreview !== originalPoint.item
+          ) {
+            newPreview.destroy();
+            return;
+          }
 
-      // the pane may have been reused: e.g. previewing a line in the same file
-      // so make sure it wasn't. Then destroy the old preview if it's not the
-      // original pane.
-      if (
-        preview != null &&
-        preview !== newPreview &&
-        originalPoint != null &&
-        newPreview !== originalPoint.item
-      ) {
-        preview.destroy();
-      }
+          // the pane may have been reused: e.g. previewing a line in the same file
+          // so make sure it wasn't. Then destroy the old preview if it's not the
+          // original pane.
+          if (preview != null && isPending(preview) && preview !== newPreview) {
+            preview.destroy();
+          }
 
-      if (marker != null) {
-        marker.destroy();
-        marker = null;
-      }
+          if (marker != null) {
+            marker.destroy();
+            marker = null;
+          }
 
-      preview = newPreview;
+          preview = newPreview;
 
-      // highlight the relevant line (and possibly point if there's a column)
-      // if a line is provided in the options
-      if (line != null) {
-        marker = preview.markBufferPosition({
-          row: line,
-          column: column == null ? 0 : column,
+          // highlight the relevant line (and possibly point if there's a column)
+          // if a line is provided in the options
+          if (line != null) {
+            marker = preview.markBufferPosition({
+              row: line,
+              column: column == null ? 0 : column,
+            });
+            preview.decorateMarker(marker, {
+              type: 'line',
+              class: 'nuclide-line-preview',
+            });
+          }
+
+          return newPreview;
         });
-        preview.decorateMarker(marker, {
-          type: 'line',
-          class: 'nuclide-line-preview',
-        });
       }
-
-      return newPreview;
     });
   } else {
     promise = Promise.resolve();
   }
 
-  return {
+  const openablePreview = {
     cancel() {
       cancelled = true;
 
@@ -177,6 +189,7 @@ export default function openPreview(
       confirmed = true;
 
       const goToLocationPromise = goToLocation(uri, options).then(newEditor => {
+        newEditor.terminatePendingState();
         if (
           preview != null &&
           preview !== newEditor &&
@@ -200,4 +213,12 @@ export default function openPreview(
     // exported for test
     _promise: promise,
   };
+
+  lastOpenablePreview = openablePreview;
+  return openablePreview;
+}
+
+function isPending(paneItem: atom$PaneItem) {
+  const pane = atom.workspace.paneForItem(paneItem);
+  return pane && pane.getPendingItem() === paneItem;
 }
