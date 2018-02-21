@@ -1,21 +1,33 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {Action, Executor} from '../lib/types';
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createDummyExecutor = createDummyExecutor;
 
-import * as Actions from '../lib/redux/Actions';
-import Reducers from '../lib/redux/Reducers';
-import * as Immutable from 'immutable';
-import {Observable} from 'rxjs';
+var _Actions;
+
+function _load_Actions() {
+  return _Actions = _interopRequireWildcard(require('../lib/redux/Actions'));
+}
+
+var _Reducers;
+
+function _load_Reducers() {
+  return _Reducers = _interopRequireDefault(require('../lib/redux/Reducers'));
+}
+
+var _immutable;
+
+function _load_immutable() {
+  return _immutable = _interopRequireWildcard(require('immutable'));
+}
+
+var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 const emptyAppState = {
   createPasteFunction: null,
@@ -25,9 +37,19 @@ const emptyAppState = {
   providers: new Map(),
   providerStatuses: new Map(),
   providerSubscriptions: new Map(),
-  records: Immutable.List(),
-  history: [],
-};
+  records: (_immutable || _load_immutable()).List(),
+  history: []
+}; /**
+    * Copyright (c) 2017-present, Facebook, Inc.
+    * All rights reserved.
+    *
+    * This source code is licensed under the BSD-style license found in the
+    * LICENSE file in the root directory of this source tree. An additional grant
+    * of patent rights can be found in the PATENTS file in the same directory.
+    *
+    * 
+    * @format
+    */
 
 describe('createStateStream', () => {
   describe('RECORD_RECEIVED', () => {
@@ -35,28 +57,24 @@ describe('createStateStream', () => {
     let initialRecords;
 
     beforeEach(() => {
-      initialRecords = Immutable.List();
-      const initialState = {
-        ...emptyAppState,
+      initialRecords = (_immutable || _load_immutable()).List();
+      const initialState = Object.assign({}, emptyAppState, {
         maxMessageCount: 2,
-        records: initialRecords,
-      };
+        records: initialRecords
+      });
       const actions = [];
       for (let i = 0; i < 5; i++) {
         actions.push({
-          type: Actions.RECORD_RECEIVED,
+          type: (_Actions || _load_Actions()).RECORD_RECEIVED,
           payload: {
             record: {
               level: 'info',
-              text: i.toString(),
-            },
-          },
+              text: i.toString()
+            }
+          }
         });
       }
-      finalState = ((actions: any): Array<Action>).reduce(
-        Reducers,
-        initialState,
-      );
+      finalState = actions.reduce((_Reducers || _load_Reducers()).default, initialState);
     });
 
     it('adds records', () => {
@@ -68,10 +86,7 @@ describe('createStateStream', () => {
     });
 
     it('truncates the least recent records', () => {
-      expect(finalState.records.map(record => record.text).toArray()).toEqual([
-        '3',
-        '4',
-      ]);
+      expect(finalState.records.map(record => record.text).toArray()).toEqual(['3', '4']);
     });
 
     it("doesn't mutate the original records list", () => {
@@ -85,25 +100,19 @@ describe('createStateStream', () => {
 
     beforeEach(() => {
       initialProviders = new Map();
-      const initialState = {
-        ...emptyAppState,
-        providers: initialProviders,
-      };
-      const actions = [
-        {
-          type: Actions.REGISTER_SOURCE,
-          payload: {
-            source: {
-              id: 'test',
-              records: Observable.empty(),
-            },
-          },
-        },
-      ];
-      finalState = ((actions: any): Array<Action>).reduce(
-        Reducers,
-        initialState,
-      );
+      const initialState = Object.assign({}, emptyAppState, {
+        providers: initialProviders
+      });
+      const actions = [{
+        type: (_Actions || _load_Actions()).REGISTER_SOURCE,
+        payload: {
+          source: {
+            id: 'test',
+            records: _rxjsBundlesRxMinJs.Observable.empty()
+          }
+        }
+      }];
+      finalState = actions.reduce((_Reducers || _load_Reducers()).default, initialState);
     });
 
     it('adds providers to the registry', () => {
@@ -120,24 +129,21 @@ describe('createStateStream', () => {
     let finalState;
 
     beforeEach(() => {
-      initialRecords = Immutable.List([
-        {
-          kind: 'message',
-          sourceId: 'Test',
-          level: 'info',
-          text: 'test',
-          scopeName: null,
-          timestamp: new Date('2017-01-01T12:34:56.789Z'),
-          data: null,
-          repeatCount: 1,
-        },
-      ]);
-      const initialState = {
-        ...emptyAppState,
-        records: initialRecords,
-      };
-      const actions = [{type: Actions.CLEAR_RECORDS}];
-      finalState = actions.reduce(Reducers, initialState);
+      initialRecords = (_immutable || _load_immutable()).List([{
+        kind: 'message',
+        sourceId: 'Test',
+        level: 'info',
+        text: 'test',
+        scopeName: null,
+        timestamp: new Date('2017-01-01T12:34:56.789Z'),
+        data: null,
+        repeatCount: 1
+      }]);
+      const initialState = Object.assign({}, emptyAppState, {
+        records: initialRecords
+      });
+      const actions = [{ type: (_Actions || _load_Actions()).CLEAR_RECORDS }];
+      finalState = actions.reduce((_Reducers || _load_Reducers()).default, initialState);
     });
 
     it('clears the records', () => {
@@ -158,23 +164,20 @@ describe('createStateStream', () => {
     beforeEach(() => {
       dummyExecutor = createDummyExecutor('a');
       initialExecutors = new Map([['a', dummyExecutor]]);
-      initialState = {
-        ...emptyAppState,
-        executors: initialExecutors,
-      };
+      initialState = Object.assign({}, emptyAppState, {
+        executors: initialExecutors
+      });
     });
 
     describe('REGISTER_EXECUTOR', () => {
       beforeEach(() => {
-        const actions = [
-          {
-            type: Actions.REGISTER_EXECUTOR,
-            payload: {
-              executor: createDummyExecutor('b'),
-            },
-          },
-        ];
-        finalState = actions.reduce(Reducers, initialState);
+        const actions = [{
+          type: (_Actions || _load_Actions()).REGISTER_EXECUTOR,
+          payload: {
+            executor: createDummyExecutor('b')
+          }
+        }];
+        finalState = actions.reduce((_Reducers || _load_Reducers()).default, initialState);
       });
 
       it('adds an executor', () => {
@@ -188,8 +191,8 @@ describe('createStateStream', () => {
 
     describe('unregisterExecutor', () => {
       beforeEach(() => {
-        const actions = [Actions.unregisterExecutor(dummyExecutor)];
-        finalState = actions.reduce(Reducers, initialState);
+        const actions = [(_Actions || _load_Actions()).unregisterExecutor(dummyExecutor)];
+        finalState = actions.reduce((_Reducers || _load_Reducers()).default, initialState);
       });
 
       it('removes an executor', () => {
@@ -203,12 +206,12 @@ describe('createStateStream', () => {
   });
 });
 
-export function createDummyExecutor(id: string): Executor {
+function createDummyExecutor(id) {
   return {
     id,
     name: id,
     scopeName: 'text.plain',
-    send: (code: string) => {},
-    output: Observable.create(observer => {}),
+    send: code => {},
+    output: _rxjsBundlesRxMinJs.Observable.create(observer => {})
   };
 }
