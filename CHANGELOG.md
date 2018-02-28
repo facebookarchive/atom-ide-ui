@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.9.2
+
+- Improve performance of outline rendering
+- Fix error when Diagnostics is unmounted (#169)
+- Don't show the Console's sources list without a source
+- Console documentation is now available at https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/console.md!
+
+## v0.9.1
+
+This is a small release with the following highlight:
+
+- Resolves an issue where "Nuclide" would appear in the application menu. Instead, "Clear Console" has been moved to the Edit menu.
+
 ## v0.8.1
 
 - URL fragments/queries are now supported in diagnostic messages (#159)
