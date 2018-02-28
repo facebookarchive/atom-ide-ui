@@ -14,6 +14,7 @@ import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import type {GoToLocationOptions} from 'nuclide-commons-atom/go-to-location';
 import {goToLocation} from 'nuclide-commons-atom/go-to-location';
+import {isPending} from 'nuclide-commons-atom/pane-item';
 import {delayTime} from 'nuclide-commons/promise';
 
 type OpenablePreview = {|
@@ -54,7 +55,7 @@ export default function openPreview(
     lastOpenablePreview.cancel();
   }
 
-  let cancelled;
+  let canceled;
   let confirmed;
 
   const activeItem = atom.workspace.getActivePaneItem();
@@ -85,7 +86,7 @@ export default function openPreview(
       // a common case is scrolling through many results, cancelling one after
       // the other. give things a chance to cancel before going throught the work
       // of rendering a preview
-      if (cancelled) {
+      if (canceled) {
         return Promise.resolve();
       } else {
         return goToLocation(uri, {
@@ -98,7 +99,7 @@ export default function openPreview(
           moveCursor: false,
         }).then(newPreview => {
           if (
-            cancelled &&
+            canceled &&
             isPending(newPreview) &&
             // don't destroy the pane if it's not new (e.g. within the same file --
             // like a symbol within the originating file)
@@ -146,7 +147,7 @@ export default function openPreview(
 
   const openablePreview = {
     cancel() {
-      cancelled = true;
+      canceled = true;
 
       if (activeOpenableId !== thisOpenableId) {
         // the next preview has cleaned up our markers for us
@@ -180,7 +181,7 @@ export default function openPreview(
         );
       }
 
-      if (cancelled) {
+      if (canceled) {
         throw new Error(
           'A preview cannot be confirmed after it has been cancelled',
         );
@@ -216,9 +217,4 @@ export default function openPreview(
 
   lastOpenablePreview = openablePreview;
   return openablePreview;
-}
-
-function isPending(paneItem: atom$PaneItem) {
-  const pane = atom.workspace.paneForItem(paneItem);
-  return pane && pane.getPendingItem() === paneItem;
 }

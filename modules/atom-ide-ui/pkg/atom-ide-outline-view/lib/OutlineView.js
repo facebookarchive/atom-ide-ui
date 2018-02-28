@@ -14,8 +14,10 @@ import type {OutlineForUi, OutlineTreeForUi} from './createOutlines';
 import type {TextToken} from 'nuclide-commons/tokenized-text';
 import type {TreeNode, NodePath} from 'nuclide-commons-ui/SelectableTree';
 
+import Atomicon from 'nuclide-commons-ui/Atomicon';
 import HighlightedText from 'nuclide-commons-ui/HighlightedText';
 import {arrayEqual} from 'nuclide-commons/collection';
+import memoizeUntilChanged from 'nuclide-commons/memoizeUntilChanged';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 
 import * as React from 'react';
@@ -346,6 +348,10 @@ class OutlineViewCore extends React.PureComponent<
     pane.activateItem(editor);
   };
 
+  _getNodes = memoizeUntilChanged(outlineTrees => {
+    return outlineTrees.map(this._outlineTreeToNode);
+  });
+
   _outlineTreeToNode = (outlineTree: OutlineTreeForUi): TreeNode => {
     const searchResult = this.state.searchResults.get(outlineTree);
 
@@ -386,7 +392,7 @@ class OutlineViewCore extends React.PureComponent<
             className="outline-view-trees atom-ide-filterable"
             collapsedPaths={this.state.collapsedPaths}
             itemClassName="outline-view-item"
-            items={outline.outlineTrees.map(this._outlineTreeToNode)}
+            items={this._getNodes(outline.outlineTrees)}
             onCollapse={this._handleCollapse}
             onConfirm={this._handleConfirm}
             onExpand={this._handleExpand}
@@ -405,12 +411,9 @@ function renderItem(
   searchResult: ?SearchResult,
 ): React.Element<string> | string {
   const r = [];
-  const icon =
-    // flowlint-next-line sketchy-null-string:off
-    outline.icon || (outline.kind && OUTLINE_KIND_TO_ICON[outline.kind]);
 
-  if (icon != null) {
-    r.push(<span key={`icon-${icon}`} className={`icon icon-${icon}`} />);
+  if (outline.kind != null) {
+    r.push(<Atomicon key="type-icon" type={outline.kind} />);
     // Note: icons here are fixed-width, so the text lines up.
   }
 
@@ -480,24 +483,3 @@ function selectNodeFromPath(
   }
   return node;
 }
-
-const OUTLINE_KIND_TO_ICON = {
-  array: 'type-array',
-  boolean: 'type-boolean',
-  class: 'type-class',
-  constant: 'type-constant',
-  constructor: 'type-constructor',
-  enum: 'type-enum',
-  field: 'type-field',
-  file: 'type-file',
-  function: 'type-function',
-  interface: 'type-interface',
-  method: 'type-method',
-  module: 'type-module',
-  namespace: 'type-namespace',
-  number: 'type-number',
-  package: 'type-package',
-  property: 'type-property',
-  string: 'type-string',
-  variable: 'type-variable',
-};

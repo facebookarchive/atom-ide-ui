@@ -1,6 +1,6 @@
 {
   "name": "nuclide-commons",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Common Nuclide node modules.",
   "author": "NEEDS OWNER",
   "license": "BSD-3-Clause",
@@ -27,6 +27,7 @@
     "shell-quote": "1.6.1",
     "temp": "0.8.3",
     "uuid": "3.0.1",
+    "vscode-jsonrpc": "3.3.0",
     "vscode-uri": "1.0.1"
   },
   "devDependencies": {

@@ -273,24 +273,26 @@ declare class atom$Gutter {
   onDidDestroy(callback: () => void): IDisposable,
 }
 
+declare type atom$MarkerChangeEvent = {
+  oldHeadScreenPosition: atom$Point,
+  newHeadScreenPosition: atom$Point,
+  oldTailScreenPosition: atom$Point,
+  newTailScreenPosition: atom$Point,
+
+  oldHeadBufferPosition: atom$Point,
+  newHeadBufferPosition: atom$Point,
+  oldTailBufferPosition: atom$Point,
+  newTailBufferPosition: atom$Point,
+
+  isValid: boolean,
+  textChanged: boolean,
+}
+
 declare class atom$Marker {
   destroy(): void,
   getBufferRange(): atom$Range,
   getStartBufferPosition(): atom$Point,
-  onDidChange(callback: (event: {
-    oldHeadScreenPosition: atom$Point,
-    newHeadScreenPosition: atom$Point,
-    oldTailScreenPosition: atom$Point,
-    newTailScreenPosition: atom$Point,
-
-    oldHeadBufferPosition: atom$Point,
-    newHeadBufferPosition: atom$Point,
-    oldTailBufferPosition: atom$Point,
-    newTailBufferPosition: atom$Point,
-
-    isValid: boolean,
-    textChanged: boolean,
-  }) => mixed): IDisposable,
+  onDidChange(callback: (event: atom$MarkerChangeEvent) => mixed): IDisposable,
   isValid(): boolean,
   isDestroyed(): boolean,
   onDidDestroy(callback: () => mixed): IDisposable,
@@ -485,7 +487,9 @@ declare interface atom$PaneItem {
   +getURI?: () => ?string,
   +onDidChangeIcon?: (cb: (icon: string) => void) => IDisposable,
   +onDidChangeTitle?: (cb: (title: string) => void) => IDisposable,
+  +onDidTerminatePendingState?: (() => mixed) => IDisposable;
   +serialize?: () => Object,
+  +terminatePendingState?: () => void,
 }
 
 // Undocumented class
@@ -837,6 +841,7 @@ declare class atom$TextEditor extends atom$Model {
   terminatePendingState(): void,
   transact(fn: () => mixed, _: void): void,
   transact(groupingInterval: number, fn: () => mixed): void,
+  onDidTerminatePendingState(() => mixed): IDisposable;
 
   // TextEditor Coordinates
   screenPositionForBufferPosition(
@@ -968,6 +973,7 @@ declare class atom$TextEditor extends atom$Model {
 
   // Clipboard Operations
   pasteText: (options?: Object) => void,
+  copySelectedText: () => void,
 
   // Managing Syntax Scopes
   scopeDescriptorForBufferPosition(

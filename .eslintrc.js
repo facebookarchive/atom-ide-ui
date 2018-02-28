@@ -349,7 +349,8 @@ module.exports = {
     'jasmine/no-unsafe-spy': 0,
     'jasmine/valid-expect': 0,
 
-    // nuclide-internal (https://github.com/facebook/nuclide/tree/master/resources/eslint-plugin-nuclide-internal)
+    // nuclide-internal (https://github.com/facebook/nuclide/tree/master/modules/eslint-plugin-nuclide-internal)
+    'rulesdir/api-spelling': 1,
     'rulesdir/atom-apis': 1,
     'rulesdir/consistent-import-name': 1,
     'rulesdir/disallowed-modules': 1,
