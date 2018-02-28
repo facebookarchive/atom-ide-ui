@@ -1,18 +1,26 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import openPreview from '../openPreview';
-import fsPromise from 'nuclide-commons/fsPromise';
-import nullthrows from 'nullthrows';
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
+
+var _openPreview;
+
+function _load_openPreview() {
+  return _openPreview = _interopRequireDefault(require('../openPreview'));
+}
+
+var _fsPromise;
+
+function _load_fsPromise() {
+  return _fsPromise = _interopRequireDefault(require('nuclide-commons/fsPromise'));
+}
+
+var _nullthrows;
+
+function _load_nullthrows() {
+  return _nullthrows = _interopRequireDefault(require('nullthrows'));
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 describe('openPreview', () => {
   // replace Jasmine's mocked setTimeout with another mock which immediately
@@ -31,29 +39,29 @@ describe('openPreview', () => {
     let file;
     let fileItem;
     beforeEach(() => {
-      waitsForPromise(async () => {
-        file = await fsPromise.tempfile();
-        await fsPromise.writeFile(file, 'foobarbaz\n'.repeat(1000));
-        fileItem = await atom.workspace.open(file);
-      });
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        file = yield (_fsPromise || _load_fsPromise()).default.tempfile();
+        yield (_fsPromise || _load_fsPromise()).default.writeFile(file, 'foobarbaz\n'.repeat(1000));
+        fileItem = yield atom.workspace.open(file);
+      }));
     });
 
     afterEach(() => {
-      fsPromise.unlink(file);
+      (_fsPromise || _load_fsPromise()).default.unlink(file);
     });
 
     it('does not change the cursor position', () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         expect(getActiveTextEditor().getURI()).toEqual(file);
         expect(getActiveTextEditor().getCursorBufferPosition()).toEqual({
           row: 0,
-          column: 0,
+          column: 0
         });
 
-        await openPreview(file, {
+        yield (0, (_openPreview || _load_openPreview()).default)(file, {
           line: 700,
           column: 3,
-          center: true,
+          center: true
         })._promise;
 
         // this case shouldn't open any new editors
@@ -64,9 +72,9 @@ describe('openPreview', () => {
         expect(getActiveTextEditor().getURI()).toEqual(file);
         expect(getActiveTextEditor().getCursorBufferPosition()).toEqual({
           row: 0,
-          column: 0,
+          column: 0
         });
-      });
+      }));
     });
   });
 
@@ -75,50 +83,42 @@ describe('openPreview', () => {
     let previewingFile;
 
     beforeEach(() => {
-      waitsForPromise(async () => {
-        [startingFile, previewingFile] = await Promise.all([
-          fsPromise.tempfile(),
-          fsPromise.tempfile(),
-        ]);
-        await atom.workspace.open(startingFile);
-      });
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        [startingFile, previewingFile] = yield Promise.all([(_fsPromise || _load_fsPromise()).default.tempfile(), (_fsPromise || _load_fsPromise()).default.tempfile()]);
+        yield atom.workspace.open(startingFile);
+      }));
     });
 
     afterEach(() => {
-      waitsForPromise(() =>
-        Promise.all([
-          fsPromise.unlink(startingFile),
-          fsPromise.unlink(previewingFile),
-        ]),
-      );
+      waitsForPromise(() => Promise.all([(_fsPromise || _load_fsPromise()).default.unlink(startingFile), (_fsPromise || _load_fsPromise()).default.unlink(previewingFile)]));
     });
 
     it('opens a preview pane editor pointed at the previewFile', () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         expect(getActiveTextEditor().getURI()).toEqual(startingFile);
         expect(getActiveTextEditor().getCursorBufferPosition()).toEqual({
           row: 0,
-          column: 0,
+          column: 0
         });
 
-        await openPreview(previewingFile)._promise;
+        yield (0, (_openPreview || _load_openPreview()).default)(previewingFile)._promise;
         expect(getActiveTextEditor().getURI()).toBe(previewingFile);
         // $FlowFixMe
         expect(getPendingItem().getURI()).toBe(previewingFile);
-      });
+      }));
     });
 
     it('leaves focus on the starting editor', () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         expect(getActiveTextEditor().getURI()).toEqual(startingFile);
         expect(getActiveTextEditor().getCursorBufferPosition()).toEqual({
           row: 0,
-          column: 0,
+          column: 0
         });
 
-        await openPreview(previewingFile)._promise;
+        yield (0, (_openPreview || _load_openPreview()).default)(previewingFile)._promise;
         expect(getActiveTextEditor().getURI()).toEqual(previewingFile);
-      });
+      }));
     });
   });
 
@@ -128,38 +128,24 @@ describe('openPreview', () => {
     let secondPreviewingFile;
 
     beforeEach(() => {
-      waitsForPromise(async () => {
-        [
-          startingFile,
-          firstPreviewingFile,
-          secondPreviewingFile,
-        ] = await Promise.all([
-          fsPromise.tempfile(),
-          fsPromise.tempfile(),
-          fsPromise.tempfile(),
-        ]);
-        await atom.workspace.open(startingFile);
-      });
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        [startingFile, firstPreviewingFile, secondPreviewingFile] = yield Promise.all([(_fsPromise || _load_fsPromise()).default.tempfile(), (_fsPromise || _load_fsPromise()).default.tempfile(), (_fsPromise || _load_fsPromise()).default.tempfile()]);
+        yield atom.workspace.open(startingFile);
+      }));
     });
 
     afterEach(() => {
-      waitsForPromise(() =>
-        Promise.all([
-          fsPromise.unlink(startingFile),
-          fsPromise.unlink(firstPreviewingFile),
-          fsPromise.unlink(secondPreviewingFile),
-        ]),
-      );
+      waitsForPromise(() => Promise.all([(_fsPromise || _load_fsPromise()).default.unlink(startingFile), (_fsPromise || _load_fsPromise()).default.unlink(firstPreviewingFile), (_fsPromise || _load_fsPromise()).default.unlink(secondPreviewingFile)]));
     });
 
     it('reuses the preview pane when openPreview is called multiple times', () => {
-      waitsForPromise(async () => {
-        await openPreview(firstPreviewingFile)._promise;
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        yield (0, (_openPreview || _load_openPreview()).default)(firstPreviewingFile)._promise;
         const firstPendingItem = getPendingItem();
         // $FlowFixMe
         expect(getPendingItem().getURI()).toBe(firstPreviewingFile);
 
-        await openPreview(secondPreviewingFile)._promise;
+        yield (0, (_openPreview || _load_openPreview()).default)(secondPreviewingFile)._promise;
         const secondPendingItem = getPendingItem();
         // $FlowFixMe
         expect(getPendingItem().getURI()).toBe(secondPreviewingFile);
@@ -170,18 +156,18 @@ describe('openPreview', () => {
         expect(secondPendingItem.isDestroyed()).toBe(false);
         expect(getPendingItem()).toBe(secondPendingItem);
         expect(secondPendingItem).toBe(getActiveTextEditor());
-      });
+      }));
     });
 
     it('destroys all previews once an openable is confirmed', () => {
-      waitsForPromise(async () => {
-        await openPreview(firstPreviewingFile)._promise;
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        yield (0, (_openPreview || _load_openPreview()).default)(firstPreviewingFile)._promise;
         const firstPendingItem = getPendingItem();
-        const secondOpenable = openPreview(secondPreviewingFile);
-        await secondOpenable._promise;
+        const secondOpenable = (0, (_openPreview || _load_openPreview()).default)(secondPreviewingFile);
+        yield secondOpenable._promise;
         const secondPendingItem = getPendingItem();
 
-        await secondOpenable.confirm();
+        yield secondOpenable.confirm();
 
         // $FlowFixMe
         expect(firstPendingItem.isDestroyed()).toBe(true);
@@ -189,82 +175,85 @@ describe('openPreview', () => {
         expect(secondPendingItem.isDestroyed()).toBe(false);
         expect(getPendingItem()).not.toExist();
         expect(secondPendingItem).toBe(getActiveTextEditor());
-      });
+      }));
     });
   });
 
   it('never reuses a non-pending pane', () => {
-    waitsForPromise(async () => {
-      const [startingFile, file1, file2] = await Promise.all([
-        fsPromise.tempfile(),
-        fsPromise.tempfile(),
-        fsPromise.tempfile(),
-      ]);
-      await atom.workspace.open(startingFile);
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const [startingFile, file1, file2] = yield Promise.all([(_fsPromise || _load_fsPromise()).default.tempfile(), (_fsPromise || _load_fsPromise()).default.tempfile(), (_fsPromise || _load_fsPromise()).default.tempfile()]);
+      yield atom.workspace.open(startingFile);
 
-      await openPreview(file1)._promise;
+      yield (0, (_openPreview || _load_openPreview()).default)(file1)._promise;
       // Open a preview back in the originating file, which is not pending
-      await openPreview(startingFile)._promise;
+      yield (0, (_openPreview || _load_openPreview()).default)(startingFile)._promise;
       expect(getActiveTextEditor()).not.toBe(getPendingItem());
 
       // ...and make sure requesting a new preview does *not* reuse the original
       // file's pane item
-      await openPreview(file2)._promise;
+      yield (0, (_openPreview || _load_openPreview()).default)(file2)._promise;
       expect(getActiveTextEditor()).toBe(getPendingItem());
 
-      await Promise.all([
-        fsPromise.unlink(startingFile),
-        fsPromise.unlink(file1),
-        fsPromise.unlink(file2),
-      ]);
-    });
+      yield Promise.all([(_fsPromise || _load_fsPromise()).default.unlink(startingFile), (_fsPromise || _load_fsPromise()).default.unlink(file1), (_fsPromise || _load_fsPromise()).default.unlink(file2)]);
+    }));
   });
 
   it('throws when trying to confirm a preview that is not the latest', () => {
-    waitsForPromise(async () => {
-      const [file1, file2] = await Promise.all([
-        fsPromise.tempfile(),
-        fsPromise.tempfile(),
-      ]);
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const [file1, file2] = yield Promise.all([(_fsPromise || _load_fsPromise()).default.tempfile(), (_fsPromise || _load_fsPromise()).default.tempfile()]);
 
-      const preview1 = openPreview(file1);
-      openPreview(file2);
+      const preview1 = (0, (_openPreview || _load_openPreview()).default)(file1);
+      (0, (_openPreview || _load_openPreview()).default)(file2);
 
-      expect(() => preview1.confirm()).toThrow();
+      expect(function () {
+        return preview1.confirm();
+      }).toThrow();
 
-      await Promise.all([fsPromise.unlink(file1), fsPromise.unlink(file2)]);
-    });
+      yield Promise.all([(_fsPromise || _load_fsPromise()).default.unlink(file1), (_fsPromise || _load_fsPromise()).default.unlink(file2)]);
+    }));
   });
 
   it('throws when calling confirm after cancel', () => {
-    waitsForPromise(async () => {
-      const file = await fsPromise.tempfile();
-      const preview = openPreview(file);
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const file = yield (_fsPromise || _load_fsPromise()).default.tempfile();
+      const preview = (0, (_openPreview || _load_openPreview()).default)(file);
       preview.cancel();
-      expect(() => preview.confirm()).toThrow();
+      expect(function () {
+        return preview.confirm();
+      }).toThrow();
 
-      await fsPromise.unlink(file);
-    });
+      yield (_fsPromise || _load_fsPromise()).default.unlink(file);
+    }));
   });
 
   it('throws when calling cancel after confirm', () => {
-    waitsForPromise(async () => {
-      const file = await fsPromise.tempfile();
-      const preview = openPreview(file);
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const file = yield (_fsPromise || _load_fsPromise()).default.tempfile();
+      const preview = (0, (_openPreview || _load_openPreview()).default)(file);
       preview.confirm();
-      expect(() => preview.cancel()).toThrow();
+      expect(function () {
+        return preview.cancel();
+      }).toThrow();
 
-      await fsPromise.unlink(file);
-    });
+      yield (_fsPromise || _load_fsPromise()).default.unlink(file);
+    }));
   });
-});
+}); /**
+     * Copyright (c) 2017-present, Facebook, Inc.
+     * All rights reserved.
+     *
+     * This source code is licensed under the BSD-style license found in the
+     * LICENSE file in the root directory of this source tree. An additional grant
+     * of patent rights can be found in the PATENTS file in the same directory.
+     *
+     * 
+     * @format
+     */
 
-function getActiveTextEditor(): atom$TextEditor {
-  return nullthrows(atom.workspace.getActiveTextEditor());
+function getActiveTextEditor() {
+  return (0, (_nullthrows || _load_nullthrows()).default)(atom.workspace.getActiveTextEditor());
 }
 
-function getPendingItem(): atom$PaneItem {
-  return nullthrows(
-    atom.workspace.paneForItem(getActiveTextEditor()),
-  ).getPendingItem();
+function getPendingItem() {
+  return (0, (_nullthrows || _load_nullthrows()).default)(atom.workspace.paneForItem(getActiveTextEditor())).getPendingItem();
 }
