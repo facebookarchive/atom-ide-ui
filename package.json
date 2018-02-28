@@ -51,6 +51,7 @@
     "tabbable": "1.1.0",
     "temp": "0.8.3",
     "uuid": "3.0.1",
+    "vscode-jsonrpc": "3.3.0",
     "vscode-uri": "1.0.1"
   },
   "devDependencies": {
@@ -80,7 +81,7 @@
     "eslint-plugin-prettier": "2.3.1",
     "eslint-plugin-react": "7.4.0",
     "eslint-plugin-rulesdir": "0.1.0",
-    "flow-bin": "0.64.0",
+    "flow-bin": "0.66.0",
     "jasmine-node": "1.14.5",
     "nyc": "11.2.1",
     "prettier": "1.9.1",
