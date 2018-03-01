@@ -38,9 +38,9 @@ const TYPE_TO_ICON_NAME = {
 
 const ICON_NAME_TO_TYPE = invert(TYPE_TO_ICON_NAME);
 
-type AtomiconName = $Keys<typeof TYPE_TO_ICON_NAME>;
+type AtomiconType = $Keys<typeof TYPE_TO_ICON_NAME>;
 
-export default function Atomicon({type}: {type: AtomiconName}) {
+export default function Atomicon({type}: {type: AtomiconType}) {
   const displayName = capitalize(type);
   return (
     <span
@@ -51,6 +51,6 @@ export default function Atomicon({type}: {type: AtomiconName}) {
   );
 }
 
-export function getTypeFromIconName(iconName: string): ?AtomiconName {
+export function getTypeFromIconName(iconName: string): ?AtomiconType {
   return ICON_NAME_TO_TYPE[iconName];
 }
