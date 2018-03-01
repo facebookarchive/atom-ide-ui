@@ -13,7 +13,7 @@
 import * as React from 'react';
 import {capitalize} from 'nuclide-commons/string';
 import classnames from 'classnames';
-import {invert} from 'lodash'
+import {invert} from 'lodash';
 
 const TYPE_TO_ICON_NAME = {
   array: 'type-array',
