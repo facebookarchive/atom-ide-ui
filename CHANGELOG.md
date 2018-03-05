@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.9.3
+
+Fixed two regressions in Outline:
+
+- Restored icons for atom-languageclient providers.
+- Restored the ability to filter-on-type.
+
 ## v0.9.2
 
 - Improve performance of outline rendering
