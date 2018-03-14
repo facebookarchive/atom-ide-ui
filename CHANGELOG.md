@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.9.4
+
+- Fix console rendering bug
+
 ## v0.9.3
 
 Fixed two regressions in Outline:
