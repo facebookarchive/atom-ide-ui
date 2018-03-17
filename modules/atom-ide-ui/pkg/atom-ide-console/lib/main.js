@@ -231,6 +231,9 @@ class Activation {
         info(object: string): void {
           console.append({text: object, level: 'info'});
         },
+        success(object: string): void {
+          console.append({text: object, level: 'success'});
+        },
         append(message: Message): void {
           invariant(activation != null && !disposed);
           activation._getStore().dispatch(
@@ -328,7 +331,12 @@ class Activation {
       records: this._store
         .getState()
         .records.slice(-maximumSerializedMessages)
-        .toArray(),
+        .toArray()
+        .map(record => {
+          // `Executor` is not serializable. Make sure to remove it first.
+          const {executor, ...rest} = record;
+          return rest;
+        }),
       history: this._store.getState().history.slice(-maximumSerializedHistory),
     };
   }

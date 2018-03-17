@@ -39,9 +39,9 @@ git ls-files --ignored --exclude-standard -z | xargs -0 git rm --cached
 
 git add -A && git commit -m "Release ${VERSION}"
 
-if [[ "$1" != "--dry-run" ]]; then
-  git tag "${VERSION}"
-  git push origin "${VERSION}"
-
-  apm publish --tag "${VERSION}"
-fi
+echo
+echo "Run 'apm link' and manually verify that the release seems OK."
+echo "When ready, run:"
+echo "  git tag ${VERSION}"
+echo "  git push origin ${VERSION}"
+echo "  apm publish --tag ${VERSION}"

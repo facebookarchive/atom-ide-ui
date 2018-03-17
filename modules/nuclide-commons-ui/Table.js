@@ -53,8 +53,9 @@ export type Column<T: Object> = {
 };
 
 export type Row<T: Object> = {
-  +className?: string,
-  +data: T,
+  className?: string,
+  data: T,
+  rowAttributes?: Object,
 };
 
 type PercentageWidthMap<T> = {[key: $Keys<T>]: number};
@@ -95,7 +96,7 @@ type Props<T> = {
    * Whether items can be selected.
    * If specified, `onSelect` must also be specified.
    */
-  selectable?: boolean,
+  selectable?: boolean | ((row: T) => boolean),
   selectedIndex?: ?number,
   /**
    * Handler to be called upon selection. Called iff `selectable` is `true`. We pass along the event
@@ -550,7 +551,7 @@ export class Table<T: Object> extends React.Component<Props<T>, State<T>> {
         })
       );
     let body = rows.map((row, i) => {
-      const {className: rowClassName, data} = row;
+      const {className: rowClassName, data, rowAttributes} = row;
       const renderedRow = columns.map((column, j) => {
         const {
           key,
@@ -577,12 +578,15 @@ export class Table<T: Object> extends React.Component<Props<T>, State<T>> {
             })}
             key={j}
             style={cellStyle}
-            title={typeof datum !== 'object' ? String(datum) : null}>
+            title={typeof datum !== 'object' ? String(datum) : null}
+            {...rowAttributes}>
             {datum}
           </div>
         );
       });
-      const rowProps = selectable
+      const selectableRow =
+        typeof selectable === 'function' ? selectable(row.data) : selectable;
+      const rowProps = selectableRow
         ? {
             onClick: event => {
               switch (event.detail) {
@@ -609,7 +613,9 @@ export class Table<T: Object> extends React.Component<Props<T>, State<T>> {
         <div
           className={classnames(rowClassName, {
             'nuclide-ui-table-row': true,
-            'nuclide-ui-table-row-selectable': selectable,
+            'nuclide-ui-table-row-selectable': selectableRow,
+            'nuclide-ui-table-row-disabled':
+              typeof selectable === 'function' && !selectableRow,
             'nuclide-ui-table-row-using-keyboard-nav': this.state.usingKeyboard,
             'nuclide-ui-table-row-selected': isSelectedRow,
             'nuclide-ui-table-row-alternate':

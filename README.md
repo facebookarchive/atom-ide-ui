@@ -39,6 +39,7 @@ Check out the documentation pages for more information about each feature!
 - [Code Actions](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/code-actions.md)
 - [Code Format](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/code-format.md)
 - [Code Highlight](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/code-highlight.md)
+- [Console](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/console.md)
 - [Datatips](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/datatips.md)
 - [Definitions (plus Hyperclick)](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/definitions.md)
 - [Diagnostics](https://github.com/facebook-atom/atom-ide-ui/blob/master/docs/diagnostics.md)

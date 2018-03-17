@@ -10,6 +10,7 @@
  * @format
  */
 
+import {sleep} from 'nuclide-commons/promise';
 import {AtomTextEditor} from '../AtomTextEditor';
 import * as React from 'react';
 import ReactDOM from 'react-dom';
@@ -32,7 +33,8 @@ describe('nuclide-ui-atom-text-editor', () => {
     });
 
     it('loads the desired `Grammar`', () => {
-      const element = TestUtils.renderIntoDocument(
+      // $FlowIgnore
+      const element: AtomTextEditor = TestUtils.renderIntoDocument(
         <AtomTextEditor path=".test" />,
       );
       expect(element.getModel().getGrammar().scopeName).toEqual('text.test');
@@ -56,7 +58,8 @@ describe('nuclide-ui-atom-text-editor', () => {
     });
 
     it('updates the underlying models grammar', () => {
-      const element = TestUtils.renderIntoDocument(
+      // $FlowIgnore
+      const element: AtomTextEditor = TestUtils.renderIntoDocument(
         <AtomTextEditor path=".test" grammar={grammar2} />,
       );
       expect(element.getModel().getGrammar().scopeName).toEqual('text.test2');
@@ -64,10 +67,11 @@ describe('nuclide-ui-atom-text-editor', () => {
   });
 
   describe('when `readOnly`', () => {
-    let element;
+    let element: AtomTextEditor;
 
     describe('is true', () => {
       beforeEach(() => {
+        // $FlowIgnore
         element = TestUtils.renderIntoDocument(
           <AtomTextEditor readOnly={true} />,
         );
@@ -119,6 +123,7 @@ describe('nuclide-ui-atom-text-editor', () => {
 
     describe('is undefined', () => {
       beforeEach(() => {
+        // $FlowIgnore
         element = TestUtils.renderIntoDocument(<AtomTextEditor />);
       });
 
@@ -177,7 +182,7 @@ describe('nuclide-ui-atom-text-editor', () => {
       ReactDOM.unmountComponentAtNode(hostEl);
 
       // Cleanup occurs during the next tick.
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await sleep(0);
       expect(element.component).toBe(null);
     });
   });

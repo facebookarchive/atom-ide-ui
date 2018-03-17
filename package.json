@@ -1,6 +1,6 @@
 {
   "name": "atom-ide-ui",
-  "version": "0.9.1",
+  "version": "0.9.4",
   "description": "A collection of Atom UIs to support language services.",
   "keywords": [],
   "repository": "https://github.com/facebook-atom/atom-ide-ui",
@@ -29,6 +29,7 @@
     "idx": "1.2.0",
     "immutable": "4.0.0-rc.9",
     "invariant": "2.2.2",
+    "lodash": "4.17.4",
     "log4js": "1.1.1",
     "lru-cache": "4.0.2",
     "marked": "0.3.9",
@@ -51,6 +52,7 @@
     "tabbable": "1.1.0",
     "temp": "0.8.3",
     "uuid": "3.0.1",
+    "vscode-jsonrpc": "3.3.0",
     "vscode-uri": "1.0.1"
   },
   "devDependencies": {
@@ -61,6 +63,7 @@
     "babel-plugin-lodash": "3.2.11",
     "babel-plugin-relay": "1.4.1",
     "babel-plugin-syntax-flow": "6.18.0",
+    "babel-plugin-transform-async-super": "1.0.0",
     "babel-plugin-transform-async-to-module-method": "6.24.1",
     "babel-plugin-transform-class-properties": "6.24.1",
     "babel-plugin-transform-es2015-modules-commonjs": "6.26.0",
@@ -80,7 +83,7 @@
     "eslint-plugin-prettier": "2.3.1",
     "eslint-plugin-react": "7.4.0",
     "eslint-plugin-rulesdir": "0.1.0",
-    "flow-bin": "0.64.0",
+    "flow-bin": "0.67.1",
     "jasmine-node": "1.14.5",
     "nyc": "11.2.1",
     "prettier": "1.9.1",

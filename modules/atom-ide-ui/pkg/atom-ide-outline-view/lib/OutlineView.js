@@ -14,11 +14,14 @@ import type {OutlineForUi, OutlineTreeForUi} from './createOutlines';
 import type {TextToken} from 'nuclide-commons/tokenized-text';
 import type {TreeNode, NodePath} from 'nuclide-commons-ui/SelectableTree';
 
+import Atomicon, {getTypeFromIconName} from 'nuclide-commons-ui/Atomicon';
 import HighlightedText from 'nuclide-commons-ui/HighlightedText';
 import {arrayEqual} from 'nuclide-commons/collection';
+import memoizeUntilChanged from 'nuclide-commons/memoizeUntilChanged';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 
 import * as React from 'react';
+import classnames from 'classnames';
 import invariant from 'assert';
 import nullthrows from 'nullthrows';
 
@@ -62,38 +65,13 @@ const TOKEN_KIND_TO_CLASS_NAME_MAP = {
 };
 
 export class OutlineView extends React.PureComponent<Props, State> {
-  subscription: ?UniversalDisposable;
   _outlineViewRef: ?React.ElementRef<typeof OutlineViewComponent>;
-  state = {
-    fontFamily: (atom.config.get('editor.fontFamily'): any),
-    fontSize: (atom.config.get('editor.fontSize'): any),
-    lineHeight: (atom.config.get('editor.lineHeight'): any),
-  };
 
   componentDidMount(): void {
-    invariant(this.subscription == null);
-    this.subscription = new UniversalDisposable(
-      atom.config.observe('editor.fontSize', (size: mixed) => {
-        this.setState({fontSize: (size: any)});
-      }),
-      atom.config.observe('editor.fontFamily', (font: mixed) => {
-        this.setState({fontFamily: (font: any)});
-      }),
-      atom.config.observe('editor.lineHeight', (size: mixed) => {
-        this.setState({lineHeight: (size: any)});
-      }),
-    );
-
     // Ensure that focus() gets called during the initial mount.
     if (this.props.visible) {
       this.focus();
     }
-  }
-
-  componentWillUnmount(): void {
-    invariant(this.subscription != null);
-    this.subscription.unsubscribe();
-    this.subscription = null;
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -117,17 +95,6 @@ export class OutlineView extends React.PureComponent<Props, State> {
   render(): React.Node {
     return (
       <div className="outline-view">
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              .outline-view-core {
-                line-height: ${this.state.lineHeight};
-                font-size: ${this.state.fontSize}px;
-                font-family: ${this.state.fontFamily};
-              }
-          `,
-          }}
-        />
         <OutlineViewComponent
           outline={this.props.outline}
           ref={this._setOutlineViewRef}
@@ -346,6 +313,14 @@ class OutlineViewCore extends React.PureComponent<
     pane.activateItem(editor);
   };
 
+  _getNodes = memoizeUntilChanged(
+    outlineTrees => outlineTrees.map(this._outlineTreeToNode),
+    // searchResults is passed here as a cache key for the memoization.
+    // Since tree nodes contain `hidden` within them, we need to rerender
+    // whenever searchResults changes to reflect that.
+    outlineTrees => [outlineTrees, this.state.searchResults],
+  );
+
   _outlineTreeToNode = (outlineTree: OutlineTreeForUi): TreeNode => {
     const searchResult = this.state.searchResults.get(outlineTree);
 
@@ -386,7 +361,7 @@ class OutlineViewCore extends React.PureComponent<
             className="outline-view-trees atom-ide-filterable"
             collapsedPaths={this.state.collapsedPaths}
             itemClassName="outline-view-item"
-            items={outline.outlineTrees.map(this._outlineTreeToNode)}
+            items={this._getNodes(outline.outlineTrees)}
             onCollapse={this._handleCollapse}
             onConfirm={this._handleConfirm}
             onExpand={this._handleExpand}
@@ -405,13 +380,24 @@ function renderItem(
   searchResult: ?SearchResult,
 ): React.Element<string> | string {
   const r = [];
-  const icon =
-    // flowlint-next-line sketchy-null-string:off
-    outline.icon || (outline.kind && OUTLINE_KIND_TO_ICON[outline.kind]);
 
-  if (icon != null) {
-    r.push(<span key={`icon-${icon}`} className={`icon icon-${icon}`} />);
-    // Note: icons here are fixed-width, so the text lines up.
+  const iconName = outline.icon;
+  if (iconName != null) {
+    const correspondingAtomicon = getTypeFromIconName(iconName);
+    if (correspondingAtomicon == null) {
+      r.push(
+        <span
+          key="type-icon"
+          className={classnames('icon', `icon-${iconName}`)}
+        />,
+      );
+    } else {
+      // If we're passed an icon name rather than a type, and it maps directly
+      // to an atomicon, use that.
+      r.push(<Atomicon key="type-icon" type={correspondingAtomicon} />);
+    }
+  } else if (outline.kind != null) {
+    r.push(<Atomicon key="type-icon" type={outline.kind} />);
   }
 
   if (outline.tokenizedText != null) {
@@ -480,24 +466,3 @@ function selectNodeFromPath(
   }
   return node;
 }
-
-const OUTLINE_KIND_TO_ICON = {
-  array: 'type-array',
-  boolean: 'type-boolean',
-  class: 'type-class',
-  constant: 'type-constant',
-  constructor: 'type-constructor',
-  enum: 'type-enum',
-  field: 'type-field',
-  file: 'type-file',
-  function: 'type-function',
-  interface: 'type-interface',
-  method: 'type-method',
-  module: 'type-module',
-  namespace: 'type-namespace',
-  number: 'type-number',
-  package: 'type-package',
-  property: 'type-property',
-  string: 'type-string',
-  variable: 'type-variable',
-};
