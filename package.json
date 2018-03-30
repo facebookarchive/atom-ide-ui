@@ -23,7 +23,6 @@
     "async-to-generator": "1.1.0",
     "big-integer": "1.6.17",
     "classnames": "2.2.5",
-    "command-exists": "1.2.2",
     "dedent": "0.6.0",
     "domexception": "1.0.1",
     "dompurify": "1.0.3",
