@@ -8,7 +8,6 @@ SYNC_PATHS=(
   'flow-typed'
   'modules'
   ':!modules/big-dig*'
-  ':!modules/nuclide-debugger*'
   ':!modules/nuclide-watchman-helpers'
 )
 SYNC_BRANCH=nuclide-sync
