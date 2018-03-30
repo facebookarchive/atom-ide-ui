@@ -27,7 +27,7 @@ const {getModules} = require('./util');
 
 getModules().forEach(dirpath => {
   if (dirpath.includes('nuclide-debugger-vsps')) {
-    continue;
+    return;
   }
   console.log('Running tests for ' + dirpath);
   try {
