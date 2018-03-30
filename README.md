@@ -1,4 +1,4 @@
-# atom-ide-ui &middot; [![Package version](https://img.shields.io/apm/v/atom-ide-ui.svg)](https://atom.io/packages/atom-ide-ui) [![CircleCI](https://img.shields.io/circleci/project/github/facebook-atom/atom-ide-ui.svg)](https://circleci.com/gh/facebook-atom/atom-ide-ui) [![codecov](https://img.shields.io/codecov/c/github/facebook-atom/atom-ide-ui.svg)](https://codecov.io/gh/facebook-atom/atom-ide-ui)
+# atom-ide-ui &middot; [![Package version](https://img.shields.io/apm/v/atom-ide-ui.svg)](https://atom.io/packages/atom-ide-ui) [![CircleCI](https://img.shields.io/circleci/project/github/facebook-atom/atom-ide-ui.svg)](https://circleci.com/gh/facebook-atom/atom-ide-ui)
 
 A collection of Atom UIs to support language services as part of Atom IDE,
 designed for use with packages built on top of
