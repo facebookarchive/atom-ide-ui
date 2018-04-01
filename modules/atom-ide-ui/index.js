@@ -88,6 +88,7 @@ export type {
   Signature,
   SignatureHelp,
   SignatureHelpProvider,
+  SignatureHelpRegistry,
   SignatureParameter,
 } from './pkg/atom-ide-signature-help/lib/types';
 
@@ -110,3 +111,7 @@ export type {
   OutputService,
   RegisterExecutorFunction,
 } from './pkg/atom-ide-console/lib/types';
+
+export {
+  default as DebuggerService,
+} from './pkg/atom-ide-debugger/lib/RemoteControlService';

@@ -28,11 +28,19 @@ if ! git config --get user.name >/dev/null; then
   echo "Git \"user.name\" not set."
   exit 1
 fi
+if ! which jq >/dev/null; then
+  echo "You must have jq installed."
+  exit 1
+fi
 
 # Force a detached HEAD
 git checkout "$(git rev-parse HEAD)"
 
 npm run release-transpile -- --overwrite
+
+# Remove "private" field.
+jq 'del(.private)' < package.json > package.json.new
+mv package.json.new package.json
 
 # Remove newly ignored files from the commit.
 git ls-files --ignored --exclude-standard -z | xargs -0 git rm --cached

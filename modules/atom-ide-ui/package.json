@@ -18,6 +18,7 @@
   "dependencies": {
     "async-to-generator": "1.1.0",
     "classnames": "2.2.5",
+    "dompurify": "1.0.3",
     "fuzzaldrin-plus": "0.4.1",
     "idx": "1.2.0",
     "immutable": "4.0.0-rc.9",
@@ -26,6 +27,8 @@
     "nuclide-commons": "0.5.1-dev",
     "nuclide-commons-atom": "0.5.1-dev",
     "nuclide-commons-ui": "0.5.1-dev",
+    "nuclide-debugger-common": "0.5.1-dev",
+    "nuclide-debugger-vsps": "0.5.1-dev",
     "nullthrows": "1.0.0",
     "react": "16.2.0",
     "react-dom": "16.2.0",
@@ -34,7 +37,10 @@
     "reselect": "3.0.1",
     "rxjs": "5.5.5",
     "semver": "5.3.0",
-    "shallowequal": "0.2.2"
+    "shallowequal": "0.2.2",
+    "strip-ansi": "3.0.1",
+    "uuid": "3.0.1",
+    "vscode-debugprotocol": "1.24.0"
   },
   "devDependencies": {
     "temp": "0.8.3"

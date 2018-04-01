@@ -26,6 +26,9 @@ const child_process = require('child_process');
 const {getModules} = require('./util');
 
 getModules().forEach(dirpath => {
+  if (dirpath.includes('nuclide-debugger-vsps')) {
+    return;
+  }
   console.log('Running tests for ' + dirpath);
   try {
     child_process.execFileSync('npm', ['test'], {
