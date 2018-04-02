@@ -12,18 +12,23 @@
 
 import * as React from 'react';
 import marked from 'marked';
+import createDOMPurify from 'dompurify';
+
+const domPurify = createDOMPurify();
 
 type DiagnosticsMessageDescriptionProps = {
   description: ?string,
 };
 
-export const DiagnosticsMessageDescription = (
-  props: DiagnosticsMessageDescriptionProps,
-) => {
-  const {description} = props;
-  if (description != null) {
-    const __html = marked(description);
-    return <div dangerouslySetInnerHTML={{__html}} />;
+export class DiagnosticsMessageDescription extends React.PureComponent<
+  DiagnosticsMessageDescriptionProps,
+> {
+  render() {
+    const {description} = this.props;
+    if (description != null) {
+      const __html = domPurify.sanitize(marked(description));
+      return <div dangerouslySetInnerHTML={{__html}} />;
+    }
+    return null;
   }
-  return null;
-};
+}

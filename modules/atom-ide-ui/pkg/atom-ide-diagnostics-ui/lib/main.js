@@ -240,15 +240,13 @@ class Activation {
         this._model.setState({filterByActiveTextEditor});
       };
 
-      const setSelectedMessageStream: Observable<
-        (message: DiagnosticMessage) => void,
-      > = updaters.map(updater => {
-        return (message: DiagnosticMessage) => {
-          if (updater) {
-            updater.fetchDescriptions([message], true);
-          }
-        };
-      });
+      const handleSelectMessage = (message: DiagnosticMessage) => {
+        const updater = this._model.state.diagnosticUpdater;
+        if (updater == null) {
+          return;
+        }
+        updater.fetchDescriptions([message], true);
+      };
 
       const supportedMessageKindsStream: Observable<
         Set<DiagnosticMessageKind>,
@@ -290,7 +288,6 @@ class Activation {
         showTracesStream,
         showDirectoryColumnStream,
         autoVisibilityStream,
-        setSelectedMessageStream,
         supportedMessageKindsStream,
         uiConfigStream,
         // $FlowFixMe
@@ -302,7 +299,6 @@ class Activation {
           showTraces,
           showDirectoryColumn,
           autoVisibility,
-          setSelectedMessage,
           supportedMessageKinds,
           uiConfig,
         ) => ({
@@ -315,7 +311,7 @@ class Activation {
           autoVisibility,
           onShowTracesChange: setShowTraces,
           onFilterByActiveTextEditorChange: setFilterByActiveTextEditor,
-          onSelectMessage: setSelectedMessage,
+          onSelectMessage: handleSelectMessage,
           supportedMessageKinds,
           uiConfig,
         }),

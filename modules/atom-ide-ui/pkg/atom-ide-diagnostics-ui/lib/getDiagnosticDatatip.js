@@ -32,7 +32,7 @@ function makeDatatipComponent(
 ): React.ComponentType<*> {
   const fixer = message => diagnosticUpdater.applyFix(message);
   return bindObservableAsProps(
-    Observable.zip(
+    Observable.combineLatest(
       observableFromSubscribeFunction(cb =>
         diagnosticUpdater.observeCodeActionsForMessage(cb),
       ),

@@ -192,18 +192,19 @@ export function fetchDescriptions(
           } else {
             return Promise.resolve(message.description);
           }
-        }).map(description => [message, description || '']),
+        })
+          .map(description => [message, description || ''])
+          .catch(err => {
+            getLogger('atom-ide-diagnostics').error(
+              `Error fetching description for ${message.filePath}`,
+              err,
+            );
+            return Observable.empty();
+          }),
       ),
-    )
-      .map(descriptions =>
-        Actions.setDescriptions(new Map(descriptions), keepDescriptions),
-      )
-      .catch(err => {
-        getLogger('atom-ide-diagnostics').error(
-          `Error fetching description for ${messages[0].filePath}`,
-          err,
-        );
-        return Observable.empty();
-      });
+    ).map(descriptions =>
+      // keep updates to the store minimal to reduce re-renders of the diagnostics table.
+      Actions.setDescriptions(new Map(descriptions), keepDescriptions),
+    );
   });
 }

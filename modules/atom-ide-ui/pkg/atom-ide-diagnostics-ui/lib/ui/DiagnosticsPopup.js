@@ -129,13 +129,14 @@ export class DiagnosticsPopup extends React.Component<DiagnosticsPopupProps> {
     } = this.props;
     return (
       <div className="diagnostics-popup" {...rest}>
-        {messages.map(
-          renderMessage.bind(
-            null,
+        {messages.map((msg, index) =>
+          renderMessage(
             fixer,
             goToLocation,
             codeActionsForMessage,
             descriptions,
+            msg,
+            index,
           ),
         )}
       </div>
