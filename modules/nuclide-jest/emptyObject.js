@@ -10,7 +10,5 @@
  * @format
  */
 
-import {getLogger} from 'log4js';
-
-const DEBUGGER_LOGGER_CATEGORY = 'atom-debugger';
-export default getLogger(DEBUGGER_LOGGER_CATEGORY);
+// eslint-disable-next-line rulesdir/no-commonjs
+module.exports = {};

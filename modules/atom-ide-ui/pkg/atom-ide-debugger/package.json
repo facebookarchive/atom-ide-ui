@@ -3,13 +3,13 @@
   "displayName": "Debugger",
   "main": "./lib/main.js",
   "version": "0.0.0",
-  "description": "Allows debugging of various types of process from within Nuclide",
-  "author": "Nuclide: Debugging",
+  "description": "Allows debugging of various types of processes",
+  "author": "Debugging",
   "atomTestRunner": "../../../scripts/atom-test-runner.js",
   "nuclide": {
     "configMetadata": {
       "pathComponents": [
-        "Nuclide Debugger",
+        "Debugger",
         "General Settings"
       ]
     }
@@ -23,7 +23,7 @@
     }
   },
   "providedServices": {
-    "nuclide-debugger.remote": {
+    "debugger.remote": {
       "versions": {
         "description": "Remote control for launching debugger.",
         "0.0.0": "provideRemoteControlService"
@@ -46,11 +46,6 @@
         "0.1.0": "consumeDatatipService"
       }
     },
-    "nuclide-evaluation-expression.provider": {
-      "versions": {
-        "0.0.0": "consumeEvaluationExpressionProvider"
-      }
-    },
     "tool-bar": {
       "versions": {
         "^1.0.0": "consumeToolBar"
@@ -61,7 +56,7 @@
         "0.0.0": "consumeNotifications"
       }
     },
-    "nuclide-debugger.provider": {
+    "debugger.provider": {
       "versions": {
         "0.0.0": "consumeDebuggerProvider"
       }
