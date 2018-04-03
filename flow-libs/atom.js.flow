@@ -54,6 +54,13 @@ type atom$Octicon = 'alert' | 'alignment-align' | 'alignment-aligned-to' | 'alig
 
 type atom$PaneLocation = 'left' | 'right' | 'bottom' | 'center';
 
+declare type atom$Color  = {
+  // Returns a String in the form '#abcdef'.
+  toHexString(): string;
+  // Returns a String in the form 'rgba(25, 50, 75, .9)'.
+  toRGBAString(): string;
+}
+
 declare class atom$Model {
   destroy(): void,
   isDestroyed(): boolean,
@@ -256,6 +263,7 @@ declare class atom$LayerDecoration {
 
 declare class atom$Disposable {
   constructor(disposalAction?: (...args: Array<any>) => any): void,
+  disposed: boolean,
   dispose(): void,
 }
 
@@ -768,7 +776,7 @@ type MarkerOptions = {
   exclusive?: boolean,
 };
 
-type ChangeSelectionRangeEvent = {|
+type atom$ChangeSelectionRangeEvent = {|
   oldBufferRange: atom$Range,
   oldScreenRange: atom$Range,
   newBufferRange: atom$Range,
@@ -795,7 +803,7 @@ declare class atom$TextEditor extends atom$Model {
   // Note that the range property of the event is undocumented.
   onDidInsertText(callback: (event: {text: string, range: atom$Range}) => mixed): IDisposable,
   onDidChangeSoftWrapped(callback: (softWrapped: boolean) => mixed): IDisposable,
-  onDidChangeSelectionRange(callback: (event: ChangeSelectionRangeEvent) => mixed): IDisposable,
+  onDidChangeSelectionRange(callback: (event: atom$ChangeSelectionRangeEvent) => mixed): IDisposable,
   observeSelections(callback: (selection: atom$Selection) => mixed): IDisposable,
 
   // File Details

@@ -392,7 +392,7 @@ export default class DebugService implements IDebugService {
           );
           editor.decorateMarker(selectedFrameMarker, {
             type: 'line',
-            class: 'nuclide-current-line-highlight',
+            class: 'debugger-current-line-highlight',
           });
 
           const datatipService = getDatatipService();
@@ -411,7 +411,7 @@ export default class DebugService implements IDebugService {
             threadChangeDatatip = datatipService.createPinnedDataTip(
               {
                 component: () => (
-                  <div className="nuclide-debugger-thread-switch-alert">
+                  <div className="debugger-thread-switch-alert">
                     <Icon icon="alert" />
                     {message}
                   </div>
@@ -821,7 +821,7 @@ export default class DebugService implements IDebugService {
     const raiseNativeNotification = getNotificationService();
     if (raiseNativeNotification != null) {
       const pendingNotification = raiseNativeNotification(
-        'Nuclide Debugger',
+        'Debugger',
         'Paused at a breakpoint',
         3000,
         false,
@@ -1154,7 +1154,7 @@ export default class DebugService implements IDebugService {
       this._registerSessionListeners(process, session);
       atom.commands.dispatch(
         atom.views.getView(atom.workspace),
-        'nuclide-debugger:show',
+        'debugger:show',
       );
       await session.initialize({
         clientID: 'atom',
@@ -1222,7 +1222,8 @@ export default class DebugService implements IDebugService {
     if (configuration.adapterPreprocessor != null) {
       adapterPreprocessors.push(configuration.adapterPreprocessor);
     }
-    if (nuclideUri.isRemote(configuration.targetUri)) {
+    const isRemote = nuclideUri.isRemote(configuration.targetUri);
+    if (isRemote) {
       clientPreprocessors.push(remoteToLocalProcessor());
       adapterPreprocessors.push(
         localToRemoteProcessor(configuration.targetUri),
@@ -1232,6 +1233,7 @@ export default class DebugService implements IDebugService {
       sessionId,
       logger,
       configuration.adapterExecutable,
+      {adapter: configuration.adapterType, host: 'debugService', isRemote},
       spawner,
       clientPreprocessors,
       adapterPreprocessors,
@@ -1261,7 +1263,7 @@ export default class DebugService implements IDebugService {
    * and resolveds configurations via DebugConfigurationProviders.
    */
   async startDebugging(config: IProcessConfig): Promise<void> {
-    this._timer = startTracking('nuclide-debugger-atom:startDebugging');
+    this._timer = startTracking('debugger-atom:startDebugging');
     this._onSessionEnd();
 
     this._updateModeAndEmit(DebuggerMode.STARTING);
