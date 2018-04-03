@@ -100,13 +100,6 @@ export class DiagnosticsViewModel {
         }),
     );
 
-    const createSelectMessage = memoizeUntilChanged(
-      onSelectMessage => message => {
-        this._model.setState({selectedMessage: message});
-        onSelectMessage(message);
-      },
-    );
-
     // Combine the state that's shared between instances, the state that's unique to this instance,
     // and unchanging callbacks, to get the props for our component.
     const props = Observable.combineLatest(
@@ -129,7 +122,7 @@ export class DiagnosticsViewModel {
         descriptions: globalState.descriptions,
         onTypeFilterChange: this._handleTypeFilterChange,
         onTextFilterChange: this._handleTextFilterChange,
-        selectMessage: createSelectMessage(globalState.onSelectMessage),
+        selectMessage: this._selectMessage,
         gotoMessageLocation: goToDiagnosticLocation,
         supportedMessageKinds: globalState.supportedMessageKinds,
       }),
@@ -273,6 +266,10 @@ export class DiagnosticsViewModel {
       );
     });
   }
+
+  _selectMessage = (message: DiagnosticMessage): void => {
+    this._model.setState({selectedMessage: message});
+  };
 }
 
 function goToDiagnosticLocation(

@@ -240,14 +240,6 @@ class Activation {
         this._model.setState({filterByActiveTextEditor});
       };
 
-      const handleSelectMessage = (message: DiagnosticMessage) => {
-        const updater = this._model.state.diagnosticUpdater;
-        if (updater == null) {
-          return;
-        }
-        updater.fetchDescriptions([message], true);
-      };
-
       const supportedMessageKindsStream: Observable<
         Set<DiagnosticMessageKind>,
       > = updaters
@@ -311,7 +303,6 @@ class Activation {
           autoVisibility,
           onShowTracesChange: setShowTraces,
           onFilterByActiveTextEditorChange: setFilterByActiveTextEditor,
-          onSelectMessage: handleSelectMessage,
           supportedMessageKinds,
           uiConfig,
         }),

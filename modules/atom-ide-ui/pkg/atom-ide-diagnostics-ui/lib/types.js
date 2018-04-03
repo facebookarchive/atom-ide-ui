@@ -37,7 +37,6 @@ export type GlobalViewState = {
   autoVisibility: boolean,
   showTraces: boolean,
   onShowTracesChange: (isChecked: boolean) => mixed,
-  onSelectMessage: (message: DiagnosticMessage) => void,
   supportedMessageKinds: Set<DiagnosticMessageKind>,
   uiConfig: UiConfig,
 };
