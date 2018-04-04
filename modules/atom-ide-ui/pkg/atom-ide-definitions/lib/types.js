@@ -10,6 +10,7 @@
  * @format
  */
 
+import type {AbortSignal} from 'nuclide-commons/AbortController';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 export type Definition = {
@@ -47,6 +48,7 @@ export type DefinitionProvider = {
   getDefinition: (
     editor: TextEditor,
     position: atom$Point,
+    options?: {signal: AbortSignal},
   ) => Promise<?DefinitionQueryResult>,
 };
 
