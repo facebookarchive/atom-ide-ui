@@ -51,10 +51,9 @@ import type {
   IEvaluatableExpression,
   IRawBreakpoint,
   IStackFrame,
-  IProcessConfig,
   SerializedState,
 } from '../types';
-import type {MessageProcessor} from 'nuclide-debugger-common';
+import type {IProcessConfig, MessageProcessor} from 'nuclide-debugger-common';
 import type {EvaluationResult} from 'nuclide-commons-ui/TextRenderer';
 import type {TimingTracker} from 'nuclide-commons/analytics';
 import * as DebugProtocol from 'vscode-debugprotocol';
@@ -99,7 +98,7 @@ import {
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {Emitter, TextBuffer} from 'atom';
 import {distinct} from 'nuclide-commons/collection';
-import {onUnexpectedError} from '../utils';
+import {onUnexpectedError, notifyOpenDebugSession} from '../utils';
 import uuid from 'uuid';
 import {
   BreakpointEventReasons,
@@ -1264,7 +1263,11 @@ export default class DebugService implements IDebugService {
    */
   async startDebugging(config: IProcessConfig): Promise<void> {
     this._timer = startTracking('debugger-atom:startDebugging');
-    this._onSessionEnd();
+    if (this._viewModel.focusedProcess != null) {
+      // We currently support only running only one debug session at a time.
+      notifyOpenDebugSession();
+      return;
+    }
 
     this._updateModeAndEmit(DebuggerMode.STARTING);
     // Open the console window if it's not already opened.
