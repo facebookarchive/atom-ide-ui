@@ -336,6 +336,8 @@ type atom$PackageMetadata = {
 };
 
 declare class atom$PackageManager {
+  +initialPackagesActivated: boolean,
+
   // Event Subscription
   onDidLoadInitialPackages(callback: () => void): IDisposable,
   onDidActivateInitialPackages(callback: () => void): IDisposable,
@@ -1000,6 +1002,7 @@ declare class atom$TextEditor extends atom$Model {
   copySelectedText: () => void,
 
   // Managing Syntax Scopes
+  getRootScopeDescriptor(): atom$ScopeDescriptor,
   scopeDescriptorForBufferPosition(
     bufferPosition: atom$PointLike,
   ): atom$ScopeDescriptor,
@@ -1617,6 +1620,7 @@ declare class atom$KeymapManager {
 
   // Adding and Removing Bindings
   add(source: string, bindings: Object): IDisposable,
+  removeBindingsFromSource(source: string): void,
 
   // Accessing Bindings
   getKeyBindings(): Array<atom$KeyBinding>,
@@ -2062,6 +2066,7 @@ type atom$AutocompleteSuggestion = {
   className?: ?string,
   iconHTML?: ?string,
   description?: ?string,
+  descriptionMarkdown?: ?string,
   descriptionMoreURL?: ?string,
 };
 

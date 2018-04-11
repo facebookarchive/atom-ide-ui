@@ -10,8 +10,11 @@
  * @format
  */
 
-import type {DatatipService} from 'atom-ide-ui';
-import type {ConsoleService, RegisterExecutorFunction} from 'atom-ide-ui';
+import type {
+  DatatipService,
+  ConsoleService,
+  RegisterExecutorFunction,
+} from 'atom-ide-ui';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import typeof * as VSCodeDebuggerAdapterService from 'nuclide-debugger-vsps/VSCodeDebuggerAdapterService';
 
@@ -95,6 +98,16 @@ export function setRpcService(rpcService: nuclide$RpcService): IDisposable {
   return new UniversalDisposable(() => {
     _rpcService = null;
   });
+}
+
+export async function getDefaultNodeBinaryPath(
+  uri: NuclideUri,
+): Promise<?string> {
+  if (_rpcService == null) {
+    return null;
+  } else {
+    return _rpcService.getNodeBinaryPath(uri);
+  }
 }
 
 export function getVSCodeDebuggerAdapterServiceByNuclideUri(

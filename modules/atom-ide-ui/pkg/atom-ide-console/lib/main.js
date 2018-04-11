@@ -88,8 +88,8 @@ class Activation {
         observableFromSubscribeFunction(cb =>
           atom.config.observe('editor.fontSize', cb),
         ),
-        featureConfig.observeAsStream('atom-ide-console.consoleFontScale'),
-        (fontSize, consoleFontScale) => fontSize * parseFloat(consoleFontScale),
+        featureConfig.observeAsStream('atom-ide-console.fontScale'),
+        (fontSize, fontScale) => fontSize * parseFloat(fontScale),
       )
         .map(Actions.setFontSize)
         .subscribe(this._store.dispatch),
