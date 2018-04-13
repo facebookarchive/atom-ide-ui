@@ -35,6 +35,8 @@ export type VSAdapterExecutableInfo = {
   args: Array<string>,
 };
 
+export type NativeVsAdapterType = 'native_lldb' | 'native_gdb';
+
 export type VsAdapterType =
   | 'hhvm'
   | 'python'
@@ -101,7 +103,8 @@ export type AutoGenPropertyType =
   | AutoGenPropertyPrimitiveType
   | 'array'
   | 'enum'
-  | 'object';
+  | 'object'
+  | 'process';
 
 export type AutoGenProperty = {
   name: string,
@@ -153,3 +156,7 @@ export type LaunchAttachProviderIsEnabled = (
   action: DebuggerConfigAction,
   config: AutoGenConfig,
 ) => Promise<boolean>;
+
+export interface DebuggerConfigurationProvider {
+  resolveConfiguration(configuration: IProcessConfig): Promise<IProcessConfig>;
+}

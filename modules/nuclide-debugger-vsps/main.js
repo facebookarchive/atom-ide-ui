@@ -67,11 +67,14 @@ const _adapters: Map<VsAdapterType, AdapterInfo> = new Map([
         args: [
           nuclideUri.join(
             __dirname,
-            'VendorLib/vscode-react-native/out/debugger/reactNativeDebugEntryPoint.js',
+            '../atom-ide-debugger-react-native/VendorLib/vscode-react-native/out/debugger/reactNativeDebugEntryPoint.js',
           ),
         ],
       },
-      root: nuclideUri.join(__dirname, 'VendorLib/vscode-react-native'),
+      root: nuclideUri.join(
+        __dirname,
+        '../atom-ide-debugger-react-native/VendorLib/vscode-react-native',
+      ),
     },
   ],
   [
@@ -95,10 +98,13 @@ const _adapters: Map<VsAdapterType, AdapterInfo> = new Map([
       executable: {
         command: 'node',
         args: [
-          nuclideUri.join(__dirname, 'vscode-ocaml/vscode-debugger-entry.js'),
+          nuclideUri.join(
+            __dirname,
+            '../atom-ide-debugger-ocaml/lib/vscode-debugger-entry.js',
+          ),
         ],
       },
-      root: nuclideUri.join(__dirname, 'vscode-ocaml'),
+      root: nuclideUri.join(__dirname, '../atom-ide-debugger-ocaml'),
     },
   ],
   [
@@ -117,6 +123,16 @@ const _adapters: Map<VsAdapterType, AdapterInfo> = new Map([
     },
   ],
   [
+    'native_lldb',
+    {
+      executable: {
+        command: 'lldb-vscode',
+        args: [],
+      },
+      root: nuclideUri.join(__dirname, 'fb-native-debugger-lldb-vsp'),
+    },
+  ],
+  [
     'hhvm',
     {
       executable: {
@@ -129,6 +145,21 @@ const _adapters: Map<VsAdapterType, AdapterInfo> = new Map([
         ],
       },
       root: nuclideUri.join(__dirname, '../../pkg/nuclide-debugger-hhvm-rpc'),
+    },
+  ],
+  [
+    'mobilejs',
+    {
+      executable: {
+        command: 'node',
+        args: [
+          nuclideUri.join(
+            __dirname,
+            '../../pkg/fb-debugger-mobilejs-rpc/lib/vscode/vscode-debugger-entry.js',
+          ),
+        ],
+      },
+      root: nuclideUri.join(__dirname, '../../pkg/fb-debugger-mobilejs-rpc'),
     },
   ],
 ]);
