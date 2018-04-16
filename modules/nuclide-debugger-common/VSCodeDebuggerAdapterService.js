@@ -11,16 +11,12 @@
  */
 
 import type {ConnectableObservable} from 'rxjs';
-import type {
-  VSAdapterExecutableInfo,
-  VsAdapterType,
-} from 'nuclide-debugger-common';
-import type {ProcessMessage} from 'nuclide-commons/process';
-import type {ProcessInfo} from 'nuclide-commons/process';
+import type {VSAdapterExecutableInfo, VsAdapterType} from './types';
+import type {ProcessInfo, ProcessMessage} from 'nuclide-commons/process';
 
 import {psTree} from 'nuclide-commons/process';
-import {VsAdapterSpawner} from 'nuclide-debugger-common';
-import {getAdapterExecutable} from './main';
+import VsAdapterSpawner from './VsAdapterSpawner';
+import {getAdapterExecutable} from './debugger-registry';
 
 export class VsRawAdapterSpawnerService extends VsAdapterSpawner {
   spawnAdapter(
