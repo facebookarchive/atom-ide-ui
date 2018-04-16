@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.0
+
+- Add atom-ide-debugger
+
 ## v0.9.4
 
 - Fix console rendering bug
