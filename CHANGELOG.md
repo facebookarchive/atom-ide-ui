@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.1
+
+- Fix atom-ide-debugger-* runtime path resolution.
+
 ## v0.10.0
 
 - Add atom-ide-debugger
