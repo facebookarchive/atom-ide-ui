@@ -42,6 +42,7 @@
     "mime-types": "2.1.16",
     "mkdirp": "0.5.1",
     "mv": "2.1.1",
+    "nuclide-prebuilt-libs": "0.4.0",
     "nullthrows": "1.0.0",
     "react": "16.2.0",
     "react-dom": "16.2.0",
@@ -61,7 +62,8 @@
     "uuid": "3.0.1",
     "vscode-debugprotocol": "1.24.0",
     "vscode-jsonrpc": "3.3.0",
-    "vscode-uri": "1.0.1"
+    "vscode-uri": "1.0.1",
+    "xterm": "3.1.0"
   },
   "devDependencies": {
     "babel-core": "6.26.0",
