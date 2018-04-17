@@ -1,19 +1,14 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {PtyClient} from '../lib/pty-service/rpc-types';
-import invariant from 'assert';
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
-import {spawn} from '../lib/pty-service/PtyService';
+var _PtyService;
+
+function _load_PtyService() {
+  return _PtyService = require('../lib/pty-service/PtyService');
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 describe('PtyService', () => {
   describe('spawn', () => {
@@ -25,36 +20,40 @@ describe('PtyService', () => {
         terminalType: 'xterm',
         command: {
           file: '',
-          args: [],
-        },
+          args: []
+        }
       };
       runner = new LocalRunner();
     });
 
     it('adds numbers in bash', () => {
-      waitsForPromise(async () => {
-        invariant(ptyInfo.command != null);
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        if (!(ptyInfo.command != null)) {
+          throw new Error('Invariant violation: "ptyInfo.command != null"');
+        }
+
         ptyInfo.command.file = '/bin/bash';
         ptyInfo.command.args = ['--norc', '-c', 'echo $((1 + 1))'];
-        await spawn(ptyInfo, runner);
-        const result = await runner.promise;
+        yield (0, (_PtyService || _load_PtyService()).spawn)(ptyInfo, runner);
+        const result = yield runner.promise;
         expect(result.output.trim()).toBe('2');
         expect(result.code).toBe(0);
-      });
+      }));
     });
   });
-});
+}); /**
+     * Copyright (c) 2017-present, Facebook, Inc.
+     * All rights reserved.
+     *
+     * This source code is licensed under the BSD-style license found in the
+     * LICENSE file in the root directory of this source tree. An additional grant
+     * of patent rights can be found in the PATENTS file in the same directory.
+     *
+     * 
+     * @format
+     */
 
-type PtyResult = {
-  output: string,
-  code: number,
-  signal: number,
-};
-
-class LocalRunner implements PtyClient {
-  promise: Promise<PtyResult>;
-  _output: string;
-  _resolve: (result: PtyResult) => void;
+class LocalRunner {
 
   constructor() {
     this.promise = new Promise((resolve, reject) => {
@@ -63,12 +62,12 @@ class LocalRunner implements PtyClient {
     this._output = '';
   }
 
-  onOutput(data: string): void {
+  onOutput(data) {
     this._output += data;
   }
 
-  onExit(code: number, signal: number): void {
-    this._resolve({output: this._output, code, signal});
+  onExit(code, signal) {
+    this._resolve({ output: this._output, code, signal });
   }
 
   dispose() {}

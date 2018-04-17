@@ -1,30 +1,22 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import {removePrefixSink, patternCounterSink} from '../lib/sink';
+var _sink;
 
-import type {Sink} from '../lib/sink';
+function _load_sink() {
+  return _sink = require('../lib/sink');
+}
 
 describe('sink', () => {
   describe('removePrefixSink', () => {
     const prefix = '\x1bprefix';
-    let callCount: number;
-    let output: string;
-    let sink: Sink;
+    let callCount;
+    let output;
+    let sink;
 
     beforeEach(() => {
       callCount = 0;
       output = '';
-      sink = removePrefixSink(prefix, data => {
+      sink = (0, (_sink || _load_sink()).removePrefixSink)(prefix, data => {
         output += data;
         callCount++;
       });
@@ -55,15 +47,15 @@ describe('sink', () => {
   });
 
   describe('patternCounterSink', () => {
-    let enabled: boolean;
-    let counter: number;
-    let output: string;
+    let enabled;
+    let counter;
+    let output;
 
-    function notify(): boolean {
+    function notify() {
       counter++;
       return enabled;
     }
-    function next(data: string): void {
+    function next(data) {
       output += data;
     }
 
@@ -74,34 +66,34 @@ describe('sink', () => {
     });
 
     it('does not match a non-match', () => {
-      const sink = patternCounterSink('needle', notify, next);
+      const sink = (0, (_sink || _load_sink()).patternCounterSink)('needle', notify, next);
       sink('haystack');
       expect(counter).toEqual(0);
       expect(output).toEqual('haystack');
     });
     it('matches a unique pattern exactly', () => {
-      const sink = patternCounterSink('abc', notify, next);
+      const sink = (0, (_sink || _load_sink()).patternCounterSink)('abc', notify, next);
       sink('abc');
       expect(counter).toEqual(1);
       expect(output).toEqual('abc');
     });
     it('matches multiple occurrences of a pattern', () => {
-      const sink = patternCounterSink('abc', notify, next);
+      const sink = (0, (_sink || _load_sink()).patternCounterSink)('abc', notify, next);
       sink('abc abc abc');
       expect(counter).toEqual(3);
     });
     it('matches overlapping occurrences of a pattern', () => {
-      const sink = patternCounterSink('aba', notify, next);
+      const sink = (0, (_sink || _load_sink()).patternCounterSink)('aba', notify, next);
       sink('ababababa');
       expect(counter).toEqual(4);
     });
     it('matches odd characters', () => {
-      const sink = patternCounterSink('\x1b\n ', notify, next);
+      const sink = (0, (_sink || _load_sink()).patternCounterSink)('\x1b\n ', notify, next);
       sink('  \x1b\n  ');
       expect(counter).toEqual(1);
     });
     it('matches small chunks', () => {
-      const sink = patternCounterSink('aaa', notify, next);
+      const sink = (0, (_sink || _load_sink()).patternCounterSink)('aaa', notify, next);
       sink('b');
       expect(counter).toEqual(0);
       sink('a');
@@ -124,7 +116,7 @@ describe('sink', () => {
       expect(counter).toEqual(4);
     });
     it('Returning enabled=false has no subsequent notifications', () => {
-      const sink = patternCounterSink('a', notify, next);
+      const sink = (0, (_sink || _load_sink()).patternCounterSink)('a', notify, next);
       sink('a');
       expect(counter).toEqual(1);
       enabled = false;
@@ -136,4 +128,14 @@ describe('sink', () => {
       expect(counter).toEqual(2);
     });
   });
-});
+}); /**
+     * Copyright (c) 2017-present, Facebook, Inc.
+     * All rights reserved.
+     *
+     * This source code is licensed under the BSD-style license found in the
+     * LICENSE file in the root directory of this source tree. An additional grant
+     * of patent rights can be found in the PATENTS file in the same directory.
+     *
+     * 
+     * @format
+     */

@@ -1,20 +1,16 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import parseText from '../lib/parseText';
+var _parseText;
+
+function _load_parseText() {
+  return _parseText = _interopRequireDefault(require('../lib/parseText'));
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 describe('parseText', () => {
   it('parses url pattern', () => {
-    const chunks = parseText('Message: https://facebook.com');
+    const chunks = (0, (_parseText || _load_parseText()).default)('Message: https://facebook.com');
     expect(chunks.length).toBe(3);
     expect(chunks[0]).toBe('Message: ');
     expect(chunks[2]).toBe('');
@@ -28,4 +24,14 @@ describe('parseText', () => {
       expect(reactElement.props.children).toBe('https://facebook.com');
     }
   });
-});
+}); /**
+     * Copyright (c) 2017-present, Facebook, Inc.
+     * All rights reserved.
+     *
+     * This source code is licensed under the BSD-style license found in the
+     * LICENSE file in the root directory of this source tree. An additional grant
+     * of patent rights can be found in the PATENTS file in the same directory.
+     *
+     * 
+     * @format
+     */

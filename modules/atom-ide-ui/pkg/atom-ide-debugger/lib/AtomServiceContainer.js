@@ -1,130 +1,134 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import type {
-  DatatipService,
-  ConsoleService,
-  RegisterExecutorFunction,
-  TerminalApi,
-} from 'atom-ide-ui';
-import type {
-  DebuggerConfigurationProvider,
-  IProcessConfig,
-} from 'nuclide-debugger-common';
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.resolveDebugConfiguration = undefined;
 
-import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
+var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
-type raiseNativeNotificationFunc = ?(
-  title: string,
-  body: string,
-  timeout: number,
-  raiseIfAtomHasFocus: boolean,
-) => ?IDisposable;
+let resolveDebugConfiguration = exports.resolveDebugConfiguration = (() => {
+  var _ref = (0, _asyncToGenerator.default)(function* (configuration) {
+    let resolvedConfiguration = configuration;
+    for (const provider of _configurationProviders) {
+      // eslint-disable-next-line no-await-in-loop
+      resolvedConfiguration = yield provider.resolveConfiguration(resolvedConfiguration);
+    }
+    return resolvedConfiguration;
+  });
 
-let _raiseNativeNotification: ?raiseNativeNotificationFunc = null;
-let _registerExecutor: ?RegisterExecutorFunction = null;
-let _datatipService: ?DatatipService = null;
-let _createConsole: ?ConsoleService = null;
-let _terminalService: ?TerminalApi = null;
-let _rpcService: ?nuclide$RpcService = null;
-let _configurationProviders: Array<DebuggerConfigurationProvider> = [];
+  return function resolveDebugConfiguration(_x) {
+    return _ref.apply(this, arguments);
+  };
+})();
 
-export function setConsoleService(createConsole: ConsoleService): IDisposable {
+exports.setConsoleService = setConsoleService;
+exports.getConsoleService = getConsoleService;
+exports.setConsoleRegisterExecutor = setConsoleRegisterExecutor;
+exports.getConsoleRegisterExecutor = getConsoleRegisterExecutor;
+exports.setDatatipService = setDatatipService;
+exports.getDatatipService = getDatatipService;
+exports.setNotificationService = setNotificationService;
+exports.getNotificationService = getNotificationService;
+exports.setTerminalService = setTerminalService;
+exports.getTerminalService = getTerminalService;
+exports.setRpcService = setRpcService;
+exports.isNuclideEnvironment = isNuclideEnvironment;
+exports.addDebugConfigurationProvider = addDebugConfigurationProvider;
+
+var _UniversalDisposable;
+
+function _load_UniversalDisposable() {
+  return _UniversalDisposable = _interopRequireDefault(require('nuclide-commons/UniversalDisposable'));
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+let _raiseNativeNotification = null; /**
+                                      * Copyright (c) 2017-present, Facebook, Inc.
+                                      * All rights reserved.
+                                      *
+                                      * This source code is licensed under the BSD-style license found in the
+                                      * LICENSE file in the root directory of this source tree. An additional grant
+                                      * of patent rights can be found in the PATENTS file in the same directory.
+                                      *
+                                      * 
+                                      * @format
+                                      */
+
+let _registerExecutor = null;
+let _datatipService = null;
+let _createConsole = null;
+let _terminalService = null;
+let _rpcService = null;
+let _configurationProviders = [];
+
+function setConsoleService(createConsole) {
   _createConsole = createConsole;
-  return new UniversalDisposable(() => {
+  return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
     _createConsole = null;
   });
 }
 
-export function getConsoleService(): ?ConsoleService {
+function getConsoleService() {
   return _createConsole;
 }
 
-export function setConsoleRegisterExecutor(
-  registerExecutor: RegisterExecutorFunction,
-): IDisposable {
+function setConsoleRegisterExecutor(registerExecutor) {
   _registerExecutor = registerExecutor;
-  return new UniversalDisposable(() => {
+  return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
     _registerExecutor = null;
   });
 }
 
-export function getConsoleRegisterExecutor(): ?RegisterExecutorFunction {
+function getConsoleRegisterExecutor() {
   return _registerExecutor;
 }
 
-export function setDatatipService(datatipService: DatatipService): IDisposable {
+function setDatatipService(datatipService) {
   _datatipService = datatipService;
-  return new UniversalDisposable(() => {
+  return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
     _datatipService = null;
   });
 }
 
-export function getDatatipService(): ?DatatipService {
+function getDatatipService() {
   return _datatipService;
 }
 
-export function setNotificationService(
-  raiseNativeNotification: raiseNativeNotificationFunc,
-): void {
+function setNotificationService(raiseNativeNotification) {
   _raiseNativeNotification = raiseNativeNotification;
 }
 
-export function getNotificationService(): ?raiseNativeNotificationFunc {
+function getNotificationService() {
   return _raiseNativeNotification;
 }
 
-export function setTerminalService(terminalService: TerminalApi): IDisposable {
+function setTerminalService(terminalService) {
   _terminalService = terminalService;
-  return new UniversalDisposable(() => {
+  return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
     _terminalService = null;
   });
 }
 
-export function getTerminalService(): ?TerminalApi {
+function getTerminalService() {
   return _terminalService;
 }
 
-export function setRpcService(rpcService: nuclide$RpcService): IDisposable {
+function setRpcService(rpcService) {
   _rpcService = rpcService;
-  return new UniversalDisposable(() => {
+  return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
     _rpcService = null;
   });
 }
 
-export function isNuclideEnvironment(): boolean {
+function isNuclideEnvironment() {
   return _rpcService != null;
 }
 
-export function addDebugConfigurationProvider(
-  provider: DebuggerConfigurationProvider,
-): IDisposable {
+function addDebugConfigurationProvider(provider) {
   _configurationProviders.push(provider);
-  return new UniversalDisposable(() => {
-    _configurationProviders = _configurationProviders.filter(
-      p => p !== provider,
-    );
+  return new (_UniversalDisposable || _load_UniversalDisposable()).default(() => {
+    _configurationProviders = _configurationProviders.filter(p => p !== provider);
   });
-}
-
-export async function resolveDebugConfiguration(
-  configuration: IProcessConfig,
-): Promise<IProcessConfig> {
-  let resolvedConfiguration = configuration;
-  for (const provider of _configurationProviders) {
-    // eslint-disable-next-line no-await-in-loop
-    resolvedConfiguration = await provider.resolveConfiguration(
-      resolvedConfiguration,
-    );
-  }
-  return resolvedConfiguration;
 }
