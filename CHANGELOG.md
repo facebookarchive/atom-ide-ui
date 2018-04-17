@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.11.0
+
+- `atom-ide-terminal` is now available!
+- Improve documentation for `atom-ide-debugger` usage and integrations.
+
 ## v0.10.1
 
 - Fix atom-ide-debugger-* runtime path resolution.
