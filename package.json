@@ -105,6 +105,5 @@
     "prettier": "1.9.1",
     "react-addons-test-utils": "15.3.1",
     "simple-text-buffer": "9.2.11"
-  },
-  "private": true
+  }
 }
