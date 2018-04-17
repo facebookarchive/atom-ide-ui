@@ -6,7 +6,31 @@
 
 ## v0.10.0
 
-- Add atom-ide-debugger
+### Debugging
+
+- `atom-ide-debugger` is now available! Install a debugger package to get started:
+  - https://atom.io/packages/atom-ide-debugger-node
+  - https://atom.io/packages/atom-ide-debugger-python
+  - https://atom.io/packages/atom-ide-debugger-native-gdb
+  - https://atom.io/packages/atom-ide-debugger-react-native
+  - https://atom.io/packages/atom-ide-debugger-ocaml
+  - Start debugging by adding a breakpoint in the gutter or via the "Debugger" menu.
+
+### Signature Help
+
+- Added a keyboard shortcut to trigger signature help (cmd/ctrl-shift-space).
+- The active parameter is now underlined (in addition to being bold)
+- Fixed vertical positioning of signature help datatips when they start to go off the screen.
+- Signature help should now be triggered when using autocomplete and/or copy+pasting.
+- Markdown in the signature should now be escaped.
+
+### Other
+
+- Errors from find references are now correctly surfaced.
+- Code from find references is now copyable.
+- Removed extra whitespace in diagnostic trace output.
+- Polished various details of the Console UI.
+- The "format on save" setting can now be controlled on a per-grammar basis.
 
 ## v0.9.4
 
