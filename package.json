@@ -21,7 +21,6 @@
   ],
   "dependencies": {
     "async-to-generator": "1.1.0",
-    "big-integer": "1.6.17",
     "classnames": "2.2.5",
     "dedent": "0.6.0",
     "domexception": "1.0.1",
@@ -43,7 +42,6 @@
     "mime-types": "2.1.16",
     "mkdirp": "0.5.1",
     "mv": "2.1.1",
-    "nuclide-prebuilt-libs": "0.4.0",
     "nullthrows": "1.0.0",
     "react": "16.2.0",
     "react-dom": "16.2.0",
@@ -61,12 +59,9 @@
     "tabbable": "1.1.0",
     "temp": "0.8.3",
     "uuid": "3.0.1",
-    "v8-compile-cache": "1.1.0",
-    "vscode-debugadapter": "1.24.0",
     "vscode-debugprotocol": "1.24.0",
     "vscode-jsonrpc": "3.3.0",
-    "vscode-uri": "1.0.1",
-    "yargs": "3.32.0"
+    "vscode-uri": "1.0.1"
   },
   "devDependencies": {
     "babel-core": "6.26.0",
@@ -104,7 +99,8 @@
     "nyc": "11.2.1",
     "prettier": "1.9.1",
     "react-addons-test-utils": "15.3.1",
-    "simple-text-buffer": "9.2.11"
+    "simple-text-buffer": "9.2.11",
+    "yargs": "3.32.0"
   },
   "private": true
 }

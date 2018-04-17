@@ -626,10 +626,6 @@ bcrypt-pbkdf@^1.0.0:
   dependencies:
     tweetnacl "^0.14.3"
 
-big-integer@1.6.17:
-  version "1.6.17"
-  resolved "https://registry.yarnpkg.com/big-integer/-/big-integer-1.6.17.tgz#f0dcf5109a949e42a993ee3e8fb2070452817b51"
-
 block-stream@*:
   version "0.0.9"
   resolved "https://registry.yarnpkg.com/block-stream/-/block-stream-0.0.9.tgz#13ebfe778a03205cfe03751481ebb4b3300c126a"
@@ -3225,10 +3221,6 @@ npmlog@^4.0.2:
     gauge "~2.7.3"
     set-blocking "~2.0.0"
 
-nuclide-prebuilt-libs@0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/nuclide-prebuilt-libs/-/nuclide-prebuilt-libs-0.4.0.tgz#da1ee8bded779fc39d22eae48a3c69dec0958e0b"
-
 nullthrows@1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/nullthrows/-/nullthrows-1.0.0.tgz#34715e53b9debe0750a77233fd494a5835a2d999"
@@ -4542,10 +4534,6 @@ uuid@^3.1.0:
   version "3.2.1"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-3.2.1.tgz#12c528bb9d58d0b9265d9a2f6f0fe8be17ff1f14"
 
-v8-compile-cache@1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/v8-compile-cache/-/v8-compile-cache-1.1.0.tgz#1dc2a340fb8e5f800a32bcdbfb8c23cd747021b9"
-
 validate-npm-package-license@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/validate-npm-package-license/-/validate-npm-package-license-3.0.1.tgz#2804babe712ad3379459acfbe24746ab2c303fbc"
@@ -4561,19 +4549,9 @@ verror@1.10.0:
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
 
-vscode-debugadapter@1.24.0:
-  version "1.24.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugadapter/-/vscode-debugadapter-1.24.0.tgz#28063b01cca8ac1e5f7a13d118e3207a6e887ffd"
-  dependencies:
-    vscode-debugprotocol "^1.24.0"
-
 vscode-debugprotocol@1.24.0:
   version "1.24.0"
   resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.24.0.tgz#dbc10e8d7d95b102727a19af3f0fcef7e252b08e"
-
-vscode-debugprotocol@^1.24.0:
-  version "1.28.0"
-  resolved "https://registry.yarnpkg.com/vscode-debugprotocol/-/vscode-debugprotocol-1.28.0.tgz#b9fb97c3fb2dadbec78e5c1619ff12bf741ce406"
 
 vscode-jsonrpc@3.3.0:
   version "3.3.0"
