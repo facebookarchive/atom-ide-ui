@@ -10,5 +10,5 @@
   "eslint-plugin-rulesdir": "0.1.0",
   "flow-bin": "0.67.1",
   "nyc": "11.2.1",
-  "prettier": "1.9.1"
+  "prettier": "1.12.1"
 }
