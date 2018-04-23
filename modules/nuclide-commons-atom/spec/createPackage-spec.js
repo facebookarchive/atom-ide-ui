@@ -1,35 +1,35 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';var _createPackage;
 
-import createPackage from '../createPackage';
+
+
+
+
+
+
+
+
+
+
+function _load_createPackage() {return _createPackage = _interopRequireDefault(require('../createPackage'));}function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };}
 
 describe('createPackage', () => {
   it('throws when the activation class contains an `initialize()`', () => {
     class Activation {
-      initialize() {}
-    }
-    expect(() => createPackage({}, Activation)).toThrow(
-      'Your activation class contains an "initialize" method, but that work should be done in the' +
-        ' constructor.',
-    );
+      initialize() {}}
+
+    expect(() => (0, (_createPackage || _load_createPackage()).default)({}, Activation)).toThrow(
+    'Your activation class contains an "initialize" method, but that work should be done in the' +
+    ' constructor.');
+
   });
 
   it('throws when the activation class contains a `deactivate()`', () => {
     class Activation {
-      deactivate() {}
-    }
-    expect(() => createPackage({}, Activation)).toThrow(
-      'Your activation class contains an "deactivate" method. Please use "dispose" instead.',
-    );
+      deactivate() {}}
+
+    expect(() => (0, (_createPackage || _load_createPackage()).default)({}, Activation)).toThrow(
+    'Your activation class contains an "deactivate" method. Please use "dispose" instead.');
+
   });
 
   it("calls the activation's `dispose()` when deactivated", () => {
@@ -37,10 +37,10 @@ describe('createPackage', () => {
     class Activation {
       dispose() {
         called = true;
-      }
-    }
+      }}
+
     const pkg = {};
-    createPackage(pkg, Activation);
+    (0, (_createPackage || _load_createPackage()).default)(pkg, Activation);
     pkg.initialize();
     expect(called).toBe(false);
     pkg.deactivate();
@@ -52,10 +52,10 @@ describe('createPackage', () => {
     class Activation {
       doSomething() {
         called = true;
-      }
-    }
+      }}
+
     const pkg = {};
-    createPackage(pkg, Activation);
+    (0, (_createPackage || _load_createPackage()).default)(pkg, Activation);
     pkg.initialize();
     pkg.doSomething();
     expect(called).toBe(true);
@@ -66,10 +66,10 @@ describe('createPackage', () => {
     class Activation {
       activate(serializedState) {
         state = serializedState;
-      }
-    }
+      }}
+
     const pkg = {};
-    createPackage(pkg, Activation);
+    (0, (_createPackage || _load_createPackage()).default)(pkg, Activation);
     pkg.initialize();
     pkg.activate(1);
     expect(state).toBe(1);
@@ -80,10 +80,10 @@ describe('createPackage', () => {
     class Activation {
       doSomething() {
         called = true;
-      }
-    }
+      }}
+
     const pkg = {};
-    createPackage(pkg, Activation);
+    (0, (_createPackage || _load_createPackage()).default)(pkg, Activation);
     pkg.initialize();
     pkg.deactivate();
     expect(() => {
@@ -94,11 +94,21 @@ describe('createPackage', () => {
 
   it('contains methods inherited by the activation class', () => {
     class A {
-      inheritedMethod() {}
-    }
+      inheritedMethod() {}}
+
     class B extends A {}
     const pkg = {};
-    createPackage(pkg, B);
+    (0, (_createPackage || _load_createPackage()).default)(pkg, B);
     expect('inheritedMethod' in pkg).toBe(true);
   });
-});
+}); /**
+     * Copyright (c) 2017-present, Facebook, Inc.
+     * All rights reserved.
+     *
+     * This source code is licensed under the BSD-style license found in the
+     * LICENSE file in the root directory of this source tree. An additional grant
+     * of patent rights can be found in the PATENTS file in the same directory.
+     *
+     * 
+     * @format
+     */

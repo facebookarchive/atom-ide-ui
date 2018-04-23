@@ -1,30 +1,30 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-import {Emitter} from 'atom';
-import {LastItemManager} from '../lib/FocusManager';
 
-describe('LastItemManager', () => {
-  it('ensure subscriptions are disposed, as appropriate', () => {
-    const a = {};
-    const b = {};
-    const c = {};
-    const pane = new FakePane([a, b, c]);
-    spyOn(atom.workspace, 'paneForItem').andCallFake(
-      item => (pane.hasItem(item) ? pane : null),
-    );
+
+
+
+
+
+
+
+
+
+var _atom = require('atom');var _FocusManager;
+function _load_FocusManager() {return _FocusManager = require('../lib/FocusManager');} /**
+                                                                                        * Copyright (c) 2017-present, Facebook, Inc.
+                                                                                        * All rights reserved.
+                                                                                        *
+                                                                                        * This source code is licensed under the BSD-style license found in the
+                                                                                        * LICENSE file in the root directory of this source tree. An additional grant
+                                                                                        * of patent rights can be found in the PATENTS file in the same directory.
+                                                                                        *
+                                                                                        * 
+                                                                                        * @format
+                                                                                        */describe('LastItemManager', () => {it('ensure subscriptions are disposed, as appropriate', () => {const a = {};const b = {};const c = {};const pane = new FakePane([a, b, c]);spyOn(atom.workspace, 'paneForItem').andCallFake(item => pane.hasItem(item) ? pane : null);
 
     // Verify initial state.
-    const manager = new LastItemManager();
+    const manager = new (_FocusManager || _load_FocusManager()).LastItemManager();
     expect(manager.item).toBe(null);
 
     // Verify initial active item.
@@ -72,35 +72,34 @@ const WILL_REMOVE_ITEM = 'will-remove-item';
 
 /** Fake atom$Pane for testing. */
 class FakePane {
-  _items: Array<Object> = [];
-  _emitter: Emitter = new Emitter();
 
-  /** Disposable returned by the last call to onWillRemoveItem(). */
-  lastDisposable: atom$Disposable;
 
-  constructor(items: Array<Object>) {
+
+
+
+
+  constructor(items) {this._items = [];this._emitter = new _atom.Emitter();
     this._items.push(...items);
-  }
+  } /** Disposable returned by the last call to onWillRemoveItem(). */
 
-  hasItem(item: Object): boolean {
+  hasItem(item) {
     return this._items.indexOf(item) >= 0;
   }
 
-  removeItem(item: Object) {
+  removeItem(item) {
     const index = this._items.indexOf(item);
     if (index < 0) {
       return;
     }
 
-    this._emitter.emit(WILL_REMOVE_ITEM, {item, index});
+    this._emitter.emit(WILL_REMOVE_ITEM, { item, index });
     this._items.splice(index, 1);
   }
 
   onWillRemoveItem(
-    callback: (event: {item: Object, index: number}) => void,
-  ): IDisposable {
+  callback)
+  {
     const disposable = this._emitter.on(WILL_REMOVE_ITEM, callback);
-    this.lastDisposable = ((disposable: any): atom$Disposable);
+    this.lastDisposable = disposable;
     return disposable;
-  }
-}
+  }}

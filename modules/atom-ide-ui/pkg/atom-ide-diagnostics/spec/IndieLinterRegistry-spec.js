@@ -1,39 +1,39 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';var _IndieLinterRegistry;
 
-import IndieLinterRegistry from '../lib/services/IndieLinterRegistry';
+
+
+
+
+
+
+
+
+
+
+function _load_IndieLinterRegistry() {return _IndieLinterRegistry = _interopRequireDefault(require('../lib/services/IndieLinterRegistry'));}function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };}
 
 describe('IndieLinterRegistry', () => {
-  const registry = new IndieLinterRegistry();
+  const registry = new (_IndieLinterRegistry || _load_IndieLinterRegistry()).default();
   const message1 = {
     location: {
       file: 'test.txt',
-      position: [[0, 0], [0, 0]],
-    },
+      position: [[0, 0], [0, 0]] },
+
     excerpt: 'test',
-    severity: 'error',
-  };
+    severity: 'error' };
+
   const message2 = {
     location: {
       file: 'test2.txt',
-      position: [[0, 0], [0, 0]],
-    },
+      position: [[0, 0], [0, 0]] },
+
     excerpt: 'test2',
-    severity: 'error',
-  };
+    severity: 'error' };
+
 
   let delegate;
   beforeEach(() => {
-    delegate = registry.register({name: 'test'});
+    delegate = registry.register({ name: 'test' });
   });
 
   afterEach(() => {
@@ -83,4 +83,14 @@ describe('IndieLinterRegistry', () => {
       expect(spy.callCount).toBe(1);
     });
   });
-});
+}); /**
+     * Copyright (c) 2017-present, Facebook, Inc.
+     * All rights reserved.
+     *
+     * This source code is licensed under the BSD-style license found in the
+     * LICENSE file in the root directory of this source tree. An additional grant
+     * of patent rights can be found in the PATENTS file in the same directory.
+     *
+     * 
+     * @format
+     */

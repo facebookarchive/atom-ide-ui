@@ -1,89 +1,89 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
-import {Range} from 'atom';
-import temp from 'temp';
-import * as config from '../lib/config';
-import CodeFormatManager from '../lib/CodeFormatManager';
 
-describe('CodeFormatManager', () => {
-  let textEditor;
-  beforeEach(() => {
-    waitsForPromise(async () => {
-      temp.track();
-      const file = temp.openSync();
-      textEditor = await atom.workspace.open(file.path);
-    });
-  });
+
+
+
+
+
+
+
+
+
+var _atom = require('atom');var _temp;
+function _load_temp() {return _temp = _interopRequireDefault(require('temp'));}var _config;
+function _load_config() {return _config = _interopRequireWildcard(require('../lib/config'));}var _CodeFormatManager;
+function _load_CodeFormatManager() {return _CodeFormatManager = _interopRequireDefault(require('../lib/CodeFormatManager'));}function _interopRequireWildcard(obj) {if (obj && obj.__esModule) {return obj;} else {var newObj = {};if (obj != null) {for (var key in obj) {if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key];}}newObj.default = obj;return newObj;}}function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };} /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            * Copyright (c) 2017-present, Facebook, Inc.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            * All rights reserved.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            * This source code is licensed under the BSD-style license found in the
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            * LICENSE file in the root directory of this source tree. An additional grant
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            * of patent rights can be found in the PATENTS file in the same directory.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            * 
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            * @format
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            */describe('CodeFormatManager', () => {let textEditor;beforeEach(() => {waitsForPromise((0, _asyncToGenerator.default)(function* () {(_temp || _load_temp()).default.track();const file = (_temp || _load_temp()).default.openSync();textEditor = yield atom.workspace.open(file.path);}));});
 
   it('formats an editor on request', () => {
-    waitsForPromise(async () => {
-      const manager = new CodeFormatManager();
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const manager = new (_CodeFormatManager || _load_CodeFormatManager()).default();
       manager.addRangeProvider({
         grammarScopes: ['text.plain.null-grammar'],
         priority: 1,
-        formatCode: () =>
-          Promise.resolve([
+        formatCode: function () {return (
+            Promise.resolve([
             {
-              oldRange: new Range([0, 0], [0, 3]),
+              oldRange: new _atom.Range([0, 0], [0, 3]),
               oldText: 'abc',
-              newText: 'def',
-            },
-          ]),
-      });
+              newText: 'def' }]));} });
+
+
+
 
       textEditor.setText('abc');
       atom.commands.dispatch(
-        atom.views.getView(textEditor),
-        'code-format:format-code',
-      );
-      waitsFor(() => textEditor.getText() === 'def');
-    });
+      atom.views.getView(textEditor),
+      'code-format:format-code');
+
+      waitsFor(function () {return textEditor.getText() === 'def';});
+    }));
   });
 
   it('format an editor using formatEntireFile', () => {
-    waitsForPromise(async () => {
-      const manager = new CodeFormatManager();
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      const manager = new (_CodeFormatManager || _load_CodeFormatManager()).default();
       manager.addFileProvider({
         grammarScopes: ['text.plain.null-grammar'],
         priority: 1,
-        formatEntireFile: () => Promise.resolve({formatted: 'ghi'}),
-      });
+        formatEntireFile: function () {return Promise.resolve({ formatted: 'ghi' });} });
+
 
       textEditor.setText('abc');
       atom.commands.dispatch(
-        atom.views.getView(textEditor),
-        'code-format:format-code',
-      );
-      waitsFor(() => textEditor.getText() === 'ghi');
-    });
+      atom.views.getView(textEditor),
+      'code-format:format-code');
+
+      waitsFor(function () {return textEditor.getText() === 'ghi';});
+    }));
   });
 
   it('formats an editor on type', () => {
-    waitsForPromise(async () => {
-      spyOn(config, 'getFormatOnType').andReturn(true);
-      const manager = new CodeFormatManager();
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      spyOn(_config || _load_config(), 'getFormatOnType').andReturn(true);
+      const manager = new (_CodeFormatManager || _load_CodeFormatManager()).default();
       const provider = {
         grammarScopes: ['text.plain.null-grammar'],
         priority: 1,
-        formatAtPosition: () =>
-          Promise.resolve([
+        formatAtPosition: function () {return (
+            Promise.resolve([
             {
-              oldRange: new Range([0, 0], [0, 3]),
+              oldRange: new _atom.Range([0, 0], [0, 3]),
               oldText: 'abc',
-              newText: 'def',
-            },
-          ]),
-      };
+              newText: 'def' }]));} };
+
+
+
       const spy = spyOn(provider, 'formatAtPosition').andCallThrough();
       manager.addOnTypeProvider(provider);
 
@@ -92,67 +92,67 @@ describe('CodeFormatManager', () => {
       textEditor.insertText('b');
       textEditor.insertText('c');
 
-      waitsFor(() => textEditor.getText() === 'def');
-      runs(() => {
+      waitsFor(function () {return textEditor.getText() === 'def';});
+      runs(function () {
         // Debouncing should ensure only one format call.
         expect(spy.callCount).toBe(1);
       });
-    });
+    }));
   });
 
   it('formats an editor on save', () => {
-    waitsForPromise(async () => {
-      spyOn(config, 'getFormatOnSave').andReturn(true);
-      const manager = new CodeFormatManager();
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      spyOn(_config || _load_config(), 'getFormatOnSave').andReturn(true);
+      const manager = new (_CodeFormatManager || _load_CodeFormatManager()).default();
       manager.addOnSaveProvider({
         grammarScopes: ['text.plain.null-grammar'],
         priority: 1,
-        formatOnSave: () =>
-          Promise.resolve([
+        formatOnSave: function () {return (
+            Promise.resolve([
             {
-              oldRange: new Range([0, 0], [0, 3]),
+              oldRange: new _atom.Range([0, 0], [0, 3]),
               oldText: 'abc',
-              newText: 'def',
-            },
-          ]),
-      });
+              newText: 'def' }]));} });
+
+
+
 
       textEditor.setText('abc');
-      await textEditor.save();
+      yield textEditor.save();
       expect(textEditor.getText()).toBe('def');
-    });
+    }));
   });
 
   it('should still save on timeout', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       jasmine.Clock.useMock();
-      spyOn(config, 'getFormatOnSave').andReturn(true);
-      const manager = new CodeFormatManager();
+      spyOn(_config || _load_config(), 'getFormatOnSave').andReturn(true);
+      const manager = new (_CodeFormatManager || _load_CodeFormatManager()).default();
       manager.addRangeProvider({
         grammarScopes: ['text.plain.null-grammar'],
         priority: 1,
-        formatCode: () => new Promise(() => {}),
-      });
+        formatCode: function () {return new Promise(function () {});} });
+
 
       const spy = spyOn(textEditor.getBuffer(), 'save').andCallThrough();
       textEditor.save();
       const savePromise = Promise.resolve(textEditor.save());
 
       // The first save should be pushed through after the 2nd.
-      waitsFor(() => spy.callCount === 1);
+      waitsFor(function () {return spy.callCount === 1;});
 
-      runs(() => {
+      runs(function () {
         jasmine.Clock.tick(3000);
       });
 
       // Hitting the timeout will force the 2nd save through.
-      waitsFor(() => spy.callCount === 2);
+      waitsFor(function () {return spy.callCount === 2;});
 
       // The real save should still go through.
-      waitsForPromise(() => savePromise);
+      waitsForPromise(function () {return savePromise;});
 
       // Sanity check.
-      runs(() => expect(spy.callCount).toBe(2));
-    });
+      runs(function () {return expect(spy.callCount).toBe(2);});
+    }));
   });
 });

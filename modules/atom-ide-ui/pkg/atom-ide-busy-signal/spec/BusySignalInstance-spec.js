@@ -1,47 +1,47 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));var _fsPromise;
 
-import type {BusySignalOptions} from '../lib/types';
 
-import fsPromise from 'nuclide-commons/fsPromise';
-import {MessageStore} from '../lib/MessageStore';
-import BusySignalSingleton from '../lib/BusySignalSingleton';
 
-describe('BusySignalSingleton', () => {
-  let messageStore: MessageStore;
-  let singleton: BusySignalSingleton;
-  let messages: Array<Array<string>>;
-  const options: BusySignalOptions = {debounce: false};
 
-  beforeEach(() => {
-    messageStore = new MessageStore();
-    singleton = new BusySignalSingleton(messageStore);
+
+
+
+
+
+
+
+
+
+function _load_fsPromise() {return _fsPromise = _interopRequireDefault(require('nuclide-commons/fsPromise'));}var _MessageStore;
+function _load_MessageStore() {return _MessageStore = require('../lib/MessageStore');}var _BusySignalSingleton;
+function _load_BusySignalSingleton() {return _BusySignalSingleton = _interopRequireDefault(require('../lib/BusySignalSingleton'));}function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };} /**
+                                                                                                                                                                                                                                  * Copyright (c) 2017-present, Facebook, Inc.
+                                                                                                                                                                                                                                  * All rights reserved.
+                                                                                                                                                                                                                                  *
+                                                                                                                                                                                                                                  * This source code is licensed under the BSD-style license found in the
+                                                                                                                                                                                                                                  * LICENSE file in the root directory of this source tree. An additional grant
+                                                                                                                                                                                                                                  * of patent rights can be found in the PATENTS file in the same directory.
+                                                                                                                                                                                                                                  *
+                                                                                                                                                                                                                                  * 
+                                                                                                                                                                                                                                  * @format
+                                                                                                                                                                                                                                  */describe('BusySignalSingleton', () => {let messageStore;let singleton;let messages;const options = { debounce: false };beforeEach(() => {messageStore = new (_MessageStore || _load_MessageStore()).MessageStore();singleton = new (_BusySignalSingleton || _load_BusySignalSingleton()).default(messageStore);
     messages = [];
-    messageStore
-      .getMessageStream()
-      .skip(1)
-      .subscribe(elements => {
-        const strings = [...elements].map(element => {
-          const titleElement = element.getTitleElement();
-          const child =
-            titleElement != null && titleElement.childNodes.length >= 1
-              ? titleElement.childNodes[0]
-              : {};
-          return child.data != null && typeof child.data === 'string'
-            ? child.data
-            : '';
-        });
-        messages.push(strings);
+    messageStore.
+    getMessageStream().
+    skip(1).
+    subscribe(elements => {
+      const strings = [...elements].map(element => {
+        const titleElement = element.getTitleElement();
+        const child =
+        titleElement != null && titleElement.childNodes.length >= 1 ?
+        titleElement.childNodes[0] :
+        {};
+        return child.data != null && typeof child.data === 'string' ?
+        child.data :
+        '';
       });
+      messages.push(strings);
+    });
   });
 
   it('should record messages before and after a call', () => {
@@ -49,22 +49,22 @@ describe('BusySignalSingleton', () => {
     singleton.reportBusyWhile('foo', () => Promise.resolve(5), options);
     expect(messages.length).toBe(1);
     waitsFor(
-      () => messages.length === 2,
-      'It should publish a second message',
-      100,
-    );
+    () => messages.length === 2,
+    'It should publish a second message',
+    100);
+
   });
 
   it("should send the 'done' message even if the promise rejects", () => {
-    singleton
-      .reportBusyWhile('foo', () => Promise.reject(new Error()), options)
-      .catch(() => {});
+    singleton.
+    reportBusyWhile('foo', () => Promise.reject(new Error()), options).
+    catch(() => {});
     expect(messages.length).toBe(1);
     waitsFor(
-      () => messages.length === 2,
-      'It should publish a second message',
-      100,
-    );
+    () => messages.length === 2,
+    'It should publish a second message',
+    100);
+
   });
 
   it('should properly display duplicate messages', () => {
@@ -86,18 +86,18 @@ describe('BusySignalSingleton', () => {
   });
 
   describe('when onlyForFile is provided', () => {
-    let editor1: atom$TextEditor = (null: any);
-    let editor2: atom$TextEditor = (null: any);
-    let editor3: atom$TextEditor = (null: any);
+    let editor1 = null;
+    let editor2 = null;
+    let editor3 = null;
     let file2;
 
     beforeEach(() => {
-      waitsForPromise(async () => {
-        editor1 = await atom.workspace.open(await fsPromise.tempfile());
-        file2 = await fsPromise.tempfile();
-        editor2 = await atom.workspace.open(file2);
-        editor3 = await atom.workspace.open();
-      });
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
+        editor1 = yield atom.workspace.open((yield (_fsPromise || _load_fsPromise()).default.tempfile()));
+        file2 = yield (_fsPromise || _load_fsPromise()).default.tempfile();
+        editor2 = yield atom.workspace.open(file2);
+        editor3 = yield atom.workspace.open();
+      }));
     });
 
     afterEach(() => {
@@ -107,10 +107,10 @@ describe('BusySignalSingleton', () => {
     it('should only display for the proper text editor', () => {
       atom.workspace.getActivePane().activateItem(editor1);
 
-      const disposable = singleton.reportBusy('foo', {
-        onlyForFile: file2,
-        ...options,
-      });
+      const disposable = singleton.reportBusy('foo', Object.assign({
+        onlyForFile: file2 },
+      options));
+
       expect(messages).toEqual([]);
 
       atom.workspace.getActivePane().activateItem(editor2);
@@ -132,21 +132,21 @@ describe('BusySignalSingleton', () => {
   });
 
   it('correctly sets revealTooltip when provided', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       function getCurrentMessages() {
-        return messageStore
-          .getMessageStream()
-          .take(1)
-          .toPromise();
+        return messageStore.
+        getMessageStream().
+        take(1).
+        toPromise();
       }
 
       singleton.reportBusy('foo', {
         debounce: false,
-        revealTooltip: true,
-      });
-      const curMessages = await getCurrentMessages();
+        revealTooltip: true });
+
+      const curMessages = yield getCurrentMessages();
       expect(curMessages.length).toBe(1);
       expect(curMessages[0].shouldRevealTooltip()).toBe(true);
-    });
+    }));
   });
 });
