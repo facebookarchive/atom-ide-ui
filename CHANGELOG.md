@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.11.1
+
+- Fix atom-ide-debugger-native-gdb on systems with a different Node version from Atom.
+- Remove extra "Nuclide" menu item.
+
 ## v0.11.0
 
 - `atom-ide-terminal` is now available!
