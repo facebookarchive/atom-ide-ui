@@ -10,7 +10,7 @@ SYNC_PATHS=(
   ':!modules/big-dig*'
   ':!modules/nuclide-debugger-cli'
   ':!modules/nuclide-watchman-helpers'
-  ':!modules/atom-ide-debugger-*',
+  ':!modules/atom-ide-debugger-*'
   ':!modules/nuclide-debugger-vsps'
 )
 SYNC_BRANCH=nuclide-sync
