@@ -8,10 +8,11 @@ SYNC_PATHS=(
   'flow-typed'
   'modules'
   ':!modules/big-dig*'
+  ':!modules/nuclide-adb'
   ':!modules/nuclide-debugger-cli'
+  ':!modules/nuclide-debugger-vsps'
   ':!modules/nuclide-watchman-helpers'
   ':!modules/atom-ide-debugger-*'
-  ':!modules/nuclide-debugger-vsps'
 )
 SYNC_BRANCH=nuclide-sync
 SYNC_MESSAGE="Sync with facebook/nuclide"
