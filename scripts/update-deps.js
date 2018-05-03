@@ -58,26 +58,12 @@ function sortObject(obj) {
   return newObject;
 }
 
-// Core dev dependencies.
-const devDependencies = require(path.join(__dirname, 'devDependencies.json'));
-addDependencies(pkgJson.devDependencies, devDependencies, false);
-
 // Pull in dependencies from modules.
 modulePaths.forEach(dirpath => {
   const modulePkg = require(path.join(dirpath, 'package.json'));
   addDependencies(pkgJson.dependencies, modulePkg.dependencies || {});
-  addDependencies(pkgJson.devDependencies, modulePkg.devDependencies || {});
 });
-
-// Don't list a dependency twice!
-Object.keys(pkgJson.devDependencies).forEach(dep => {
-  if (pkgJson.dependencies[dep]) {
-    delete pkgJson.devDependencies[dep];
-  }
-});
-
 pkgJson.dependencies = sortObject(pkgJson.dependencies);
-pkgJson.devDependencies = sortObject(pkgJson.devDependencies);
 
 fs.writeFileSync(
   require.resolve('../package.json'),
