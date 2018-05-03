@@ -10,6 +10,7 @@
  * @format
  */
 
+import type UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import type DebuggerLaunchAttachProvider from './DebuggerLaunchAttachProvider';
 import type {Observable, ConnectableObservable} from 'rxjs';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
@@ -24,6 +25,7 @@ export interface IVspInstance {
     args: any,
   ): Promise<DebugProtocol.CustomResponse>;
   observeCustomEvents(): Observable<DebugProtocol.DebugEvent>;
+  addCustomDisposable(disposable: IDisposable): void;
 }
 
 export type AtomNotificationType = 'info' | 'warning' | 'error' | 'fatalError';
@@ -86,6 +88,7 @@ export type IProcessConfig = {|
   +config: Object,
   +clientPreprocessor?: ?MessageProcessor,
   +adapterPreprocessor?: ?MessageProcessor,
+  +customDisposable?: UniversalDisposable,
 |};
 
 export interface IVsAdapterSpawner {
@@ -161,4 +164,5 @@ export type LaunchAttachProviderIsEnabled = (
 
 export interface DebuggerConfigurationProvider {
   resolveConfiguration(configuration: IProcessConfig): Promise<IProcessConfig>;
+  adapterType: VsAdapterType;
 }
