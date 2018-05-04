@@ -1,7 +1,7 @@
 machine:
   environment:
     PATH: "${PATH}:${HOME}/${CIRCLE_PROJECT_REPONAME}/node_modules/.bin"
-    COVERAGE_DIR: "${HOME}/${CIRCLE_PROJECT_REPONAME}/.nyc_output"
+    # COVERAGE_DIR: "${HOME}/${CIRCLE_PROJECT_REPONAME}/.nyc_output"
   node:
     version: 7.4.0
 
@@ -19,13 +19,13 @@ dependencies:
   cache_directories:
     - ~/.cache/yarn
 
-test:
-  pre:
-    - mkdir "$COVERAGE_DIR"
-  post:
-    - scripts/initial-coverage.js
-    - nyc report -r lcovonly
-    - codecov
+# test:
+  # pre:
+  #   - mkdir "$COVERAGE_DIR"
+  # post:
+  #   - scripts/initial-coverage.js
+  #   - nyc report -r lcovonly
+  #   - codecov
 
 notify:
   branches:
