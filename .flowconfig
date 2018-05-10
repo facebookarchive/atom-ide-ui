@@ -13,7 +13,6 @@
 <PROJECT_ROOT>/modules/nuclide-node-transpiler/spec/fixtures/.*
 ; large dirs that are not imported
 <PROJECT_ROOT>/docs/.*
-<PROJECT_ROOT>/pkg/nuclide-debugger/VendorLib/devtools/.*
 
 [libs]
 flow-libs/
@@ -23,8 +22,6 @@ emoji=true
 experimental.const_params=true
 module.use_strict=true
 module.system.node.resolve_dirname=node_modules
-; 'modules' is added to the NODE_PATH via nuclide-node-transpiler.
-module.system.node.resolve_dirname=modules
 
 suppress_comment=.*\\$FlowFixMe.*
 suppress_comment=.*\\$FlowIssue.*
@@ -37,6 +34,14 @@ untyped-type-import=error
 
 sketchy-null=error
 sketchy-null-bool=off
+
+[strict]
+nonstrict-import
+sketchy-null
+unclear-type
+unsafe-getters-setters
+untyped-import
+untyped-type-import
 
 [version]
 0.71.0
