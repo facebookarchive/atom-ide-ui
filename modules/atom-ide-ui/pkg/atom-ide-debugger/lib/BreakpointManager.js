@@ -6,14 +6,13 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
 import type {IDebugService} from './types';
 
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
-import {observeTextEditors} from 'nuclide-commons-atom/text-editor';
 import BreakpointDisplayController from './BreakpointDisplayController';
 
 export default class BreakpointManager {
@@ -25,7 +24,7 @@ export default class BreakpointManager {
     this._service = service;
     this._displayControllers = new Map();
     this._disposables = new UniversalDisposable(
-      observeTextEditors(this._handleTextEditor.bind(this)),
+      atom.workspace.observeTextEditors(this._handleTextEditor.bind(this)),
     );
   }
 

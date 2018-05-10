@@ -6,13 +6,13 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
 /* An abstroction that acts as a sempaphore for Atom workers. */
 
-/* eslint-disable rulesdir/no-commonjs */
+/* eslint-disable nuclide-internal/no-commonjs */
 
 import type {ServerID} from './utils';
 import type {IPCServer} from './ipc-server';

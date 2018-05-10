@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -26,6 +26,20 @@ describe('main', () => {
   it('passes values to observers on change', () => {
     const spy = jasmine.createSpy('spy');
     featureConfig.observe('animal', spy);
+    featureConfig.set('animal', 'yup');
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('can observeAsStream', () => {
+    const spy = jasmine.createSpy('spy');
+    featureConfig.observeAsStream('animal').subscribe(spy);
+    featureConfig.set('animal', 'yup');
+    expect(spy).toHaveBeenCalled();
+  });
+
+  it('passes options to observe', () => {
+    const spy = jasmine.createSpy('spy');
+    featureConfig.observe('animal', {scope: []}, spy);
     featureConfig.set('animal', 'yup');
     expect(spy).toHaveBeenCalled();
   });

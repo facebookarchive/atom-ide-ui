@@ -13,7 +13,7 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 const idx = require('idx');
@@ -50,7 +50,7 @@ const NO_FLOW_AND_NO_TRANSPILE = `\
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 `;
 
@@ -84,7 +84,7 @@ const BSD_NO_FLOW_AND_NO_TRANSPILE = `\
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 `;
 
@@ -107,7 +107,7 @@ module.exports = function(context) {
       const flowHeader = useBSDLicense
         ? BSD_FLOW_FORMAT_AND_TRANSPILE
         : FLOW_FORMAT_AND_TRANSPILE;
-      if (source.startsWith(flowHeader)) {
+      if (source.replace(/@flow( strict(-local)?)?/, '@flow').startsWith(flowHeader)) {
         return;
       }
 

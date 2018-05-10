@@ -6,11 +6,10 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
-import type {WatchEditorFunction} from '../types';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import * as React from 'react';
 import ReactDOM from 'react-dom';
@@ -21,8 +20,9 @@ type Props = {
   onSubmit: (value: string) => mixed,
   scopeName: ?string,
   history: Array<string>,
-  watchEditor: ?WatchEditorFunction,
+  watchEditor: ?atom$AutocompleteWatchEditor,
   onDidTextBufferChange?: (event: atom$AggregatedTextEditEvent) => mixed,
+  placeholderText?: string,
 };
 
 type State = {
@@ -45,6 +45,12 @@ export default class InputArea extends React.Component<Props, State> {
       draft: '',
     };
   }
+
+  focus = (): void => {
+    if (this._textEditorModel != null) {
+      this._textEditorModel.getElement().focus();
+    }
+  };
 
   _submit = (): void => {
     // Clear the text and trigger the `onSubmit` callback
@@ -163,6 +169,7 @@ export default class InputArea extends React.Component<Props, State> {
           onConfirm={this._submit}
           onInitialized={this._attachLabel}
           onDidTextBufferChange={this.props.onDidTextBufferChange}
+          placeholderText={this.props.placeholderText}
         />
       </div>
     );

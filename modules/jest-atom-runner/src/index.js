@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -14,7 +14,7 @@
  * 'runner': 'path/to/this/file'
  */
 
-/* eslint-disable rulesdir/no-commonjs */
+/* eslint-disable nuclide-internal/no-commonjs */
 
 import type {GlobalConfig, Test, TestResult, Watcher} from './types';
 

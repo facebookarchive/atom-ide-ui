@@ -16,13 +16,11 @@ import type {
   OutputProvider,
   RecordHeightChangeHandler,
   Source,
-  WatchEditorFunction,
 } from '../types';
 import type {RegExpFilterChange} from 'nuclide-commons-ui/RegExpFilter';
 
 import {macrotask} from 'nuclide-commons/observable';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
-import debounce from 'nuclide-commons/debounce';
 import * as React from 'react';
 import {Observable} from 'rxjs';
 import FilteredMessagesReminder from './FilteredMessagesReminder';
@@ -35,14 +33,13 @@ import invariant from 'assert';
 import shallowEqual from 'shallowequal';
 import recordsChanged from '../recordsChanged';
 import StyleSheet from 'nuclide-commons-ui/StyleSheet';
-import classnames from 'classnames';
 
 type Props = {
   displayableRecords: Array<DisplayableRecord>,
   history: Array<string>,
   clearRecords: () => void,
   createPaste: ?() => Promise<void>,
-  watchEditor: ?WatchEditorFunction,
+  watchEditor: ?atom$AutocompleteWatchEditor,
   execute: (code: string) => void,
   currentExecutor: ?Executor,
   executors: Map<string, Executor>,
@@ -63,7 +60,6 @@ type Props = {
 
 type State = {
   unseenMessages: boolean,
-  promptBufferChanged: boolean,
 };
 
 // Maximum time (ms) for the console to try scrolling to the bottom.
@@ -75,6 +71,7 @@ export default class ConsoleView extends React.Component<Props, State> {
   _disposables: UniversalDisposable;
   _isScrolledNearBottom: boolean;
   _id: number;
+  _inputArea: ?InputArea;
 
   // Used when _scrollToBottom is called. The console optimizes message loading
   // so scrolling to the bottom once doesn't always scroll to the bottom since
@@ -88,12 +85,10 @@ export default class ConsoleView extends React.Component<Props, State> {
     super(props);
     this.state = {
       unseenMessages: false,
-      promptBufferChanged: false,
     };
     this._disposables = new UniversalDisposable();
     this._isScrolledNearBottom = true;
     this._continuouslyScrollToBottom = false;
-    (this: any)._handleScrollEnd = debounce(this._handleScrollEnd, 100);
     this._id = count++;
   }
 
@@ -110,6 +105,14 @@ export default class ConsoleView extends React.Component<Props, State> {
           this._scrollingThrottle.unsubscribe();
         }
       },
+      atom.commands.add('atom-workspace', {
+        // eslint-disable-next-line nuclide-internal/atom-apis
+        'atom-ide-console:focus-console-prompt': () => {
+          if (this._inputArea != null) {
+            this._inputArea.focus();
+          }
+        },
+      }),
     );
   }
 
@@ -244,37 +247,24 @@ export default class ConsoleView extends React.Component<Props, State> {
             />
           </div>
           {this._renderPrompt()}
-          {this._renderMultilineTip()}
         </div>
       </div>
     );
   }
 
-  _renderMultilineTip(): ?React.Element<any> {
+  _getMultiLineTip(): string {
     const {currentExecutor} = this.props;
     if (currentExecutor == null) {
-      return;
+      return '';
     }
     const keyCombo =
-      process.platform === 'darwin' ? (
-        // Option + Enter on Mac
-        <span>&#8997; + &#9166;</span>
-      ) : (
-        // Shift + Enter on Windows and Linux.
-        <span>Shift + Enter</span>
-      );
+      process.platform === 'darwin'
+        ? // Option + Enter on Mac
+          '\u2325  + \u23CE'
+        : // Shift + Enter on Windows and Linux.
+          'Shift + Enter';
 
-    return (
-      <div
-        className={classnames(
-          'console-multiline-tip',
-          this.state.promptBufferChanged
-            ? 'console-multiline-tip-dim'
-            : 'console-multiline-tip-not-dim',
-        )}>
-        Tip: {keyCombo} to insert a newline
-      </div>
-    );
+    return `Tip: ${keyCombo} to insert a newline`;
   }
 
   _renderPrompt(): ?React.Element<any> {
@@ -286,13 +276,12 @@ export default class ConsoleView extends React.Component<Props, State> {
       <div className="console-prompt">
         {this._renderPromptButton()}
         <InputArea
+          ref={(component: ?InputArea) => (this._inputArea = component)}
           scopeName={currentExecutor.scopeName}
           onSubmit={this._executePrompt}
           history={this.props.history}
           watchEditor={this.props.watchEditor}
-          onDidTextBufferChange={() => {
-            this.setState({promptBufferChanged: true});
-          }}
+          placeholderText={this._getMultiLineTip()}
         />
       </div>
     );
@@ -323,16 +312,11 @@ export default class ConsoleView extends React.Component<Props, State> {
       scrollTop,
     );
 
-    if (this._continuouslyScrollToBottom && !isScrolledToBottom) {
-      this._scrollToBottom();
-    } else {
-      this._isScrolledNearBottom = isScrolledToBottom;
-      this._stopScrollToBottom();
-      this.setState({
-        unseenMessages:
-          this.state.unseenMessages && !this._isScrolledNearBottom,
-      });
-    }
+    this._isScrolledNearBottom = isScrolledToBottom;
+    this._stopScrollToBottom();
+    this.setState({
+      unseenMessages: this.state.unseenMessages && !this._isScrolledNearBottom,
+    });
   }
 
   _handleOutputTable = (ref: OutputTable): void => {

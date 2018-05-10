@@ -6,15 +6,17 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
+import nuclideUri from 'nuclide-commons/nuclideUri';
 import typeof * as PtyService from './pty-service/PtyService';
 
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import * as PtyServiceLocal from './pty-service/PtyService';
+import nullthrows from 'nullthrows';
 
 let _rpcService: ?nuclide$RpcService = null;
 
@@ -26,9 +28,9 @@ export function setRpcService(rpcService: nuclide$RpcService): IDisposable {
 }
 
 export function getPtyServiceByNuclideUri(uri: ?NuclideUri): PtyService {
-  if (_rpcService != null) {
-    return _rpcService.getServiceByNuclideUri('PtyService', uri);
-  } else {
+  if (uri == null || !nuclideUri.isRemote(uri)) {
     return PtyServiceLocal;
   }
+
+  return nullthrows(_rpcService).getServiceByNuclideUri('PtyService', uri);
 }

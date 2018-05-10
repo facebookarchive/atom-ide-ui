@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -86,7 +86,7 @@ export class LoadingSpinner extends React.Component<
     return (
       <div
         className={newClassName}
-        // eslint-disable-next-line rulesdir/jsx-simple-callback-refs
+        // eslint-disable-next-line nuclide-internal/jsx-simple-callback-refs
         ref={ref}
       />
     );

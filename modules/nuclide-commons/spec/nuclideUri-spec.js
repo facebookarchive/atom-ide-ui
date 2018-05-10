@@ -6,12 +6,12 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
 import nuclideUri, {__TEST__} from '../nuclideUri';
-// eslint-disable-next-line rulesdir/prefer-nuclide-uri
+// eslint-disable-next-line nuclide-internal/prefer-nuclide-uri
 import path from 'path';
 
 describe('nuclide-uri', () => {
