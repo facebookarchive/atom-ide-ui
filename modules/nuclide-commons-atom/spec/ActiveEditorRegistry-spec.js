@@ -1,63 +1,63 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));var _testHelpers;
 
-import type {
-  Config,
-  EventSources,
-  ResultFunction,
-  Result,
-} from '../ActiveEditorRegistry';
 
-import type {Observable} from 'rxjs';
 
-import {expectObservableToStartWith} from 'nuclide-commons/test-helpers';
-import {Subject} from 'rxjs';
 
-import ActiveEditorRegistry from '../ActiveEditorRegistry';
 
-type TestProvider = {
-  priority: number,
-  grammarScopes: Array<string>,
-  updateOnEdit?: boolean,
-};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function _load_testHelpers() {return _testHelpers = require('../../nuclide-commons/test-helpers');}
+var _rxjsBundlesRxMinJs = require('rxjs/bundles/Rx.min.js');var _ActiveEditorRegistry;
+
+function _load_ActiveEditorRegistry() {return _ActiveEditorRegistry = _interopRequireDefault(require('../ActiveEditorRegistry'));}function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };}
+
+
+
+
+
+
 
 describe('ActiveEditorRegistry', () => {
-  let activeEditorRegistry: ActiveEditorRegistry<
-    TestProvider,
-    void,
-  > = (null: any);
+  let activeEditorRegistry =
 
-  let activeEditors: Subject<?atom$TextEditor> = (null: any);
-  let editorChanges: Subject<void> = (null: any);
-  let editorSaves: Subject<void> = (null: any);
 
-  let resultFunction: ResultFunction<TestProvider, void> = (null: any);
-  let config: Config = (null: any);
-  let eventSources: EventSources = (null: any);
+  null;
 
-  let editor1: atom$TextEditor = (null: any);
-  let editor2: atom$TextEditor = (null: any);
+  let activeEditors = null;
+  let editorChanges = null;
+  let editorSaves = null;
 
-  let events: Observable<Result<TestProvider, void>> = (null: any);
-  let eventNames: Observable<string> = (null: any);
+  let resultFunction = null;
+  let config = null;
+  let eventSources = null;
 
-  let shouldProviderError: boolean = (null: any);
+  let editor1 = null;
+  let editor2 = null;
+
+  let events = null;
+  let eventNames = null;
+
+  let shouldProviderError = null;
 
   function initializeService() {
-    activeEditorRegistry = new ActiveEditorRegistry(
-      resultFunction,
-      config,
-      eventSources,
-    );
+    activeEditorRegistry = new (_ActiveEditorRegistry || _load_ActiveEditorRegistry()).default(
+    resultFunction,
+    config,
+    eventSources);
+
 
     events = activeEditorRegistry.getResultsStream().publishReplay();
     eventNames = events.map(event => event.kind);
@@ -65,103 +65,103 @@ describe('ActiveEditorRegistry', () => {
   }
 
   beforeEach(() => {
-    waitsForPromise(async () => {
-      activeEditors = new Subject();
-      editorChanges = new Subject();
-      editorSaves = new Subject();
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      activeEditors = new _rxjsBundlesRxMinJs.Subject();
+      editorChanges = new _rxjsBundlesRxMinJs.Subject();
+      editorSaves = new _rxjsBundlesRxMinJs.Subject();
       shouldProviderError = false;
 
-      resultFunction = jasmine.createSpy().andCallFake(async () => {
+      resultFunction = jasmine.createSpy().andCallFake((0, _asyncToGenerator.default)(function* () {
         if (shouldProviderError) {
           throw new Error('baaaaad');
         }
-      });
+      }));
       config = {};
       eventSources = {
         activeEditors,
-        changesForEditor: () => editorChanges,
-        savesForEditor: () => editorSaves,
-      };
+        changesForEditor: function () {return editorChanges;},
+        savesForEditor: function () {return editorSaves;} };
+
 
       initializeService();
 
-      editor1 = await atom.workspace.open();
-      editor2 = await atom.workspace.open();
-    });
+      editor1 = yield atom.workspace.open();
+      editor2 = yield atom.workspace.open();
+    }));
   });
 
   describe('when there is a provider', () => {
-    let provider: TestProvider = (null: any);
+    let provider = null;
     beforeEach(() => {
       provider = {
         priority: 10,
-        grammarScopes: ['text.plain.null-grammar'],
-      };
+        grammarScopes: ['text.plain.null-grammar'] };
+
       activeEditorRegistry.consumeProvider(provider);
     });
 
     it('should create correct event stream during normal use', () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         activeEditors.next(null);
-        await waitForNextTick();
+        yield waitForNextTick();
 
         activeEditors.next(editor1);
-        await waitForNextTick();
+        yield waitForNextTick();
 
         editorChanges.next(undefined);
-        await waitForNextTick();
+        yield waitForNextTick();
 
         activeEditors.next(editor2);
 
-        await expectObservableToStartWith(eventNames, [
-          'not-text-editor',
-          'pane-change',
-          'result',
-          'edit',
-          'result',
-          'pane-change',
-          'result',
-        ]);
+        yield (0, (_testHelpers || _load_testHelpers()).expectObservableToStartWith)(eventNames, [
+        'not-text-editor',
+        'pane-change',
+        'result',
+        'edit',
+        'result',
+        'pane-change',
+        'result']);
 
-        const fullEvents = await events
-          .take(4)
-          .toArray()
-          .toPromise();
+
+        const fullEvents = yield events.
+        take(4).
+        toArray().
+        toPromise();
         expect(fullEvents[1]).toEqual({
           kind: 'pane-change',
-          editor: editor1,
-        });
+          editor: editor1 });
+
         expect(fullEvents[2]).toEqual({
           kind: 'result',
           editor: editor1,
           provider,
-          result: undefined,
-        });
+          result: undefined });
+
         expect(fullEvents[3]).toEqual({
           kind: 'edit',
-          editor: editor1,
-        });
-      });
+          editor: editor1 });
+
+      }));
     });
 
     it('should not emit save events when it is configured to respond to edit events', () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         activeEditors.next(editor1);
-        await waitForNextTick();
+        yield waitForNextTick();
 
         editorChanges.next(undefined);
-        await waitForNextTick();
+        yield waitForNextTick();
 
         editorSaves.next(undefined);
-        await waitForNextTick();
+        yield waitForNextTick();
 
-        await expectObservableToStartWith(eventNames, [
-          'pane-change',
-          'result',
-          'edit',
-          'result',
-        ]);
-      });
+        yield (0, (_testHelpers || _load_testHelpers()).expectObservableToStartWith)(eventNames, [
+        'pane-change',
+        'result',
+        'edit',
+        'result']);
+
+      }));
     });
 
     describe('when configured to respond to save events', () => {
@@ -171,37 +171,37 @@ describe('ActiveEditorRegistry', () => {
         // Have to re-add this since the re-initialization kills it
         activeEditorRegistry.consumeProvider({
           priority: 10,
-          grammarScopes: ['text.plain.null-grammar'],
-        });
+          grammarScopes: ['text.plain.null-grammar'] });
+
       });
 
       it('should generate and respond to save events', () => {
-        waitsForPromise(async () => {
+        waitsForPromise((0, _asyncToGenerator.default)(function* () {
           activeEditors.next(editor1);
-          await waitForNextTick();
+          yield waitForNextTick();
 
           editorChanges.next(undefined);
-          await waitForNextTick();
+          yield waitForNextTick();
 
           editorSaves.next(undefined);
-          await waitForNextTick();
+          yield waitForNextTick();
 
-          await expectObservableToStartWith(eventNames, [
-            'pane-change',
-            'result',
-            'save',
-            'result',
-          ]);
+          yield (0, (_testHelpers || _load_testHelpers()).expectObservableToStartWith)(eventNames, [
+          'pane-change',
+          'result',
+          'save',
+          'result']);
 
-          const fullEvents = await events
-            .take(3)
-            .toArray()
-            .toPromise();
+
+          const fullEvents = yield events.
+          take(3).
+          toArray().
+          toPromise();
           expect(fullEvents[2]).toEqual({
             kind: 'save',
-            editor: editor1,
-          });
-        });
+            editor: editor1 });
+
+        }));
       });
     });
 
@@ -211,76 +211,76 @@ describe('ActiveEditorRegistry', () => {
         // Have to re-add this since the re-initialization kills it
         activeEditorRegistry.consumeProvider({
           priority: 10,
-          grammarScopes: ['text.plain.null-grammar'],
-        });
+          grammarScopes: ['text.plain.null-grammar'] });
+
         activeEditorRegistry.consumeProvider({
           priority: 10,
           grammarScopes: ['source.cpp'],
-          updateOnEdit: false,
-        });
+          updateOnEdit: false });
+
         spyOn(editor2, 'getGrammar').andReturn({
-          scopeName: 'source.cpp',
-        });
+          scopeName: 'source.cpp' });
+
       });
 
       it('should generate and respond to the appropriate event', () => {
-        waitsForPromise(async () => {
+        waitsForPromise((0, _asyncToGenerator.default)(function* () {
           activeEditors.next(editor1);
-          await waitForNextTick();
+          yield waitForNextTick();
 
           editorChanges.next(undefined);
-          await waitForNextTick();
+          yield waitForNextTick();
 
           editorSaves.next(undefined);
-          await waitForNextTick();
+          yield waitForNextTick();
 
           activeEditors.next(editor2);
-          await waitForNextTick();
+          yield waitForNextTick();
 
           editorChanges.next(undefined);
-          await waitForNextTick();
+          yield waitForNextTick();
 
           editorSaves.next(undefined);
-          await waitForNextTick();
+          yield waitForNextTick();
 
-          await expectObservableToStartWith(eventNames, [
-            'pane-change',
-            'result',
-            'edit',
-            'result',
-            'pane-change',
-            'result',
-            'save',
-            'result',
-          ]);
-        });
+          yield (0, (_testHelpers || _load_testHelpers()).expectObservableToStartWith)(eventNames, [
+          'pane-change',
+          'result',
+          'edit',
+          'result',
+          'pane-change',
+          'result',
+          'save',
+          'result']);
+
+        }));
       });
     });
 
     it("should produce the 'provider-error' event when a provider errors", () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         shouldProviderError = true;
 
         activeEditors.next(editor1);
-        await waitForNextTick();
+        yield waitForNextTick();
 
-        await expectObservableToStartWith(eventNames, [
-          'pane-change',
-          'provider-error',
-        ]);
+        yield (0, (_testHelpers || _load_testHelpers()).expectObservableToStartWith)(eventNames, [
+        'pane-change',
+        'provider-error']);
 
-        expect(await events.elementAt(1).toPromise()).toEqual({
+
+        expect((yield events.elementAt(1).toPromise())).toEqual({
           kind: 'provider-error',
-          provider,
-        });
-      });
+          provider });
+
+      }));
     });
 
     it('should immediately query a better provider', () => {
       const betterProvider = {
         priority: 20,
-        grammarScopes: ['text.plain.null-grammar'],
-      };
+        grammarScopes: ['text.plain.null-grammar'] };
+
 
       activeEditors.next(editor1);
       expect(resultFunction).toHaveBeenCalledWith(provider, editor1);
@@ -291,19 +291,25 @@ describe('ActiveEditorRegistry', () => {
 
   describe('when there is no provider', () => {
     it("should produce the 'no-provider' result when there is no provider", () => {
-      waitsForPromise(async () => {
+      waitsForPromise((0, _asyncToGenerator.default)(function* () {
         activeEditors.next(editor1);
-        await waitForNextTick();
+        yield waitForNextTick();
 
-        await expectObservableToStartWith(eventNames, [
-          'pane-change',
-          'no-provider',
-        ]);
-      });
+        yield (0, (_testHelpers || _load_testHelpers()).expectObservableToStartWith)(eventNames, [
+        'pane-change',
+        'no-provider']);
+
+      }));
     });
   });
-});
-
-function waitForNextTick(): Promise<void> {
-  return new Promise(resolve => process.nextTick(resolve));
-}
+}); /**
+     * Copyright (c) 2017-present, Facebook, Inc.
+     * All rights reserved.
+     *
+     * This source code is licensed under the BSD-style license found in the
+     * LICENSE file in the root directory of this source tree. An additional grant
+     * of patent rights can be found in the PATENTS file in the same directory.
+     *
+     * 
+     * @format
+     */function waitForNextTick() {return new Promise(resolve => process.nextTick(resolve));}

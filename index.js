@@ -1,70 +1,70 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';
 
-/* eslint-disable nuclide-internal/no-commonjs */
 
-import fs from 'fs';
-// eslint-disable-next-line nuclide-internal/prefer-nuclide-uri
-import path from 'path';
-import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
-import FeatureLoader from 'nuclide-commons-atom/FeatureLoader';
-import displayNuclideWarning from './display-nuclide-warning';
 
-const featureDir = path.join(__dirname, 'modules/atom-ide-ui/pkg');
-const features = fs
-  .readdirSync(featureDir)
-  .map(item => {
-    const dirname = path.join(featureDir, item);
-    try {
-      const pkgJson = fs.readFileSync(
-        path.join(dirname, 'package.json'),
-        'utf8',
-      );
-      return {
-        path: dirname,
-        pkg: JSON.parse(pkgJson),
-      };
-    } catch (err) {
-      if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
-        throw err;
-      }
+
+
+
+
+
+
+
+
+
+
+var _fs = _interopRequireDefault(require('fs'));
+
+var _path = _interopRequireDefault(require('path'));var _UniversalDisposable;
+function _load_UniversalDisposable() {return _UniversalDisposable = _interopRequireDefault(require('./modules/nuclide-commons/UniversalDisposable'));}var _FeatureLoader;
+function _load_FeatureLoader() {return _FeatureLoader = _interopRequireDefault(require('./modules/nuclide-commons-atom/FeatureLoader'));}var _displayNuclideWarning;
+function _load_displayNuclideWarning() {return _displayNuclideWarning = _interopRequireDefault(require('./display-nuclide-warning'));}function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };} // eslint-disable-next-line nuclide-internal/prefer-nuclide-uri
+
+const featureDir = _path.default.join(__dirname, 'modules/atom-ide-ui/pkg'); /**
+                                                                              * Copyright (c) 2017-present, Facebook, Inc.
+                                                                              * All rights reserved.
+                                                                              *
+                                                                              * This source code is licensed under the BSD-style license found in the
+                                                                              * LICENSE file in the root directory of this source tree. An additional grant
+                                                                              * of patent rights can be found in the PATENTS file in the same directory.
+                                                                              *
+                                                                              * 
+                                                                              * @format
+                                                                              */ /* eslint-disable nuclide-internal/no-commonjs */const features = _fs.default.readdirSync(featureDir).map(item => {const dirname = _path.default.join(featureDir, item);try {const pkgJson = _fs.default.readFileSync(_path.default.join(dirname, 'package.json'), 'utf8');return {
+      path: dirname,
+      pkg: JSON.parse(pkgJson) };
+
+  } catch (err) {
+    if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
+      throw err;
     }
-  })
-  .filter(Boolean);
+  }
+}).
+filter(Boolean);
 
 /**
- * Use a unified package loader to load all the feature packages.
- * See the following post for more context:
- * https://nuclide.io/blog/2016/01/13/Nuclide-v0.111.0-The-Unified-Package/
- */
-let disposables: ?UniversalDisposable;
-const featureLoader = new FeatureLoader({
+                  * Use a unified package loader to load all the feature packages.
+                  * See the following post for more context:
+                  * https://nuclide.io/blog/2016/01/13/Nuclide-v0.111.0-The-Unified-Package/
+                  */
+let disposables;
+const featureLoader = new (_FeatureLoader || _load_FeatureLoader()).default({
   path: __dirname,
   config: {},
-  features,
-});
+  features });
+
 featureLoader.load();
 
 module.exports = {
   config: featureLoader.getConfig(),
   activate() {
-    disposables = new UniversalDisposable(
-      require('nuclide-commons-ui'),
-      atom.packages.onDidActivatePackage(pkg => {
-        if (pkg.name === 'nuclide') {
-          displayNuclideWarning();
-        }
-      }),
-    );
+    disposables = new (_UniversalDisposable || _load_UniversalDisposable()).default(
+    require('./modules/nuclide-commons-ui'),
+    atom.packages.onDidActivatePackage(pkg => {
+      if (pkg.name === 'nuclide') {
+        (0, (_displayNuclideWarning || _load_displayNuclideWarning()).default)();
+      }
+    }));
+
     featureLoader.activate();
   },
   deactivate() {
@@ -76,5 +76,4 @@ module.exports = {
   },
   serialize() {
     featureLoader.serialize();
-  },
-};
+  } };

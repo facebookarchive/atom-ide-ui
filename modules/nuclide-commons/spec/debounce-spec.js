@@ -1,33 +1,33 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';var _debounce;
 
-import invariant from 'assert';
-import debounce from '../debounce';
 
-describe('debounce()', () => {
-  it('only calls function once after time advances', () => {
-    const timerCallback: any = jasmine.createSpy('timerCallback');
-    const debouncedFunc = debounce(timerCallback, 100, false);
 
-    debouncedFunc();
-    expect(timerCallback).not.toHaveBeenCalled();
 
-    advanceClock(101);
+
+
+
+
+
+
+
+
+function _load_debounce() {return _debounce = _interopRequireDefault(require('../debounce'));}function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };} /**
+                                                                                                                                                                                             * Copyright (c) 2017-present, Facebook, Inc.
+                                                                                                                                                                                             * All rights reserved.
+                                                                                                                                                                                             *
+                                                                                                                                                                                             * This source code is licensed under the BSD-style license found in the
+                                                                                                                                                                                             * LICENSE file in the root directory of this source tree. An additional grant
+                                                                                                                                                                                             * of patent rights can be found in the PATENTS file in the same directory.
+                                                                                                                                                                                             *
+                                                                                                                                                                                             * 
+                                                                                                                                                                                             * @format
+                                                                                                                                                                                             */describe('debounce()', () => {it('only calls function once after time advances', () => {const timerCallback = jasmine.createSpy('timerCallback');const debouncedFunc = (0, (_debounce || _load_debounce()).default)(timerCallback, 100, false);debouncedFunc();expect(timerCallback).not.toHaveBeenCalled();advanceClock(101);
     expect(timerCallback).toHaveBeenCalled();
   });
 
   it('disposes', () => {
-    const timerCallback: any = jasmine.createSpy('timerCallback');
-    const debouncedFunc = debounce(timerCallback, 100, false);
+    const timerCallback = jasmine.createSpy('timerCallback');
+    const debouncedFunc = (0, (_debounce || _load_debounce()).default)(timerCallback, 100, false);
 
     debouncedFunc();
     expect(timerCallback).not.toHaveBeenCalled();
@@ -39,8 +39,8 @@ describe('debounce()', () => {
   });
 
   it('does not swallow flow types', () => {
-    const func = (a: string): number => 1;
-    const debounced = debounce(func, 0);
+    const func = a => 1;
+    const debounced = (0, (_debounce || _load_debounce()).default)(func, 0);
     const ret = debounced('bar');
 
     // $FlowIgnore: func's first param should be a string.
@@ -48,10 +48,10 @@ describe('debounce()', () => {
 
     expect(() => {
       // $FlowIgnore: debounce's return type is "maybe func's return" type.
-      (ret: number);
+      ret;
       // This is false because we haven't waited for the timer.
-      invariant(ret != null);
-      (ret: number);
+      if (!(ret != null)) {throw new Error('Invariant violation: "ret != null"');}
+      ret;
     }).toThrow();
 
     debounced.dispose();

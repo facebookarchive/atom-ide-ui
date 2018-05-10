@@ -1,77 +1,77 @@
-/**
- * Copyright (c) 2017-present, Facebook, Inc.
- * All rights reserved.
- *
- * This source code is licensed under the BSD-style license found in the
- * LICENSE file in the root directory of this source tree. An additional grant
- * of patent rights can be found in the PATENTS file in the same directory.
- *
- * @flow
- * @format
- */
+'use strict';var _asyncToGenerator = _interopRequireDefault(require('async-to-generator'));
 
-import type {DiagnosticMessage} from '../lib/types';
 
-import invariant from 'assert';
-import {Range} from 'atom';
 
-import MessageRangeTracker from '../lib/MessageRangeTracker';
 
-import nuclideUri from 'nuclide-commons/nuclideUri';
+
+
+
+
+
+
+
+
+
+
+var _atom = require('atom');var _MessageRangeTracker;
+
+function _load_MessageRangeTracker() {return _MessageRangeTracker = _interopRequireDefault(require('../lib/MessageRangeTracker'));}var _nuclideUri;
+
+function _load_nuclideUri() {return _nuclideUri = _interopRequireDefault(require('../../../../nuclide-commons/nuclideUri'));}function _interopRequireDefault(obj) {return obj && obj.__esModule ? obj : { default: obj };}
 
 describe('MessageRangeTracker', () => {
-  let tracker: MessageRangeTracker = (null: any);
+  let tracker = null;
 
-  let initiallyOpenFilePath: string = (null: any);
-  let initiallyClosedFilePath: string = (null: any);
+  let initiallyOpenFilePath = null;
+  let initiallyClosedFilePath = null;
 
-  let messageForInitiallyOpenFile: DiagnosticMessage = (null: any);
-  let messageForInitiallyClosedFile: DiagnosticMessage = (null: any);
+  let messageForInitiallyOpenFile = null;
+  let messageForInitiallyClosedFile = null;
 
-  let initiallyOpenEditor: atom$TextEditor = (null: any);
+  let initiallyOpenEditor = null;
 
   beforeEach(() => {
-    tracker = new MessageRangeTracker();
+    tracker = new (_MessageRangeTracker || _load_MessageRangeTracker()).default();
 
-    const fixturesPath = nuclideUri.join(__dirname, 'fixtures');
-    initiallyOpenFilePath = nuclideUri.join(
-      fixturesPath,
-      'initiallyOpenFile.txt',
-    );
-    initiallyClosedFilePath = nuclideUri.join(
-      fixturesPath,
-      'initiallyClosedFile.txt',
-    );
+    const fixturesPath = (_nuclideUri || _load_nuclideUri()).default.join(__dirname, 'fixtures');
+    initiallyOpenFilePath = (_nuclideUri || _load_nuclideUri()).default.join(
+    fixturesPath,
+    'initiallyOpenFile.txt');
+
+    initiallyClosedFilePath = (_nuclideUri || _load_nuclideUri()).default.join(
+    fixturesPath,
+    'initiallyClosedFile.txt');
+
 
     messageForInitiallyOpenFile = {
       providerName: 'test',
       type: 'Error',
       filePath: initiallyOpenFilePath,
       text: 'something is wrong',
-      range: new Range([1, 18], [1, 22]),
+      range: new _atom.Range([1, 18], [1, 22]),
       fix: {
-        oldRange: new Range([1, 18], [1, 22]),
+        oldRange: new _atom.Range([1, 18], [1, 22]),
         oldText: 'test',
-        newText: 'fix',
-      },
-    };
+        newText: 'fix' } };
+
+
 
     messageForInitiallyClosedFile = {
       providerName: 'test',
       type: 'Error',
       filePath: initiallyClosedFilePath,
       text: 'something is wrong',
-      range: new Range([1, 4], [1, 31]),
+      range: new _atom.Range([1, 4], [1, 31]),
       fix: {
-        oldRange: new Range([1, 4], [1, 31]),
+        oldRange: new _atom.Range([1, 4], [1, 31]),
         oldText: 'at first this one is closed',
-        newText: 'now this one is open',
-      },
-    };
+        newText: 'now this one is open' } };
 
-    waitsForPromise(async () => {
-      initiallyOpenEditor = await atom.workspace.open(initiallyOpenFilePath);
-    });
+
+
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
+      initiallyOpenEditor = yield atom.workspace.open(initiallyOpenFilePath);
+    }));
   });
 
   afterEach(() => {
@@ -82,54 +82,54 @@ describe('MessageRangeTracker', () => {
 
   it('should return ranges for already-open files', () => {
     tracker.addFileMessages([messageForInitiallyOpenFile]);
-    const range = tracker.getCurrentRange(messageForInitiallyOpenFile);
-    invariant(range != null);
-    expect(range.isEqual(new Range([1, 18], [1, 22]))).toBeTruthy();
+    const range = tracker.getCurrentRange(messageForInitiallyOpenFile);if (!(
+    range != null)) {throw new Error('Invariant violation: "range != null"');}
+    expect(range.isEqual(new _atom.Range([1, 18], [1, 22]))).toBeTruthy();
     checkRep(tracker);
   });
 
   it('should correctly track changes using markers', () => {
     tracker.addFileMessages([messageForInitiallyOpenFile]);
     initiallyOpenEditor.setTextInBufferRange(
-      new Range([1, 3], [1, 11]),
-      'are using',
-    );
-    const range = tracker.getCurrentRange(messageForInitiallyOpenFile);
-    invariant(range != null);
-    expect(range.isEqual(new Range([1, 19], [1, 23]))).toBeTruthy();
+    new _atom.Range([1, 3], [1, 11]),
+    'are using');
+
+    const range = tracker.getCurrentRange(messageForInitiallyOpenFile);if (!(
+    range != null)) {throw new Error('Invariant violation: "range != null"');}
+    expect(range.isEqual(new _atom.Range([1, 19], [1, 23]))).toBeTruthy();
     checkRep(tracker);
   });
 
   it('should invalidate fixes where the oldRange has been touched', () => {
     tracker.addFileMessages([messageForInitiallyOpenFile]);
-    initiallyOpenEditor.setTextInBufferRange(new Range([1, 20], [1, 21]), '');
+    initiallyOpenEditor.setTextInBufferRange(new _atom.Range([1, 20], [1, 21]), '');
     const range = tracker.getCurrentRange(messageForInitiallyOpenFile);
     expect(range).toBeNull();
     checkRep(tracker);
   });
 
   it('should add markers to files when they are opened', () => {
-    waitsForPromise(async () => {
+    waitsForPromise((0, _asyncToGenerator.default)(function* () {
       tracker.addFileMessages([messageForInitiallyClosedFile]);
       checkRep(tracker);
       expect(tracker.getCurrentRange(messageForInitiallyClosedFile)).toBeNull();
-      const initiallyClosedEditor = await atom.workspace.open(
-        initiallyClosedFilePath,
-      );
-      let range = tracker.getCurrentRange(messageForInitiallyClosedFile);
-      invariant(range != null);
-      expect(range.isEqual(new Range([1, 4], [1, 31]))).toBeTruthy();
+      const initiallyClosedEditor = yield atom.workspace.open(
+      initiallyClosedFilePath);
+
+      let range = tracker.getCurrentRange(messageForInitiallyClosedFile);if (!(
+      range != null)) {throw new Error('Invariant violation: "range != null"');}
+      expect(range.isEqual(new _atom.Range([1, 4], [1, 31]))).toBeTruthy();
 
       initiallyClosedEditor.setTextInBufferRange(
-        new Range([0, 16], [0, 16]),
-        '\n',
-      );
+      new _atom.Range([0, 16], [0, 16]),
+      '\n');
 
-      range = tracker.getCurrentRange(messageForInitiallyClosedFile);
-      invariant(range != null);
-      expect(range.isEqual(new Range([2, 4], [2, 31]))).toBeTruthy();
+
+      range = tracker.getCurrentRange(messageForInitiallyClosedFile);if (!(
+      range != null)) {throw new Error('Invariant violation: "range != null"');}
+      expect(range.isEqual(new _atom.Range([2, 4], [2, 31]))).toBeTruthy();
       checkRep(tracker);
-    });
+    }));
   });
 
   // The tests below break the MessageRangeTracker abstraction so that they can ensure that disposal
@@ -137,19 +137,19 @@ describe('MessageRangeTracker', () => {
 
   it('should remove messages for open files and destroy markers', () => {
     tracker.addFileMessages([messageForInitiallyOpenFile]);
-    const messageSet = tracker._fileToMessages.get(initiallyOpenFilePath);
-    invariant(messageSet != null);
+    const messageSet = tracker._fileToMessages.get(initiallyOpenFilePath);if (!(
+    messageSet != null)) {throw new Error('Invariant violation: "messageSet != null"');}
     expect(messageSet.has(messageForInitiallyOpenFile)).toBeTruthy();
-    const marker = tracker._messageToMarker.get(messageForInitiallyOpenFile);
-    invariant(marker != null);
+    const marker = tracker._messageToMarker.get(messageForInitiallyOpenFile);if (!(
+    marker != null)) {throw new Error('Invariant violation: "marker != null"');}
 
     checkRep(tracker);
 
     tracker.removeFileMessages([messageForInitiallyOpenFile]);
     expect(tracker._fileToMessages.hasAny(initiallyOpenFilePath)).toBeFalsy();
     expect(
-      tracker._messageToMarker.has(messageForInitiallyOpenFile),
-    ).toBeFalsy();
+    tracker._messageToMarker.has(messageForInitiallyOpenFile)).
+    toBeFalsy();
     expect(marker.isDestroyed()).toBeTruthy();
 
     checkRep(tracker);
@@ -158,10 +158,10 @@ describe('MessageRangeTracker', () => {
   it('should remove messages for closed files', () => {
     tracker.addFileMessages([messageForInitiallyClosedFile]);
     expect(
-      tracker._messageToMarker.has(messageForInitiallyClosedFile),
-    ).toBeFalsy();
-    const messagesSet = tracker._fileToMessages.get(initiallyClosedFilePath);
-    invariant(messagesSet != null);
+    tracker._messageToMarker.has(messageForInitiallyClosedFile)).
+    toBeFalsy();
+    const messagesSet = tracker._fileToMessages.get(initiallyClosedFilePath);if (!(
+    messagesSet != null)) {throw new Error('Invariant violation: "messagesSet != null"');}
     expect(messagesSet.has(messageForInitiallyClosedFile)).toBeTruthy();
 
     tracker.removeFileMessages([messageForInitiallyClosedFile]);
@@ -172,19 +172,19 @@ describe('MessageRangeTracker', () => {
 
   it('should properly clean up when a text buffer is closed', () => {
     tracker.addFileMessages([messageForInitiallyOpenFile]);
-    const marker = tracker._messageToMarker.get(messageForInitiallyOpenFile);
-    invariant(marker != null);
+    const marker = tracker._messageToMarker.get(messageForInitiallyOpenFile);if (!(
+    marker != null)) {throw new Error('Invariant violation: "marker != null"');}
 
     initiallyOpenEditor.destroy();
 
-    const messageSet = tracker._fileToMessages.get(initiallyOpenFilePath);
-    invariant(messageSet != null);
+    const messageSet = tracker._fileToMessages.get(initiallyOpenFilePath);if (!(
+    messageSet != null)) {throw new Error('Invariant violation: "messageSet != null"');}
 
     expect(messageSet.has(messageForInitiallyOpenFile)).toBeTruthy();
 
     expect(
-      tracker._messageToMarker.has(messageForInitiallyOpenFile),
-    ).toBeFalsy();
+    tracker._messageToMarker.has(messageForInitiallyOpenFile)).
+    toBeFalsy();
 
     expect(marker.isDestroyed()).toBeTruthy();
 
@@ -193,8 +193,8 @@ describe('MessageRangeTracker', () => {
 
   it('should clean up when disposed', () => {
     tracker.addFileMessages([messageForInitiallyOpenFile]);
-    const marker = tracker._messageToMarker.get(messageForInitiallyOpenFile);
-    invariant(marker != null);
+    const marker = tracker._messageToMarker.get(messageForInitiallyOpenFile);if (!(
+    marker != null)) {throw new Error('Invariant violation: "marker != null"');}
 
     expect(marker.isDestroyed()).toBeFalsy();
     tracker.dispose();
@@ -208,19 +208,19 @@ describe('MessageRangeTracker', () => {
 });
 
 /**
- * Ensures that the representation invariants hold. Obviously, this breaks abstraction by reaching
- * into private properties.
- */
-function checkRep(tracker: MessageRangeTracker): void {
-  const openFiles = new Set(
-    atom.workspace.getTextEditors().map(editor => editor.getPath()),
-  );
-
-  for (const message of tracker._messageToMarker.keys()) {
-    expect(openFiles.has(message.filePath)).toBeTruthy();
-  }
-
-  for (const marker of tracker._messageToMarker.values()) {
+     * Ensures that the representation invariants hold. Obviously, this breaks abstraction by reaching
+     * into private properties.
+     */ /**
+         * Copyright (c) 2017-present, Facebook, Inc.
+         * All rights reserved.
+         *
+         * This source code is licensed under the BSD-style license found in the
+         * LICENSE file in the root directory of this source tree. An additional grant
+         * of patent rights can be found in the PATENTS file in the same directory.
+         *
+         * 
+         * @format
+         */function checkRep(tracker) {const openFiles = new Set(atom.workspace.getTextEditors().map(editor => editor.getPath()));for (const message of tracker._messageToMarker.keys()) {expect(openFiles.has(message.filePath)).toBeTruthy();}for (const marker of tracker._messageToMarker.values()) {
     expect(marker.isDestroyed()).toBeFalsy();
   }
 }
