@@ -36,7 +36,7 @@ fi
 # Force a detached HEAD
 git checkout "$(git rev-parse HEAD)"
 
-npm run release-transpile -- --overwrite
+NUCLIDE_TRANSPILE_ENV=production npm run release-transpile -- --overwrite
 
 # Remove "private" field.
 jq 'del(.private)' < package.json > package.json.new
