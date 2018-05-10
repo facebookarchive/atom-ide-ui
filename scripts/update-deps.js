@@ -59,11 +59,15 @@ function sortObject(obj) {
 }
 
 // Pull in dependencies from modules.
+const baseDependencies = {};
 modulePaths.forEach(dirpath => {
   const modulePkg = require(path.join(dirpath, 'package.json'));
-  addDependencies(pkgJson.dependencies, modulePkg.dependencies || {});
+  if (modulePkg.private) {
+    return;
+  }
+  addDependencies(baseDependencies, modulePkg.dependencies || {});
 });
-pkgJson.dependencies = sortObject(pkgJson.dependencies);
+pkgJson.dependencies = sortObject(baseDependencies);
 
 fs.writeFileSync(
   require.resolve('../package.json'),

@@ -50,6 +50,12 @@ else
   HEAD_COMMIT=$(git rev-parse nuclide/master)
 fi
 
+echo "** Updating dependencies"
+scripts/update-deps.js && yarn
+if [ -n "$(git status --porcelain)" ]; then
+  git commit -a -m "Update dependencies"
+fi
+
 echo "** Merging back with master"
 git checkout master
 git merge --no-ff -m "$SYNC_MESSAGE@$HEAD_COMMIT" "$SYNC_BRANCH"
