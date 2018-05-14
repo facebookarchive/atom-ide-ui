@@ -2,6 +2,7 @@
 
 ## Next Release
 
+- Atom 1.25 is now the minimum required version.
 - Paths in the Terminal now require a shift+click to open.
 
 ## v0.11.2
