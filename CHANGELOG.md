@@ -1,5 +1,9 @@
 # Changelog
 
+## Next Release
+
+- Paths in the Terminal now require a shift+click to open.
+
 ## v0.11.2
 
 ### General
