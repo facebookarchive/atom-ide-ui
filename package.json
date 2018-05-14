@@ -21,7 +21,6 @@
   ],
   "dependencies": {
     "anser": "1.4.6",
-    "async-to-generator": "1.1.0",
     "classnames": "2.2.5",
     "dedent": "0.6.0",
     "domexception": "1.0.1",
