@@ -20,13 +20,11 @@
  */
 import type {IPCWorker} from './ipc-client';
 
-import {ipcRenderer} from 'electron';
-
-import {Console} from 'console';
 import os from 'os';
 import runTest from 'jest-runner/build/run_test';
 import Runtime from 'jest-runtime';
 import HasteMap from 'jest-haste-map';
+import patchAtomConsole from 'nuclide-commons/patch-atom-console';
 
 import {
   parseMessage,
@@ -38,23 +36,7 @@ import {
 import {connectToIPCServer} from './ipc-client';
 import {extractIPCIDsFromFilePath} from './utils';
 
-const redirectIO = () => {
-  // Patch `console` to output through the main process.
-  global.console = new Console(
-    /* stdout */ {
-      write(chunk) {
-        // $FlowFixMe
-        ipcRenderer.send('write-to-stdout', chunk);
-      },
-    },
-    /* stderr */ {
-      write(chunk) {
-        // $FlowFixMe
-        ipcRenderer.send('write-to-stderr', chunk);
-      },
-    },
-  );
-};
+const ATOM_BUILTIN_MODULES = new Set(['atom', 'electron']);
 
 process.on('uncaughtException', err => {
   console.error(err.stack);
@@ -68,13 +50,16 @@ export type AtomParams = {
 };
 
 module.exports = async function(params: AtomParams) {
-  redirectIO();
+  patchAtomConsole();
   const firstTestPath = params.testPaths[0];
 
   // We pass server and worker IDs via a basename of non-existing file.
   // Yeah.. it's weird, i know! :(
   const {serverID, workerID} = extractIPCIDsFromFilePath(firstTestPath);
-  const connection: IPCWorker = await connectToIPCServer({serverID, workerID});
+  const connection: IPCWorker = await connectToIPCServer({
+    serverID,
+    workerID,
+  });
 
   global.atom = params.buildAtomEnvironment({
     applicationDelegate: params.buildDefaultApplicationDelegate(),
@@ -127,6 +112,32 @@ module.exports = async function(params: AtomParams) {
   });
 };
 
+// Atom has builtin modules that can't go through jest transforme/cache
+// pipeline. There's no easy way to add custom modules to jest, so we'll wrap
+// jest Resolver object and make it bypass atom's modules.
+const wrapResolver = resolver => {
+  const isCoreModule = resolver.isCoreModule;
+  const resolveModule = resolver.resolveModule;
+
+  resolver.isCoreModule = moduleName => {
+    if (ATOM_BUILTIN_MODULES.has(moduleName)) {
+      return true;
+    } else {
+      return isCoreModule.call(resolver, moduleName);
+    }
+  };
+
+  resolver.resolveModule = (from, to, options) => {
+    if (ATOM_BUILTIN_MODULES.has(to)) {
+      return to;
+    } else {
+      return resolveModule.call(resolver, from, to, options);
+    }
+  };
+
+  return resolver;
+};
+
 const resolvers = Object.create(null);
 const getResolver = (config, rawModuleMap) => {
   // In watch mode, the raw module map with all haste modules is passed from
@@ -134,13 +145,17 @@ const getResolver = (config, rawModuleMap) => {
   // watch mode does not persist the haste map on disk after every file change.
   // To make this fast and consistent, we pass it from the TestRunner.
   if (rawModuleMap) {
-    return Runtime.createResolver(config, new HasteMap.ModuleMap(rawModuleMap));
+    return wrapResolver(
+      Runtime.createResolver(config, new HasteMap.ModuleMap(rawModuleMap)),
+    );
   } else {
     const name = config.name;
     if (!resolvers[name]) {
-      resolvers[name] = Runtime.createResolver(
-        config,
-        Runtime.createHasteMap(config).readModuleMap(),
+      resolvers[name] = wrapResolver(
+        Runtime.createResolver(
+          config,
+          Runtime.createHasteMap(config).readModuleMap(),
+        ),
       );
     }
     return resolvers[name];

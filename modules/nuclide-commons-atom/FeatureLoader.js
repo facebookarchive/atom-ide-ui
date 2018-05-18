@@ -14,12 +14,14 @@
 
 import invariant from 'assert';
 import idx from 'idx';
+import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import nullthrows from 'nullthrows';
 import activateExperimentalPackages from './experimental-packages/activatePackages';
 import featureConfig from './feature-config';
 import path from 'path'; // eslint-disable-line nuclide-internal/prefer-nuclide-uri
-import {MultiMap, setUnion} from 'nuclide-commons/collection';
+import {MultiMap, setIntersect, setUnion} from 'nuclide-commons/collection';
+import {Observable} from 'rxjs';
 
 type FeaturePkg = {
   name: string,
@@ -58,6 +60,7 @@ const DEFAULT = 'default';
 const {devMode} = atom.getLoadSettings();
 
 export const REQUIRED_FEATURE_GROUP = 'nuclide-required';
+export const INITIAL_FEATURE_GROUP = 'nuclide-core';
 
 export default class FeatureLoader {
   _activationDisposable: ?UniversalDisposable;
@@ -65,7 +68,10 @@ export default class FeatureLoader {
 
   _config: ?Object;
   _features: Array<Feature>;
+  _featureBeingActivated: ?Feature;
+  _featureBeingDeactivated: ?Feature;
   _featureGroups: MultiMap<string, Feature>;
+  _deferringFeatureActivation: boolean = true;
   _pkgName: string;
   _path: string;
   _currentlyActiveFeatures: Set<Feature> = new Set();
@@ -84,6 +90,8 @@ export default class FeatureLoader {
   // Build the config. Should occur with root package's load
   load(): void {
     invariant(!this._loadDisposable.disposed);
+
+    patchPackageManager();
 
     // Add a dummy deserializer. This forces Atom to load Nuclide's main module
     // (this file) when the package is loaded, which is super important because
@@ -118,19 +126,57 @@ export default class FeatureLoader {
     // make sure that deserializers are registered, etc.
     // https://github.com/atom/atom/blob/v1.1.0/src/atom-environment.coffee#L625-L631
     // https://atom.io/docs/api/latest/PackageManager
+    const featuresToLoad = this.getEnabledFeatures();
     this._loadDisposable.add(
       // Nesting loads within loads leads to reverse activation order- that is, if
       // the root package loads feature packages, then the feature package activations will
       // happen before the root package's. So we wait until the root package is done loading,
       // but before it activates, to load the features.
-      whenPackageLoaded(this._pkgName, () => {
-        const featuresToLoad = this.getEnabledFeatures();
+      didLoadPackage(this._pkgName).subscribe(() => {
         // Load "regular" feature packages.
         featuresToLoad.forEach(feature => {
           atom.packages.loadPackage(feature.path);
         });
-        // Load "experimental" format packages.
-        return activateExperimentalPackages([...featuresToLoad]);
+      }),
+      // Load "experimental" format packages.
+      didLoadPackage(this._pkgName)
+        .switchMap(() =>
+          Observable.create(
+            () =>
+              new UniversalDisposable(
+                activateExperimentalPackages([...featuresToLoad]),
+              ),
+          ),
+        )
+        .subscribe(),
+    );
+
+    const featureNames = new Set(
+      this._features.map(feature => feature.pkg.name),
+    );
+
+    // Ensure that the root package is initialized before all of its features. This is important
+    // because the root package defines the config for all managed features and we need to make
+    // sure that it's present before they're initialized (i.e. before their deserializers are
+    // called).
+    // $FlowIssue: Need to upstream this.
+    const onWillInitializePackageDisposable = atom.packages.onWillInitializePackage(
+      pack => {
+        if (featureNames.has(pack.name)) {
+          onWillInitializePackageDisposable.dispose();
+          const rootPackage = atom.packages.getLoadedPackage(this._pkgName);
+          nullthrows(rootPackage).initializeIfNeeded();
+        }
+      },
+    );
+    this._loadDisposable.add(onWillInitializePackageDisposable);
+
+    // Clean up when the package is unloaded.
+    this._loadDisposable.add(
+      atom.packages.onDidUnloadPackage(pack => {
+        if (pack.name === this._pkgName) {
+          this._loadDisposable.dispose();
+        }
       }),
     );
   }
@@ -147,36 +193,79 @@ export default class FeatureLoader {
       rootPackage.getCanDeferMainModuleRequireStorageKey(),
     );
 
-    // Watch the config to manage toggling features
-    this._activationDisposable = new UniversalDisposable(
-      atom.config.onDidChange(this.getUseKeyPath(), event =>
-        this.updateActiveFeatures(),
-      ),
-      atom.config.onDidChange(this.getEnabledFeatureGroupsKeyPath(), event =>
-        this.updateActiveFeatures(),
-      ),
-    );
-
     this.updateActiveFeatures();
+
+    // Watch things that should trigger reevaluation of active features. Note that we do this
+    // *after* the initial `updateActiveFeatures()` call because that could trigger one of these
+    // events.
+    this._activationDisposable = new UniversalDisposable(
+      atom.config.onDidChange(this.getUseKeyPath(), () => {
+        this.updateActiveFeatures();
+      }),
+      atom.config.onDidChange(this.getEnabledFeatureGroupsKeyPath(), () => {
+        this.updateActiveFeatures();
+      }),
+      Observable.merge(didAddFirstPath, didAddFirstTextEditor)
+        .take(1)
+        .subscribe(() => {
+          // Hopefully we've opened a project so we don't have to load all the features.
+          this._deferringFeatureActivation = false;
+          this.updateActiveFeatures();
+        }),
+    );
+  }
+
+  updateActiveFeatures() {
+    // `updateActiveFeatures()` can't be called recursively. If it is, just warn and bail.
+    if (this._featureBeingActivated != null) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `Activating ${this._featureBeingActivated.pkg.name} caused a` +
+          ' reevaluation of active features.',
+      );
+      return;
+    }
+    if (this._featureBeingDeactivated != null) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `Deactivating ${this._featureBeingDeactivated.pkg.name} caused a` +
+          ' reevaluation of active features.',
+      );
+      return;
+    }
+    this.updateActiveFeaturesNow();
   }
 
   /**
    * Enable and disable the correct features according to the current configuration.
    */
-  updateActiveFeatures() {
-    const featuresToActivate = this.getEnabledFeatures();
+  updateActiveFeaturesNow() {
+    const enabledFeatures = this.getEnabledFeatures();
+    const featuresToActivate = setUnion(
+      this._featureGroups.get(REQUIRED_FEATURE_GROUP),
+      this._deferringFeatureActivation
+        ? setIntersect(
+            enabledFeatures,
+            this._featureGroups.get(INITIAL_FEATURE_GROUP),
+          )
+        : enabledFeatures,
+    );
 
     // Enable all packages in featuresToActivate but not in currentState.
     // Disable all packages not in featuresToActivate but in currentState.
     for (const feature of featuresToActivate) {
       if (!this._currentlyActiveFeatures.has(feature)) {
+        this._featureBeingActivated = feature;
         atom.packages.activatePackage(feature.path);
+        this._featureBeingActivated = null;
       }
     }
 
     for (const feature of this._currentlyActiveFeatures) {
       if (!featuresToActivate.has(feature)) {
+        this._featureBeingDeactivated = feature;
         safeDeactivate(feature);
+        this._featureBeingDeactivated = null;
       }
     }
 
@@ -215,17 +304,14 @@ export default class FeatureLoader {
       this.getEnabledFeatureGroupsKeyPath(),
     ): any);
 
-    let featuresInEnabledGroups;
-    if (enabledFeatureGroups != null) {
-      featuresInEnabledGroups = setUnion(
-        ...enabledFeatureGroups.map(featureGroup =>
-          this._featureGroups.get(featureGroup),
-        ),
-      );
-    } else {
-      // If featuregroups is empty or undefined, assume all features should be enabled.
-      featuresInEnabledGroups = new Set(this._features);
-    }
+    const featuresInEnabledGroups =
+      enabledFeatureGroups == null
+        ? new Set(this._features) // If featuregroups is undefined, assume all features should be enabled.
+        : setUnion(
+            ...enabledFeatureGroups.map(featureGroup =>
+              this._featureGroups.get(featureGroup),
+            ),
+          );
 
     const requiredFeatures =
       this._featureGroups.get(REQUIRED_FEATURE_GROUP) || new Set();
@@ -385,25 +471,6 @@ function buildConfig(features: Array<Feature>): Object {
   return config;
 }
 
-function whenPackageLoaded(
-  pkgName: string,
-  callback: () => IDisposable,
-): IDisposable {
-  const disposables = new UniversalDisposable();
-  const onDidLoadDisposable = atom.packages.onDidLoadPackage(pack => {
-    if (pack.name !== pkgName) {
-      return;
-    }
-
-    // We only want this to happen once.
-    onDidLoadDisposable.dispose();
-
-    disposables.add(callback());
-  });
-  disposables.add(onDidLoadDisposable);
-  return disposables;
-}
-
 /**
  * Hack time!! Atom's repository APIs are synchronous. Any package that tries to use them before
  * we've had a chance to provide our implementation are going to get wrong answers. The correct
@@ -456,3 +523,84 @@ function groupFeatures(
   }
   return featureGroups;
 }
+
+/**
+ * Patch the package manager and packages to (1) implement `onWillInitializePackage` and (2) call
+ * `registerConfigSchemaFromMainModule()` when a package is initialized (to guarantee its config
+ * schema is ready when its deserializers are called). This should be removed once these changes
+ * are upstreamed.
+ */
+function patchPackageManager(): void {
+  if (
+    (atom.packages: any).onWillInitializePackage == null &&
+    !(atom.packages: any).__onWillInitializePackagePatched
+  ) {
+    (atom.packages: any).onWillInitializePackage = function(callback) {
+      (atom.packages: any).__onWillInitializePackagePatched = true;
+      return this.emitter.on('will-initialize-package', callback);
+    };
+  }
+
+  if (!(atom.packages: any).__packageLookupPatched) {
+    (atom.packages: any).__packageLookupPatched = true;
+    const loadPackage = atom.packages.loadPackage;
+    (atom.packages: any).loadPackage = function(nameOrPath, ...args) {
+      const pack = loadPackage.call(this, nameOrPath, ...args);
+      if (pack == null) {
+        return null;
+      }
+      patchPackage(pack);
+      return pack;
+    };
+
+    const getLoadedPackage = atom.packages.getLoadedPackage;
+    (atom.packages: any).getLoadedPackage = function(name, ...args) {
+      const pack = getLoadedPackage.call(this, name, ...args);
+      if (pack == null) {
+        return null;
+      }
+      patchPackage(pack);
+      return pack;
+    };
+  }
+}
+
+function patchPackage(pack): void {
+  if ((pack: any).__initializeIfNeededPatched) {
+    return;
+  }
+  (pack: any).__initializeIfNeededPatched = true;
+
+  const initializeIfNeeded = (pack: any).initializeIfNeeded;
+  (pack: any).initializeIfNeeded = function() {
+    if (this.mainInitialized) {
+      return;
+    }
+    if ((atom.packages: any).__onWillInitializePackagePatched) {
+      // If we didn't apply our patch for this, Atom is already dispatching the event.
+      atom.packages.emitter.emit('will-initialize-package', pack);
+    }
+    this.registerConfigSchemaFromMainModule();
+    return initializeIfNeeded.call(this);
+  };
+}
+
+const didLoadPackage = (pkgName: string) =>
+  observableFromSubscribeFunction(cb => atom.packages.onDidLoadPackage(cb))
+    .startWith(null)
+    .filter(() => atom.packages.getLoadedPackage(pkgName) != null)
+    .take(1);
+
+const didAddFirstPath = observableFromSubscribeFunction(cb =>
+  atom.project.onDidChangePaths(cb),
+)
+  .startWith(null)
+  .filter(() => atom.project.getDirectories().length > 0)
+  .take(1);
+
+const didAddFirstTextEditor = observableFromSubscribeFunction(cb =>
+  atom.workspace.getCenter().onDidAddTextEditor(cb),
+)
+  .startWith(null)
+  .filter(() => atom.workspace.getCenter().getTextEditors().length > 0)
+  .take(1);
