@@ -2,10 +2,8 @@ machine:
   environment:
     PATH: "${PATH}:${HOME}/${CIRCLE_PROJECT_REPONAME}/node_modules/.bin"
     # COVERAGE_DIR: "${HOME}/${CIRCLE_PROJECT_REPONAME}/.nyc_output"
-    # The prettier ESLint plugin is problematic in Node v7.
-    ESLINT_NODE_VERSION: "10.1.0"
   node:
-    version: 7.9.0
+    version: 8.9.3
 
 dependencies:
   override:
@@ -21,17 +19,7 @@ dependencies:
   cache_directories:
     - ~/.cache/yarn
 
-test:
-  override:
-    - |
-      # eslint
-      nvm install "$ESLINT_NODE_VERSION"
-      node -v
-      ./node_modules/.bin/eslint --max-warnings=0 .
-      # Restore default node version.
-      nvm use 7.9.0
-    - ./node_modules/.bin/flow check --show-all-errors
-    - ./scripts/test.js
+# test:
   # pre:
   #   - mkdir "$COVERAGE_DIR"
   # post:
