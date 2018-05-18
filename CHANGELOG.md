@@ -1,9 +1,13 @@
 # Changelog
 
-## Next Release
+## v0.11.3
 
 - Atom 1.25 is now the minimum required version.
-- Paths in the Terminal now require a shift+click to open.
+- Fixes for Atom 1.28-beta:
+  - Added a new prebuilt version of pty compatible with Electron 2.0. (#241)
+  - Code action menus correctly appear at the cursor position. (#248)
+- Paths in the Terminal now require a cmd/ctrl+click to open.
+- Upgraded React to 16.3.2.
 
 ## v0.11.2
 
