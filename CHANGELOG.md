@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.11.3
+## v0.12.0
 
 - Atom 1.25 is now the minimum required version.
 - Fixes for Atom 1.28-beta:
