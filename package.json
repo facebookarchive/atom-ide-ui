@@ -77,6 +77,5 @@
     "flow-bin": "0.71.0",
     "nyc": "11.2.1",
     "prettier": "1.12.1"
-  },
-  "private": true
+  }
 }

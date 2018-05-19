@@ -1,3 +1,17 @@
+'use strict';
+
+var _promise;
+
+function _load_promise() {
+  return _promise = require('../promise');
+}
+
+var _testHelpers;
+
+function _load_testHelpers() {
+  return _testHelpers = require('../test-helpers');
+}
+
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -6,28 +20,11 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * 
  * @format
  */
 
 /* eslint-disable prefer-promise-reject-errors */
-
-import {
-  asyncFind,
-  denodeify,
-  serializeAsyncCall,
-  asyncLimit,
-  asyncFilter,
-  asyncObjFilter,
-  asyncSome,
-  lastly,
-  retryLimit,
-  RequestSerializer,
-  TimedOutError,
-  timeoutPromise,
-} from '../promise';
-import invariant from 'assert';
-import {expectAsyncFailure} from '../test-helpers';
 
 describe('promises::asyncFind()', () => {
   it('Empty list of items should resolve to null.', () => {
@@ -42,15 +39,13 @@ describe('promises::asyncFind()', () => {
     };
 
     runs(() => {
-      asyncFind(args, test)
-        .then(result => {
-          observedResult = result;
-          isResolved = true;
-        })
-        .catch(error => {
-          observedError = error;
-          isRejected = true;
-        });
+      (0, (_promise || _load_promise()).asyncFind)(args, test).then(result => {
+        observedResult = result;
+        isResolved = true;
+      }).catch(error => {
+        observedError = error;
+        isRejected = true;
+      });
     });
 
     waitsFor(() => isResolved || isRejected);
@@ -81,15 +76,13 @@ describe('promises::asyncFind()', () => {
     };
 
     runs(() => {
-      asyncFind(args, test)
-        .then(result => {
-          observedResult = result;
-          isResolved = true;
-        })
-        .catch(error => {
-          observedError = error;
-          isRejected = true;
-        });
+      (0, (_promise || _load_promise()).asyncFind)(args, test).then(result => {
+        observedResult = result;
+        isResolved = true;
+      }).catch(error => {
+        observedError = error;
+        isRejected = true;
+      });
     });
 
     waitsFor(() => isResolved || isRejected);
@@ -116,7 +109,7 @@ describe('promises::denodeify()', () => {
    * rather than at the end. The type signature of this function cannot be
    * expressed in Flow.
    */
-  function asyncProduct(...factors): void {
+  function asyncProduct(...factors) {
     const callback = factors.pop();
     const product = factors.reduce((previousValue, currentValue) => {
       return previousValue * currentValue;
@@ -130,7 +123,7 @@ describe('promises::denodeify()', () => {
   }
 
   it('resolves Promise when callback succeeds', () => {
-    const denodeifiedAsyncProduct = denodeify(asyncProduct);
+    const denodeifiedAsyncProduct = (0, (_promise || _load_promise()).denodeify)(asyncProduct);
     waitsForPromise(async () => {
       const trivialProduct = await denodeifiedAsyncProduct();
       expect(trivialProduct).toBe(1);
@@ -141,14 +134,11 @@ describe('promises::denodeify()', () => {
   });
 
   it('rejects Promise when callback fails', () => {
-    const denodeifiedAsyncProduct = denodeify(asyncProduct);
+    const denodeifiedAsyncProduct = (0, (_promise || _load_promise()).denodeify)(asyncProduct);
     waitsForPromise(async () => {
-      await expectAsyncFailure(
-        denodeifiedAsyncProduct('a', 'b'),
-        (error: Error) => {
-          expect(error.message).toBe('product was NaN');
-        },
-      );
+      await (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(denodeifiedAsyncProduct('a', 'b'), error => {
+        expect(error.message).toBe('product was NaN');
+      });
     });
   });
 
@@ -161,22 +151,19 @@ describe('promises::denodeify()', () => {
   }
 
   it('result of denodeify propagates receiver as expected', () => {
-    const denodeifiedChecksReceiver = denodeify(checksReceiver);
+    const denodeifiedChecksReceiver = (0, (_promise || _load_promise()).denodeify)(checksReceiver);
 
     waitsForPromise(async () => {
-      const receiver = {denodeifiedChecksReceiver};
+      const receiver = { denodeifiedChecksReceiver };
       const result = await receiver.denodeifiedChecksReceiver(receiver);
       expect(result).toBe('winner');
     });
 
     waitsForPromise(async () => {
-      const receiver = {denodeifiedChecksReceiver};
-      await expectAsyncFailure(
-        receiver.denodeifiedChecksReceiver(null),
-        (error: Error) => {
-          expect(error.message).toBe('unexpected receiver');
-        },
-      );
+      const receiver = { denodeifiedChecksReceiver };
+      await (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(receiver.denodeifiedChecksReceiver(null), error => {
+        expect(error.message).toBe('unexpected receiver');
+      });
     });
   });
 });
@@ -185,7 +172,7 @@ describe('promises::serializeAsyncCall()', () => {
   it('Returns the same result when called after scheduled', () => {
     let i = 0;
     const asyncFunSpy = jasmine.createSpy('async');
-    const oneAsyncCallAtATime = serializeAsyncCall(() => {
+    const oneAsyncCallAtATime = (0, (_promise || _load_promise()).serializeAsyncCall)(() => {
       i++;
       const resultPromise = waitPromise(10, i);
       asyncFunSpy();
@@ -204,11 +191,7 @@ describe('promises::serializeAsyncCall()', () => {
     waitsFor(() => asyncFunSpy.callCount === 2);
     waitsForPromise(async () => {
       advanceClock(11);
-      const results = await Promise.all([
-        result1Promise,
-        result2Promise,
-        result3Promise,
-      ]);
+      const results = await Promise.all([result1Promise, result2Promise, result3Promise]);
       expect(results).toEqual([1, 2, 2]);
     });
   });
@@ -216,7 +199,7 @@ describe('promises::serializeAsyncCall()', () => {
   it('Calls and returns (even if errors) the same number of times if serially called', () => {
     waitsForPromise(async () => {
       let i = 0;
-      const oneAsyncCallAtATime = serializeAsyncCall(() => {
+      const oneAsyncCallAtATime = (0, (_promise || _load_promise()).serializeAsyncCall)(() => {
         i++;
         if (i === 4) {
           return Promise.reject('ERROR');
@@ -237,7 +220,7 @@ describe('promises::serializeAsyncCall()', () => {
 
       const errorPromoise = oneAsyncCallAtATime();
       advanceClock(11);
-      await expectAsyncFailure(errorPromoise, error => {
+      await (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(errorPromoise, error => {
         expect(error).toBe('ERROR');
       });
 
@@ -256,10 +239,7 @@ describe('promises::asyncLimit()', () => {
 
   it('runs in series if limit is 1', () => {
     waitsForPromise(async () => {
-      const {result, parallelismHistory} = await captureParallelismHistory(
-        asyncLimit,
-        [[1, 2, 3], 1, item => waitPromise(10, item + 1)],
-      );
+      const { result, parallelismHistory } = await captureParallelismHistory((_promise || _load_promise()).asyncLimit, [[1, 2, 3], 1, item => waitPromise(10, item + 1)]);
       expect(parallelismHistory).toEqual([1, 1, 1]);
       expect(result).toEqual([2, 3, 4]);
     });
@@ -267,14 +247,7 @@ describe('promises::asyncLimit()', () => {
 
   it('runs with the specified limit, until finishing', () => {
     waitsForPromise(async () => {
-      const {result, parallelismHistory} = await captureParallelismHistory(
-        asyncLimit,
-        [
-          [1, 2, 3, 4, 5, 6, 7, 8, 9],
-          3,
-          item => waitPromise(10 + item, item - 1),
-        ],
-      );
+      const { result, parallelismHistory } = await captureParallelismHistory((_promise || _load_promise()).asyncLimit, [[1, 2, 3, 4, 5, 6, 7, 8, 9], 3, item => waitPromise(10 + item, item - 1)]);
       expect(result).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
       expect(parallelismHistory).toEqual([1, 2, 3, 3, 3, 3, 3, 3, 3]);
     });
@@ -282,29 +255,24 @@ describe('promises::asyncLimit()', () => {
 
   it('works when the limit is bigger than the array length', () => {
     waitsForPromise(async () => {
-      const result = await asyncLimit([1, 2, 3], 10, item =>
-        waitPromise(10, item * 2),
-      );
+      const result = await (0, (_promise || _load_promise()).asyncLimit)([1, 2, 3], 10, item => waitPromise(10, item * 2));
       expect(result).toEqual([2, 4, 6]);
     });
   });
 
   it('a rejected promise rejects the whole call with the error', () => {
     waitsForPromise(async () => {
-      await expectAsyncFailure(
-        asyncLimit([1], 1, async item => {
-          throw new Error('rejected iterator promise');
-        }),
-        (error: Error) => {
-          expect(error.message).toBe('rejected iterator promise');
-        },
-      );
+      await (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)((0, (_promise || _load_promise()).asyncLimit)([1], 1, async item => {
+        throw new Error('rejected iterator promise');
+      }), error => {
+        expect(error.message).toBe('rejected iterator promise');
+      });
     });
   });
 
   it('works when the array is empty', () => {
     waitsForPromise(async () => {
-      const result = await asyncLimit([], 1, () => Promise.resolve());
+      const result = await (0, (_promise || _load_promise()).asyncLimit)([], 1, () => Promise.resolve());
       expect(result).toEqual([]);
     });
   });
@@ -320,11 +288,8 @@ describe('promises::asyncFilter()', () => {
     waitsForPromise(async () => {
       const {
         result: filtered,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncFilter, [
-        [1, 2, 3, 4, 5],
-        item => waitPromise(10 + item, item > 2),
-      ]);
+        parallelismHistory
+      } = await captureParallelismHistory((_promise || _load_promise()).asyncFilter, [[1, 2, 3, 4, 5], item => waitPromise(10 + item, item > 2)]);
       expect(filtered).toEqual([3, 4, 5]);
       expect(parallelismHistory).toEqual([1, 2, 3, 4, 5]);
     });
@@ -334,12 +299,8 @@ describe('promises::asyncFilter()', () => {
     waitsForPromise(async () => {
       const {
         result: filtered,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncFilter, [
-        [1, 2, 3, 4, 5],
-        item => waitPromise(10 + item, item > 2),
-        3,
-      ]);
+        parallelismHistory
+      } = await captureParallelismHistory((_promise || _load_promise()).asyncFilter, [[1, 2, 3, 4, 5], item => waitPromise(10 + item, item > 2), 3]);
       expect(filtered).toEqual([3, 4, 5]);
       // Increasing promise resolve time will gurantee maximum parallelization.
       expect(parallelismHistory).toEqual([1, 2, 3, 3, 3]);
@@ -357,12 +318,9 @@ describe('promises::asyncObjFilter()', () => {
     waitsForPromise(async () => {
       const {
         result: filtered,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncObjFilter, [
-        {a: 1, b: 2, c: 3, d: 4, e: 5},
-        (value, key) => waitPromise(5 + value, value > 2),
-      ]);
-      expect(filtered).toEqual({c: 3, d: 4, e: 5});
+        parallelismHistory
+      } = await captureParallelismHistory((_promise || _load_promise()).asyncObjFilter, [{ a: 1, b: 2, c: 3, d: 4, e: 5 }, (value, key) => waitPromise(5 + value, value > 2)]);
+      expect(filtered).toEqual({ c: 3, d: 4, e: 5 });
       expect(parallelismHistory).toEqual([1, 2, 3, 4, 5]);
     });
   });
@@ -371,13 +329,9 @@ describe('promises::asyncObjFilter()', () => {
     waitsForPromise(async () => {
       const {
         result: filtered,
-        parallelismHistory,
-      } = await captureParallelismHistory(asyncObjFilter, [
-        {a: 1, b: 2, c: 3, d: 4, e: 5},
-        (value, key) => waitPromise(5 + value, value > 2),
-        3,
-      ]);
-      expect(filtered).toEqual({c: 3, d: 4, e: 5});
+        parallelismHistory
+      } = await captureParallelismHistory((_promise || _load_promise()).asyncObjFilter, [{ a: 1, b: 2, c: 3, d: 4, e: 5 }, (value, key) => waitPromise(5 + value, value > 2), 3]);
+      expect(filtered).toEqual({ c: 3, d: 4, e: 5 });
       // Increasing promise resolve time will gurantee maximum parallelization.
       expect(parallelismHistory).toEqual([1, 2, 3, 3, 3]);
     });
@@ -392,10 +346,7 @@ describe('promises::asyncSome()', () => {
   // eslint-disable-next-line max-len
   it('some an array with an async iterator and maximum parallelization when no limit is specified', () => {
     waitsForPromise(async () => {
-      const {result, parallelismHistory} = await captureParallelismHistory(
-        asyncSome,
-        [[1, 2, 3, 4, 5], item => waitPromise(10, item === 6)],
-      );
+      const { result, parallelismHistory } = await captureParallelismHistory((_promise || _load_promise()).asyncSome, [[1, 2, 3, 4, 5], item => waitPromise(10, item === 6)]);
       expect(result).toEqual(false);
       expect(parallelismHistory).toEqual([1, 2, 3, 4, 5]);
     });
@@ -403,10 +354,7 @@ describe('promises::asyncSome()', () => {
 
   it('some an array with a limit on parallelization', () => {
     waitsForPromise(async () => {
-      const {result, parallelismHistory} = await captureParallelismHistory(
-        asyncSome,
-        [[1, 2, 3, 4, 5], item => waitPromise(10 + item, item === 5), 3],
-      );
+      const { result, parallelismHistory } = await captureParallelismHistory((_promise || _load_promise()).asyncSome, [[1, 2, 3, 4, 5], item => waitPromise(10 + item, item === 5), 3]);
       expect(result).toEqual(true);
       expect(parallelismHistory).toEqual([1, 2, 3, 3, 3]);
     });
@@ -417,7 +365,7 @@ describe('promises::lastly', () => {
   it('executes after a resolved promise', () => {
     waitsForPromise(async () => {
       const spy = jasmine.createSpy('spy');
-      const result = await lastly(Promise.resolve(1), spy);
+      const result = await (0, (_promise || _load_promise()).lastly)(Promise.resolve(1), spy);
       expect(result).toBe(1);
       expect(spy).toHaveBeenCalled();
     });
@@ -426,7 +374,7 @@ describe('promises::lastly', () => {
   it('executes after a rejected promise', () => {
     waitsForPromise(async () => {
       const spy = jasmine.createSpy('spy');
-      await expectAsyncFailure(lastly(Promise.reject(2), spy), err => {
+      await (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)((0, (_promise || _load_promise()).lastly)(Promise.reject(2), spy), err => {
         expect(err).toBe(2);
       });
       expect(spy).toHaveBeenCalled();
@@ -436,7 +384,7 @@ describe('promises::lastly', () => {
   it('works for async functions', () => {
     waitsForPromise(async () => {
       const spy = jasmine.createSpy('spy');
-      const result = await lastly(Promise.resolve(1), async () => {
+      const result = await (0, (_promise || _load_promise()).lastly)(Promise.resolve(1), async () => {
         spy();
       });
       expect(result).toBe(1);
@@ -455,23 +403,19 @@ describe('promises::retryLimit()', () => {
       let succeedAfter = 2;
       let calls = 0;
       let validationCalls = 0;
-      const retrialsResult = await retryLimit(
-        () => {
-          return new Promise((resolve, reject) => {
-            calls++;
-            if (succeedAfter-- === 0) {
-              resolve('RESULT');
-            } else {
-              reject('ERROR');
-            }
-          });
-        },
-        result => {
-          validationCalls++;
-          return result === 'RESULT';
-        },
-        5,
-      );
+      const retrialsResult = await (0, (_promise || _load_promise()).retryLimit)(() => {
+        return new Promise((resolve, reject) => {
+          calls++;
+          if (succeedAfter-- === 0) {
+            resolve('RESULT');
+          } else {
+            reject('ERROR');
+          }
+        });
+      }, result => {
+        validationCalls++;
+        return result === 'RESULT';
+      }, 5);
       expect(calls).toBe(3);
       expect(validationCalls).toBe(1);
       expect(retrialsResult).toBe('RESULT');
@@ -482,18 +426,14 @@ describe('promises::retryLimit()', () => {
     waitsForPromise(async () => {
       let calls = 0;
       let validationCalls = 0;
-      const failRetriesPromise = retryLimit(
-        () => {
-          calls++;
-          return Promise.reject('ERROR');
-        },
-        result => {
-          validationCalls++;
-          return result != null;
-        },
-        2,
-      );
-      await expectAsyncFailure(failRetriesPromise, error => {
+      const failRetriesPromise = (0, (_promise || _load_promise()).retryLimit)(() => {
+        calls++;
+        return Promise.reject('ERROR');
+      }, result => {
+        validationCalls++;
+        return result != null;
+      }, 2);
+      await (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(failRetriesPromise, error => {
         expect(error).toBe('ERROR');
       });
       expect(calls).toBe(2);
@@ -506,21 +446,17 @@ describe('promises::retryLimit()', () => {
       let succeedAfter = 2;
       let calls = 0;
       let validationCalls = 0;
-      const retryResult = await retryLimit(
-        () => {
-          calls++;
-          if (succeedAfter-- === 0) {
-            return Promise.resolve(null);
-          } else {
-            return Promise.resolve('NOT_GOOD');
-          }
-        },
-        result => {
-          validationCalls++;
-          return result == null;
-        },
-        5,
-      );
+      const retryResult = await (0, (_promise || _load_promise()).retryLimit)(() => {
+        calls++;
+        if (succeedAfter-- === 0) {
+          return Promise.resolve(null);
+        } else {
+          return Promise.resolve('NOT_GOOD');
+        }
+      }, result => {
+        validationCalls++;
+        return result == null;
+      }, 5);
       expect(retryResult).toBe(null);
       expect(calls).toBe(3);
       expect(validationCalls).toBe(3);
@@ -529,16 +465,12 @@ describe('promises::retryLimit()', () => {
 
   it('no valid response is ever got', () => {
     waitsForPromise(async () => {
-      const nonValidRetriesPromise = retryLimit(
-        () => {
-          return Promise.resolve('A');
-        },
-        result => {
-          return result === 'B';
-        },
-        2,
-      );
-      await expectAsyncFailure(nonValidRetriesPromise, error => {
+      const nonValidRetriesPromise = (0, (_promise || _load_promise()).retryLimit)(() => {
+        return Promise.resolve('A');
+      }, result => {
+        return result === 'B';
+      }, 2);
+      await (0, (_testHelpers || _load_testHelpers()).expectAsyncFailure)(nonValidRetriesPromise, error => {
         expect(error.message).toBe('No valid response found!');
       });
     });
@@ -546,21 +478,25 @@ describe('promises::retryLimit()', () => {
 });
 
 describe('promises::RequestSerializer()', () => {
-  let requestSerializer: RequestSerializer<any> = (null: any);
+  let requestSerializer = null;
 
   beforeEach(() => {
     jasmine.useRealClock();
-    requestSerializer = new RequestSerializer();
+    requestSerializer = new (_promise || _load_promise()).RequestSerializer();
   });
 
   it('gets outdated result for old promises resolving after newer calls', () => {
     waitsForPromise(async () => {
       const oldPromise = requestSerializer.run(waitPromise(10, 'OLD'));
       const newPromise = requestSerializer.run(waitPromise(5, 'NEW'));
-      const {status: oldStatus} = await oldPromise;
+      const { status: oldStatus } = await oldPromise;
       expect(oldStatus).toBe('outdated');
       const newResult = await newPromise;
-      invariant(newResult.status === 'success');
+
+      if (!(newResult.status === 'success')) {
+        throw new Error('Invariant violation: "newResult.status === \'success\'"');
+      }
+
       expect(newResult.result).toBe('NEW');
     });
   });
@@ -597,58 +533,49 @@ describe('timeoutPromise', () => {
   it('should resolve normally if within the timeout', () => {
     waitsForPromise(async () => {
       const inputPromise = new Promise(resolve => resolve('foo'));
-      const outputPromise = timeoutPromise(inputPromise, 1000);
-      expect(await outputPromise).toBe('foo');
+      const outputPromise = (0, (_promise || _load_promise()).timeoutPromise)(inputPromise, 1000);
+      expect((await outputPromise)).toBe('foo');
     });
   });
 
   it('should reject if the given promise rejects', () => {
     waitsForPromise(async () => {
       const inputPromise = new Promise((resolve, reject) => reject('foo'));
-      const outputPromise = timeoutPromise(inputPromise, 1000).catch(
-        value => `rejected with ${value}`,
-      );
-      expect(await outputPromise).toBe('rejected with foo');
+      const outputPromise = (0, (_promise || _load_promise()).timeoutPromise)(inputPromise, 1000).catch(value => `rejected with ${value}`);
+      expect((await outputPromise)).toBe('rejected with foo');
     });
   });
 
   it('should reject if the given promise takes too long', () => {
     waitsForPromise(async () => {
       const inputPromise = new Promise(resolve => setTimeout(resolve, 2000));
-      const outputPromise = timeoutPromise(inputPromise, 1000).catch(
-        value => value,
-      );
+      const outputPromise = (0, (_promise || _load_promise()).timeoutPromise)(inputPromise, 1000).catch(value => value);
       advanceClock(1500);
-      expect(await outputPromise).toEqual(new TimedOutError(1000));
+      expect((await outputPromise)).toEqual(new (_promise || _load_promise()).TimedOutError(1000));
     });
   });
 });
 
-async function captureParallelismHistory(
-  asyncFunction: (...args: Array<any>) => Promise<mixed>,
-  args: Array<mixed>,
-): Promise<{result: mixed, parallelismHistory: Array<number>}> {
+async function captureParallelismHistory(asyncFunction, args) {
   const parallelismHistory = [];
   let parralelism = 0;
-  const result = await asyncFunction(
-    ...args.map(arg => {
-      if (typeof arg !== 'function') {
-        return arg;
-      }
-      const func = arg;
-      return async item => {
-        ++parralelism;
-        parallelismHistory.push(parralelism);
-        const value = await func(item);
-        --parralelism;
-        return value;
-      };
-    }),
-  );
-  return {result, parallelismHistory};
+  const result = await asyncFunction(...args.map(arg => {
+    if (typeof arg !== 'function') {
+      return arg;
+    }
+    const func = arg;
+    return async item => {
+      ++parralelism;
+      parallelismHistory.push(parralelism);
+      const value = await func(item);
+      --parralelism;
+      return value;
+    };
+  }));
+  return { result, parallelismHistory };
 }
 
-function waitPromise(timeoutMs: number, value: any): Promise<any> {
+function waitPromise(timeoutMs, value) {
   return new Promise((resolve, reject) => {
     setTimeout(() => resolve(value), timeoutMs);
   });
