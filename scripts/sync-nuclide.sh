@@ -8,7 +8,6 @@ SYNC_PATHS=(
   'flow-typed'
   'modules'
   ':!modules/big-dig*'
-  ':!modules/nuclide-adb'
   ':!modules/nuclide-debugger-cli'
   ':!modules/nuclide-debugger-vsps'
   ':!modules/nuclide-watchman-helpers'
