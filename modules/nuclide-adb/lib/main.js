@@ -10,16 +10,7 @@
  * @format
  */
 
-import createPackage from 'nuclide-commons-atom/createPackage';
-import {setRpcService} from './utils';
+export type {DBPlatform} from './types';
 
-class Activation {
-  constructor() {}
-  dispose() {}
-
-  consumeRpcService(rpcService: nuclide$RpcService): IDisposable {
-    return setRpcService(rpcService);
-  }
-}
-
-createPackage(module.exports, Activation);
+export {DevicePoller} from './DevicePoller';
+export {getAdbServiceByNuclideUri} from './utils';
