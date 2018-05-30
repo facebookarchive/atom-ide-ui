@@ -11,6 +11,7 @@
  */
 
 import type {IBreakpoint, IDebugService, IExceptionBreakpoint} from '../types';
+import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import invariant from 'assert';
@@ -23,6 +24,9 @@ import classnames from 'classnames';
 import {Icon} from 'nuclide-commons-ui/Icon';
 import {AnalyticsEvents} from '../constants';
 import {openSourceLocation} from '../utils';
+import {Section} from 'nuclide-commons-ui/Section';
+import featureConfig from 'nuclide-commons-atom/feature-config';
+import {observeProjectPaths} from 'nuclide-commons-atom/projects';
 
 type Props = {|
   service: IDebugService,
@@ -32,6 +36,8 @@ type State = {
   supportsConditionalBreakpoints: boolean,
   breakpoints: IBreakpoint[],
   exceptionBreakpoints: IExceptionBreakpoint[],
+  exceptionBreakpointsCollapsed: boolean,
+  activeProjects: NuclideUri[],
 };
 
 export default class BreakpointListComponent extends React.Component<
@@ -43,12 +49,39 @@ export default class BreakpointListComponent extends React.Component<
   constructor(props: Props) {
     super(props);
     this.state = this._computeState();
+    this._disposables = new UniversalDisposable(
+      observeProjectPaths((projectPath, added) => {
+        const newProjects = this.state.activeProjects;
+        if (added) {
+          newProjects.push(projectPath);
+        } else {
+          const index = newProjects.indexOf(projectPath);
+          if (index >= 0) {
+            newProjects.splice(index, 1);
+          }
+        }
+        this.setState({activeProjects: newProjects});
+      }),
+    );
   }
 
   _computeState(): State {
     const {service} = this.props;
     const {focusedProcess} = service.viewModel;
     const model = service.getModel();
+
+    const exceptionBreakpointsCollapsed = Boolean(
+      featureConfig.get('debugger-exceptionBreakpointsCollapsed'),
+    );
+
+    let newActiveProjects = [];
+    if (this.state != null) {
+      const {activeProjects} = this.state;
+      if (activeProjects != null) {
+        newActiveProjects = activeProjects;
+      }
+    }
+
     return {
       supportsConditionalBreakpoints:
         focusedProcess != null &&
@@ -57,12 +90,14 @@ export default class BreakpointListComponent extends React.Component<
         ),
       breakpoints: model.getBreakpoints(),
       exceptionBreakpoints: model.getExceptionBreakpoints(),
+      exceptionBreakpointsCollapsed,
+      activeProjects: newActiveProjects,
     };
   }
 
   componentDidMount(): void {
     const model = this.props.service.getModel();
-    this._disposables = new UniversalDisposable(
+    this._disposables.add(
       model.onDidChangeBreakpoints(() => {
         this.setState(this._computeState());
       }),
@@ -92,12 +127,22 @@ export default class BreakpointListComponent extends React.Component<
     openSourceLocation(uri, line - 1);
   };
 
+  _setExceptionCollapsed = (collapsed: boolean): void => {
+    featureConfig.set('debugger-exceptionBreakpointsCollapsed', collapsed);
+    this.setState({exceptionBreakpointsCollapsed: collapsed});
+  };
+
   render(): React.Node {
     const {
-      breakpoints,
       exceptionBreakpoints,
       supportsConditionalBreakpoints,
+      activeProjects,
     } = this.state;
+    const breakpoints = this.state.breakpoints.filter(breakpoint =>
+      activeProjects.some(projectPath =>
+        breakpoint.uri.startsWith(projectPath),
+      ),
+    );
     const {service} = this.props;
     const items = breakpoints
       .sort((breakpointA, breakpointB) => {
@@ -226,34 +271,41 @@ export default class BreakpointListComponent extends React.Component<
         );
       });
     const separator =
-      breakpoints.length !== 0 ? (
+      breakpoints.length !== 0 && !this.state.exceptionBreakpointsCollapsed ? (
         <hr className="nuclide-ui-hr debugger-breakpoint-separator" />
       ) : null;
     return (
       <div>
-        {exceptionBreakpoints.map(exceptionBreakpoint => {
-          return (
-            <div
-              className="debugger-breakpoint"
-              key={exceptionBreakpoint.getId()}>
-              <Checkbox
-                className={classnames(
-                  'debugger-breakpoint-checkbox',
-                  'debugger-exception-checkbox',
-                )}
-                onChange={enabled =>
-                  service.enableOrDisableBreakpoints(
-                    enabled,
-                    exceptionBreakpoint,
-                  )
-                }
-                checked={exceptionBreakpoint.enabled}
-              />
-              {exceptionBreakpoint.label ||
-                `${exceptionBreakpoint.filter} exceptions`}
-            </div>
-          );
-        })}
+        <Section
+          className="debugger-breakpoint-section"
+          headline="Exception breakpoints"
+          collapsable={true}
+          onChange={this._setExceptionCollapsed}
+          collapsed={this.state.exceptionBreakpointsCollapsed}>
+          {exceptionBreakpoints.map(exceptionBreakpoint => {
+            return (
+              <div
+                className="debugger-breakpoint"
+                key={exceptionBreakpoint.getId()}>
+                <Checkbox
+                  className={classnames(
+                    'debugger-breakpoint-checkbox',
+                    'debugger-exception-checkbox',
+                  )}
+                  onChange={enabled =>
+                    service.enableOrDisableBreakpoints(
+                      enabled,
+                      exceptionBreakpoint,
+                    )
+                  }
+                  checked={exceptionBreakpoint.enabled}
+                />
+                {exceptionBreakpoint.label ||
+                  `${exceptionBreakpoint.filter} exceptions`}
+              </div>
+            );
+          })}
+        </Section>
         {separator}
         <ListView
           alternateBackground={true}
