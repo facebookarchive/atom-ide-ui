@@ -75,7 +75,7 @@
     "eslint-plugin-prefer-object-spread": "1.2.1",
     "eslint-plugin-prettier": "2.3.1",
     "eslint-plugin-react": "7.4.0",
-    "flow-bin": "0.71.0",
+    "flow-bin": "0.73.0",
     "nyc": "11.2.1",
     "prettier": "1.12.1"
   },
