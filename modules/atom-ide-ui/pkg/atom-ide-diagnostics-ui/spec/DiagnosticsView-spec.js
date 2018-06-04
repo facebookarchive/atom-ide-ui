@@ -22,6 +22,7 @@ describe('DiagnosticsView', () => {
       <DiagnosticsView
         autoVisibility={true}
         diagnostics={[]}
+        descriptions={new Map()}
         filterByActiveTextEditor={false}
         gotoMessageLocation={() => {}}
         hiddenGroups={new Set()}
