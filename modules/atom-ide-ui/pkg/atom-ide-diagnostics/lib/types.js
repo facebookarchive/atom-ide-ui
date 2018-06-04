@@ -274,13 +274,13 @@ export type Action =
 
   // Description
   | {
-    type: 'FETCH_DESCRIPTIONS',
-    payload: {messages: Array<DiagnosticMessage>, keepDescriptions: boolean},
-  }
+      type: 'FETCH_DESCRIPTIONS',
+      payload: {messages: Array<DiagnosticMessage>, keepDescriptions: boolean},
+    }
   | {
-    type: 'SET_DESCRIPTIONS',
-    payload: {descriptions: DescriptionsState, keepDescriptions: boolean},
-  }
+      type: 'SET_DESCRIPTIONS',
+      payload: {descriptions: DescriptionsState, keepDescriptions: boolean},
+    }
 
   // Fixes
   | {
