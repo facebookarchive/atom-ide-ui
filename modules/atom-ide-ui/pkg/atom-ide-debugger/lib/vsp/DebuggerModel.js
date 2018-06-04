@@ -62,10 +62,10 @@ import type {
   IExceptionBreakpoint,
   IFunctionBreakpoint,
   ITreeElement,
-  IProcessConfig,
   IVariable,
   SourcePresentationHint,
 } from '../types';
+import type {IProcessConfig} from 'nuclide-debugger-common';
 import * as DebugProtocol from 'vscode-debugprotocol';
 
 import {Observable} from 'rxjs';
@@ -90,7 +90,6 @@ export class Source implements ISource {
     } else {
       this._raw = raw;
     }
-    this.available = this._raw.name !== UNKNOWN_SOURCE;
     if (this._raw.sourceReference != null && this._raw.sourceReference > 0) {
       this.uri = `${DEBUG_SOURCES_URI}/${sessionId}/${
         this._raw.sourceReference
@@ -98,6 +97,7 @@ export class Source implements ISource {
     } else {
       this.uri = this._raw.path || '';
     }
+    this.available = this.uri !== '';
   }
 
   get name(): ?string {
@@ -125,7 +125,7 @@ export class Source implements ISource {
   }
 
   openInEditor(): Promise<atom$TextEditor> {
-    // eslint-disable-next-line rulesdir/atom-apis
+    // eslint-disable-next-line nuclide-internal/atom-apis
     return atom.workspace.open(this.uri, {
       searchAllPanes: true,
       pending: true,
@@ -539,7 +539,9 @@ export class StackFrame implements IStackFrame {
 
   async _getScopesImpl(): Promise<Scope[]> {
     try {
-      const {body: {scopes}} = await this.thread.process.session.scopes({
+      const {
+        body: {scopes},
+      } = await this.thread.process.session.scopes({
         frameId: this.frameId,
       });
       return scopes.map(
@@ -1112,6 +1114,7 @@ export class Model implements IModel {
   async fetchCallStack(threadI: IThread): Promise<void> {
     const thread: Thread = (threadI: any);
     if (
+      // $FlowFixMe(>=0.68.0) Flow suppress (T27187857)
       nullthrows(thread.process).session.capabilities
         .supportsDelayedStackTraceLoading
     ) {

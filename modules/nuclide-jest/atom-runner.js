@@ -13,13 +13,9 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
-const {Console} = require('console');
-const electron = require('electron');
-const invariant = require('assert');
-// eslint-disable-next-line rulesdir/no-unresolved
 const jestCLI = require('jest-cli');
 const fs = require('fs');
 const os = require('os');
@@ -27,9 +23,6 @@ const path = require('path');
 
 const config = require('./jest.config.js');
 const {getPackage, getPackageFile} = require('./AtomJestUtils');
-
-const {ipcRenderer} = electron;
-invariant(ipcRenderer != null);
 
 module.exports = function(params) {
   const firstTestPath = params.testPaths[0];
@@ -51,22 +44,12 @@ module.exports = function(params) {
   });
 
   if (params.headless) {
-    // Patch `console` to output through the main process.
-    global.console = new Console(
-      /* stdout */ {
-        write(chunk) {
-          ipcRenderer.send('write-to-stdout', chunk);
-        },
-      },
-      /* stderr */ {
-        write(chunk) {
-          ipcRenderer.send('write-to-stderr', chunk);
-        },
-      }
-    );
+    // Patch `console` to output to stdout/stderr.
+    const patchAtomConsole = require('nuclide-commons/patch-atom-console');
+    patchAtomConsole();
   } else {
     try {
-      // eslint-disable-next-line rulesdir/modules-dependencies
+      // eslint-disable-next-line nuclide-internal/modules-dependencies
       require('nuclide-node-transpiler');
     } catch (e) {}
   }

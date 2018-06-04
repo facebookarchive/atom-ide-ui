@@ -77,6 +77,7 @@ type Color =
 export type Message = {
   text: string,
   level: Level,
+  format?: MessageFormat,
 
   // Internally used properties. These are subject to change so don't use em!
   data?: EvaluationResult,
@@ -121,13 +122,15 @@ export type OutputService = {
 //
 
 type MessageKind = 'message' | 'request' | 'response';
+type MessageFormat = 'ansi';
 
 // A normalized type used internally to represent all possible kinds of messages. Responses and
 // Messages are transformed into these.
-// Make sure areRecordsIdentical in reducers.js is up to date with these fields
+// Make sure shouldAccumulateRecordCount in Reducers.js is up to date with these fields
 export type Record = {
   text: string,
   level: Level,
+  format?: MessageFormat,
   tags?: ?Array<string>,
   repeatCount: number,
 
@@ -212,11 +215,6 @@ export type Executor = {
 
 export type RegisterExecutorFunction = (executor: Executor) => IDisposable;
 
-export type WatchEditorFunction = (
-  editor: atom$TextEditor,
-  labels?: Array<string>,
-) => IDisposable;
-
 export type PasteOptions = {
   language?: ?string,
   title?: ?string,
@@ -288,7 +286,7 @@ export type Action =
   | {
       type: 'SET_WATCH_EDITOR_FUNCTION',
       payload: {
-        watchEditor: ?WatchEditorFunction,
+        watchEditor: ?atom$AutocompleteWatchEditor,
       },
     }
   | {

@@ -38,6 +38,14 @@ type Props = {
 };
 
 export default class ConsoleHeader extends React.Component<Props> {
+  _filterComponent: ?RegExpFilter;
+
+  focusFilter = (): void => {
+    if (this._filterComponent != null) {
+      this._filterComponent.focus();
+    }
+  };
+
   _handleClearButtonClick = (event: SyntheticMouseEvent<>): void => {
     this.props.clear();
   };
@@ -139,6 +147,7 @@ export default class ConsoleHeader extends React.Component<Props> {
           className="inline-block"
           size={ButtonSizes.SMALL}
           onClick={this._handleCreatePasteButtonClick}
+          // eslint-disable-next-line nuclide-internal/jsx-simple-callback-refs
           ref={addTooltip({
             title: 'Creates a Paste from the current contents of the console',
           })}>
@@ -151,6 +160,7 @@ export default class ConsoleHeader extends React.Component<Props> {
         <ToolbarLeft>
           {sourceButton}
           <RegExpFilter
+            ref={component => (this._filterComponent = component)}
             value={{
               text: this.props.filterText,
               isRegExp: this.props.enableRegExpFilter,

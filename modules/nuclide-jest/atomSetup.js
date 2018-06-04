@@ -13,13 +13,13 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 const temp = require('temp');
 const {getPackage} = require('./AtomJestUtils');
 const pkg = getPackage(atom.getLoadSettings().testPaths[0]);
-const nuclideConfig = pkg.atomConfig || (pkg.nuclide && pkg.nuclide.config);
+const nuclideConfig = pkg.atomConfig || (pkg.nuclide && pkg.nuclide.config) || {};
 
 beforeEach(() => {
   // Since the FeatureLoader creates the config for all feature packages,
@@ -42,7 +42,7 @@ afterEach(() => {
        resolve();
        if (err && err.message !== 'not tracking') {
          // eslint-disable-next-line no-console
-         console.log(`temp.cleanup() failed. ${err}`);
+         console.log('temp.cleanup() failed.', err);
        }
      });
    });

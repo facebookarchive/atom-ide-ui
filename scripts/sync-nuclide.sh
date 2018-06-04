@@ -9,7 +9,9 @@ SYNC_PATHS=(
   'modules'
   ':!modules/big-dig*'
   ':!modules/nuclide-debugger-cli'
+  ':!modules/nuclide-debugger-vsps'
   ':!modules/nuclide-watchman-helpers'
+  ':!modules/atom-ide-debugger-*'
 )
 SYNC_BRANCH=nuclide-sync
 SYNC_MESSAGE="Sync with facebook/nuclide"
@@ -45,6 +47,12 @@ if [[ "$1" != "--continue" ]]; then
 else
   git am --continue
   HEAD_COMMIT=$(git rev-parse nuclide/master)
+fi
+
+echo "** Updating dependencies"
+scripts/update-deps.js && yarn
+if [ -n "$(git status --porcelain)" ]; then
+  git commit -a -m "Update dependencies"
 fi
 
 echo "** Merging back with master"

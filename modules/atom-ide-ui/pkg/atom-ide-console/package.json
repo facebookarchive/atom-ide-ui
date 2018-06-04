@@ -52,7 +52,7 @@
       "type": "string",
       "default": ""
     },
-    "consoleFontScale": {
+    "fontScale": {
       "title": "Font Scale",
       "description": "The scale of the font used in the console relative to the editor font size.",
       "type": "number",

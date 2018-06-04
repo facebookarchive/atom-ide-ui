@@ -13,7 +13,7 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 const rule = require('../api-spelling');
@@ -23,7 +23,7 @@ const ruleTester = new RuleTester({
   parser: 'babel-eslint',
 });
 
-ruleTester.run('atom-commands', rule, {
+ruleTester.run('api-spelling', rule, {
   valid: [
     {code: 'value.isInitialized'},
     {code: 'value.initialize()'},

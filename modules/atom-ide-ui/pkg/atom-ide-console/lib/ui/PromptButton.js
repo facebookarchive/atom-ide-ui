@@ -30,7 +30,13 @@ type Props = {
 };
 
 export default class PromptButton extends React.Component<Props> {
-  _disposables: IDisposable;
+  _menu: ?electron$Menu;
+
+  componentWillUnmount() {
+    if (this._menu != null) {
+      this._menu.closePopup();
+    }
+  }
 
   render(): React.Node {
     return (
@@ -42,7 +48,6 @@ export default class PromptButton extends React.Component<Props> {
   }
 
   _handleClick = (event: SyntheticMouseEvent<>): void => {
-    const currentWindow = remote.getCurrentWindow();
     const menu = new remote.Menu();
     // TODO: Sort alphabetically by label
     this.props.options.forEach(option => {
@@ -55,6 +60,7 @@ export default class PromptButton extends React.Component<Props> {
         }),
       );
     });
-    menu.popup(currentWindow, event.clientX, event.clientY);
+    menu.popup({x: event.clientX, y: event.clientY, async: true});
+    this._menu = menu;
   };
 }

@@ -14,7 +14,7 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 /* eslint-disable no-console */
 
@@ -56,7 +56,6 @@ function runParent() {
   const jsFiles = pathRules.getIncludedFiles(directory);
 
   // Sanity checks
-  assert(jsFiles.length > 0);
   jsFiles.forEach(filename => {
     assert(path.isAbsolute(filename));
   });

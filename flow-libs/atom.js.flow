@@ -70,6 +70,7 @@ declare class atom$Package {
   path: string,
   activateTime: number,
   mainModule: any,
+  mainModulePath: string,
   metadata: Object,
   name: string,
   loadTime: number,
@@ -82,6 +83,7 @@ declare class atom$Package {
   // Undocumented
   bundledPackage: boolean,
   getCanDeferMainModuleRequireStorageKey(): string,
+  initializeIfNeeded(): void,
 }
 
 /**
@@ -150,14 +152,20 @@ declare class atom$Config {
   // Config Subscription
   observe(
     keyPath: string,
-    optionsOrCallback?: Object | (value: any) => void,
-    callback?: (value: any) => void
+    optionsOrCallback?:
+      | {scope?: atom$ScopeDescriptorLike}
+      | (value: mixed) => void,
+    callback?: (value: mixed) => mixed,
   ): IDisposable,
 
   onDidChange(
-    keyPathOrCallback: string | (event: Object) => void,
-    optionsOrCallback?: Object | (event: Object) => void,
-    callback?: (event: Object) => void
+    keyPathOrCallback:
+      | string
+      | (event: {oldValue: mixed, newValue: mixed}) => mixed,
+    optionsOrCallback?:
+      | {scope?: atom$ScopeDescriptorLike}
+      | (event: {oldValue: mixed, newValue: mixed}) => mixed,
+    callback?: (event: {oldValue: mixed, newValue: mixed}) => mixed
   ): IDisposable,
 
   // Managing Settings
@@ -166,7 +174,7 @@ declare class atom$Config {
     options?: {
       excludeSources?: Array<string>,
       sources?: Array<string>,
-      scope?: Object,
+      scope?: atom$ScopeDescriptorLike,
     }
   ): mixed,
 
@@ -336,12 +344,15 @@ type atom$PackageMetadata = {
 };
 
 declare class atom$PackageManager {
+  +initialPackagesActivated: boolean,
+
   // Event Subscription
   onDidLoadInitialPackages(callback: () => void): IDisposable,
   onDidActivateInitialPackages(callback: () => void): IDisposable,
   onDidActivatePackage(callback: (pkg: atom$Package) => mixed): IDisposable,
   onDidDeactivatePackage(callback: (pkg: atom$Package) => mixed): IDisposable,
   onDidLoadPackage(callback: (pkg: atom$Package) => mixed): IDisposable,
+  onDidUnloadPackage(callback: (pkg: atom$Package) => mixed): IDisposable,
   onDidTriggerActivationHook(activationHook: string, callback: () => mixed): IDisposable,
 
   // Package system data
@@ -469,6 +480,7 @@ declare class atom$Pane {
   isActive(): boolean,
   activate(): void,
   destroy(): void,
+  isDestroyed(): void,
 
   // Splitting
   splitLeft(params?: atom$PaneSplitParams): atom$Pane,
@@ -640,6 +652,8 @@ declare class atom$ScopeDescriptor {
   constructor(object: {scopes: Array<string>}): void,
   getScopesArray(): Array<string>,
 }
+
+type atom$ScopeDescriptorLike = atom$ScopeDescriptor | Array<string>;
 
 /**
  * This API is defined at https://github.com/atom/status-bar.
@@ -1000,6 +1014,7 @@ declare class atom$TextEditor extends atom$Model {
   copySelectedText: () => void,
 
   // Managing Syntax Scopes
+  getRootScopeDescriptor(): atom$ScopeDescriptor,
   scopeDescriptorForBufferPosition(
     bufferPosition: atom$PointLike,
   ): atom$ScopeDescriptor,
@@ -1053,6 +1068,7 @@ declare class atom$TextEditor extends atom$Model {
   serialize(): Object,
   foldBufferRowRange(startRow: number, endRow: number): void,
   getNonWordCharacters(position?: atom$PointLike): string,
+  scheduleComponentUpdate(): void,
 }
 
 /**
@@ -1366,6 +1382,13 @@ declare class atom$WorkspaceCenter extends atom$AbstractPaneContainer {
 
   observeActivePaneItem(callback: atom$PaneItem => mixed): IDisposable;
   onDidChangeActivePaneItem(callback: (item: mixed) => mixed): IDisposable;
+  onDidAddTextEditor(
+    callback: (item: {
+      textEditor: atom$TextEditor,
+      pane: atom$Pane,
+      index: number,
+    }) => mixed,
+  ): IDisposable;
   // This should be removed soon anyway, it's currently deprecated.
   paneContainer: Object;
 }
@@ -1617,6 +1640,7 @@ declare class atom$KeymapManager {
 
   // Adding and Removing Bindings
   add(source: string, bindings: Object): IDisposable,
+  removeBindingsFromSource(source: string): void,
 
   // Accessing Bindings
   getKeyBindings(): Array<atom$KeyBinding>,
@@ -1655,16 +1679,19 @@ declare class atom$MenuManager {
   template: Array<Object>,
 }
 
+type atom$ProjectSpecification = {|
+  originPath?: string,
+  paths?: Array<string>,
+  config?: {[string]: mixed}
+|};
+
 declare class atom$Project {
   // Event Subscription
   onDidChangePaths(callback: (projectPaths: Array<string>) => mixed): IDisposable,
   onDidAddBuffer(callback: (buffer: atom$TextBuffer) => mixed): IDisposable,
+  onDidReplace((settings: atom$ProjectSpecification) => mixed): IDisposable,
   observeBuffers(callback: (buffer: atom$TextBuffer) => mixed): IDisposable,
-  replace?: (newSettings: {|
-    originPath?: string,
-    paths?: Array<string>,
-    config?: {[string]: mixed}
-  |}) => void,
+  replace?: (newSettings: atom$ProjectSpecification) => void,
   // Accessing the git repository
   getRepositories(): Array<?atom$Repository>,
   repositoryForDirectory(directory: atom$Directory): Promise<?atom$Repository>,
@@ -1854,6 +1881,7 @@ declare class atom$Notification {
   getMessage(): string,
   getOptions(): Object,
   dismiss(): void,
+  isDismissed(): boolean,
 }
 
 type atom$NotificationButton = {
@@ -1867,6 +1895,7 @@ type atom$NotificationOptions = {
   dismissable?: boolean,
   description?: string,
   icon?: string,
+  stack?: string,
   buttons?: Array<atom$NotificationButton>,
 };
 
@@ -2010,6 +2039,7 @@ declare class atom$Repository {
   getType: () => string,
   getPath: () => string,
   getWorkingDirectory: () => string,
+  getProjectDirectory: () => string,
   isProjectAtRoot: () => boolean,
   relativize: (aPath: string) => string,
   getOriginURL: (aPath: ?string) => ?string,
@@ -2062,6 +2092,7 @@ type atom$AutocompleteSuggestion = {
   className?: ?string,
   iconHTML?: ?string,
   description?: ?string,
+  descriptionMarkdown?: ?string,
   descriptionMoreURL?: ?string,
 };
 
@@ -2097,6 +2128,12 @@ type atom$SuggestionInsertedRequest = {
   +triggerPosition: atom$Point,
   +suggestion: atom$AutocompleteSuggestion,
 };
+
+// https://github.com/atom/autocomplete-plus/blob/master/README.md#the-watcheditor-api
+type atom$AutocompleteWatchEditor = (
+  editor: atom$TextEditor,
+  labels?: Array<string>,
+) => IDisposable;
 
 // Undocumented API.
 declare class atom$Token {

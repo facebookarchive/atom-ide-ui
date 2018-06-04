@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -75,6 +75,20 @@ describe('ConfigCache', () => {
       );
 
       expect(await cache.getConfigDir(rootFolder)).toBe(rootFolder);
+      expect(await cache.getConfigDir(nestedFolder2)).toBe(rootFolder);
+    });
+  });
+
+  it('matches first path segment when the search strategy is "pathMatch"', () => {
+    waitsForPromise(async () => {
+      const cache = new ConfigCache(
+        ['ConfigCache/testFolder', 'ConfigCache'],
+        'pathMatch',
+      );
+
+      // matches both patterns, tie-breaks with first one
+      expect(await cache.getConfigDir(nestedFolder)).toBe(nestedFolder);
+      // matches second pattern
       expect(await cache.getConfigDir(nestedFolder2)).toBe(rootFolder);
     });
   });

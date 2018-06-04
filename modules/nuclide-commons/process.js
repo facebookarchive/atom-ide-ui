@@ -721,7 +721,8 @@ export type TaskEvent =
 
 type CreateProcessStreamOptions = (
   | child_process$spawnOpts
-  | child_process$forkOpts) & {
+  | child_process$forkOpts
+) & {
   killTreeWhenDone?: ?boolean,
   timeout?: ?number,
   input?: ?(string | Observable<string>),
@@ -1040,7 +1041,7 @@ function createProcessStream(
           throw err;
         })
         .finally(() => {
-          // flowlint-next-line sketchy-null-mixed:off
+          // $FlowFixMe(>=0.68.0) Flow suppress (T27187857)
           if (!proc.wasKilled && !finished) {
             killProcess(proc, Boolean(killTreeWhenDone));
           }

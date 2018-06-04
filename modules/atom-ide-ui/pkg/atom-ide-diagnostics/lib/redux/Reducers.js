@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -82,6 +82,7 @@ export function messages(
     case Actions.FIXES_APPLIED: {
       const {messages: messagesToRemove, filePath} = action.payload;
 
+      // $FlowFixMe(>=0.68.0) Flow suppress (T27187857)
       if (messagesToRemove.length === 0) {
         return state;
       }
@@ -90,6 +91,7 @@ export function messages(
       let nextState;
       for (const [provider, pathsToMessages] of state) {
         const providerMessages = pathsToMessages.get(filePath);
+        // $FlowFixMe(>=0.68.0) Flow suppress (T27187857)
         if (providerMessages == null || providerMessages.size === 0) {
           // There aren't any messages for this provider, so we don't have to remove anything.
           continue;

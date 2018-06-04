@@ -10,13 +10,19 @@
  * @format
  */
 
-import type {DatatipService} from 'atom-ide-ui';
-import type {ConsoleService, RegisterExecutorFunction} from 'atom-ide-ui';
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
-import typeof * as VSCodeDebuggerAdapterService from 'nuclide-debugger-vsps/VSCodeDebuggerAdapterService';
+import type {
+  DatatipService,
+  ConsoleService,
+  RegisterExecutorFunction,
+  TerminalApi,
+} from 'atom-ide-ui';
+import type {
+  DebuggerConfigurationProvider,
+  IProcessConfig,
+  VsAdapterType,
+} from 'nuclide-debugger-common';
 
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
-import * as VSCodeDebuggerAdapterServiceLocal from 'nuclide-debugger-vsps/VSCodeDebuggerAdapterService';
 
 type raiseNativeNotificationFunc = ?(
   title: string,
@@ -29,8 +35,12 @@ let _raiseNativeNotification: ?raiseNativeNotificationFunc = null;
 let _registerExecutor: ?RegisterExecutorFunction = null;
 let _datatipService: ?DatatipService = null;
 let _createConsole: ?ConsoleService = null;
-let _terminalService: ?nuclide$TerminalApi = null;
+let _terminalService: ?TerminalApi = null;
 let _rpcService: ?nuclide$RpcService = null;
+const _configurationProviders: Map<
+  VsAdapterType,
+  DebuggerConfigurationProvider,
+> = new Map();
 
 export function setConsoleService(createConsole: ConsoleService): IDisposable {
   _createConsole = createConsole;
@@ -77,16 +87,14 @@ export function getNotificationService(): ?raiseNativeNotificationFunc {
   return _raiseNativeNotification;
 }
 
-export function setTerminalService(
-  terminalService: nuclide$TerminalApi,
-): IDisposable {
+export function setTerminalService(terminalService: TerminalApi): IDisposable {
   _terminalService = terminalService;
   return new UniversalDisposable(() => {
     _terminalService = null;
   });
 }
 
-export function getTerminalService(): ?nuclide$TerminalApi {
+export function getTerminalService(): ?TerminalApi {
   return _terminalService;
 }
 
@@ -97,15 +105,33 @@ export function setRpcService(rpcService: nuclide$RpcService): IDisposable {
   });
 }
 
-export function getVSCodeDebuggerAdapterServiceByNuclideUri(
-  uri: NuclideUri,
-): VSCodeDebuggerAdapterService {
-  if (_rpcService != null) {
-    return _rpcService.getServiceByNuclideUri(
-      'VSCodeDebuggerAdapterService',
-      uri,
+export function isNuclideEnvironment(): boolean {
+  return _rpcService != null;
+}
+
+export function addDebugConfigurationProvider(
+  provider: DebuggerConfigurationProvider,
+): IDisposable {
+  const existingProvider = _configurationProviders.get(provider.adapterType);
+  if (existingProvider != null) {
+    throw new Error(
+      'Debug Configuration Provider already exists for adapter type: ' +
+        provider.adapterType,
     );
-  } else {
-    return VSCodeDebuggerAdapterServiceLocal;
   }
+  _configurationProviders.set(provider.adapterType, provider);
+  return new UniversalDisposable(() => {
+    _configurationProviders.delete(provider.adapterType);
+  });
+}
+
+export async function resolveDebugConfiguration(
+  configuration: IProcessConfig,
+): Promise<IProcessConfig> {
+  const existingProvider = _configurationProviders.get(
+    configuration.adapterType,
+  );
+  return existingProvider != null
+    ? existingProvider.resolveConfiguration(configuration)
+    : configuration;
 }

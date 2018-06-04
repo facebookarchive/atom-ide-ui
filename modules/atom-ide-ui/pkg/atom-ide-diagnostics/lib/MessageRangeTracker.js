@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -15,7 +15,6 @@ import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import invariant from 'assert';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
-import {observeTextEditors} from 'nuclide-commons-atom/text-editor';
 import {MultiMap} from 'nuclide-commons/collection';
 
 /**
@@ -43,7 +42,7 @@ export default class MessageRangeTracker {
     this._fileToMessages = new MultiMap();
 
     this._disposables = new UniversalDisposable(
-      observeTextEditors(editor => {
+      atom.workspace.observeTextEditors(editor => {
         const path = editor.getPath();
         if (path == null) {
           return;

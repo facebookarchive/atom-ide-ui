@@ -13,12 +13,11 @@
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import invariant from 'assert';
+import {TextEditor} from 'atom';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {Observable} from 'rxjs';
-import semver from 'semver';
 
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
-import nuclideUri from 'nuclide-commons/nuclideUri';
 
 /**
  * Returns a text editor that has the given path open, or null if none exists. If there are multiple
@@ -188,32 +187,12 @@ export function enforceSoftWrap(
 }
 
 /**
- * Small wrapper around `atom.workspace.observeTextEditors` that filters out
- * uninitialized remote editors. Most callers should use this one instead.
+ * Checks if an object (typically an Atom pane) is a TextEditor.
+ * Could be replaced with atom.workspace.isValidTextEditor,
+ * but Flow doesn't support %checks in methods yet.
  */
-export function observeTextEditors(
-  callback: (editor: atom$TextEditor) => mixed,
-): IDisposable {
-  // The one place where atom.workspace.observeTextEditors needs to be used.
-  // eslint-disable-next-line rulesdir/atom-apis
-  return atom.workspace.observeTextEditors(editor => {
-    if (isValidTextEditor(editor)) {
-      callback(editor);
-    }
-  });
-}
-
-/**
- * Checks if an object (typically an Atom pane) is a TextEditor with a non-broken path.
- */
-export function isValidTextEditor(item: mixed): boolean {
-  // eslint-disable-next-line rulesdir/atom-apis
-  if (atom.workspace.isTextEditor(item)) {
-    return !nuclideUri.isBrokenDeserializedUri(
-      ((item: any): atom$TextEditor).getPath(),
-    );
-  }
-  return false;
+export function isValidTextEditor(item: mixed): boolean %checks {
+  return item instanceof TextEditor;
 }
 
 export function centerScrollToBufferLine(
@@ -239,20 +218,4 @@ export function centerScrollToBufferLine(
   textEditor.setCursorBufferPosition([bufferLineNumber, 0], {
     autoscroll: false,
   });
-}
-
-export function getNonWordCharacters(
-  editor: atom$TextEditor,
-  position?: atom$PointLike,
-): string {
-  if (semver.gte(atom.getVersion(), '1.24.0-beta0')) {
-    return editor.getNonWordCharacters(position);
-  } else {
-    // This used to take a scope descriptor.
-    const scope =
-      position == null
-        ? null
-        : editor.scopeDescriptorForBufferPosition(position);
-    return editor.getNonWordCharacters((scope: any));
-  }
 }

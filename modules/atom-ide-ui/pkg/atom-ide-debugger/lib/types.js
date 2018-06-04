@@ -41,16 +41,8 @@ SOFTWARE.
 */
 
 import type {Observable} from 'rxjs';
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import * as DebugProtocol from 'vscode-debugprotocol';
-import type {
-  DebuggerConfigAction,
-  DebuggerCapabilities,
-  DebuggerProperties,
-  MessageProcessor,
-  VsAdapterType,
-  VSAdapterExecutableInfo,
-} from 'nuclide-debugger-common';
+import type {IProcessConfig} from 'nuclide-debugger-common';
 
 export interface ITreeElement {
   getId(): string;
@@ -215,20 +207,6 @@ export interface IScope extends IExpressionContainer {
   +range: ?atom$Range;
 }
 
-export type IProcessConfig = {|
-  +targetUri: NuclideUri,
-  +debugMode: DebuggerConfigAction,
-  +adapterType: VsAdapterType,
-  +adapterExecutable: VSAdapterExecutableInfo,
-  // TODO(most): deprecate
-  +capabilities: DebuggerCapabilities,
-  // TODO(most): deprecate
-  +properties: DebuggerProperties,
-  +config: Object,
-  +clientPreprocessor?: ?MessageProcessor,
-  +adapterPreprocessor?: ?MessageProcessor,
-|};
-
 export interface IProcess extends ITreeElement {
   +configuration: IProcessConfig;
   +session: ISession & ITreeElement;
@@ -287,6 +265,9 @@ export interface IViewModel {
 
   onDidFocusProcess(callback: (process: ?IProcess) => mixed): IDisposable;
   onDidFocusStackFrame(
+    callback: (data: {stackFrame: ?IStackFrame, explicit: boolean}) => mixed,
+  ): IDisposable;
+  onDidChangeExpressionContext(
     callback: (data: {stackFrame: ?IStackFrame, explicit: boolean}) => mixed,
   ): IDisposable;
 }
@@ -492,8 +473,7 @@ export type IRawModelUpdate = IRawStopppedUpdate | IRawThreadUpdate;
 
 export interface IRawStoppedDetails {
   reason?: string;
-  // Experimental: https://github.com/Microsoft/vscode-debugadapter-node/issues/147
-  threadCausedFocus?: boolean;
+  preserveFocusHint?: boolean;
   description?: string;
   threadId?: number;
   text?: string;

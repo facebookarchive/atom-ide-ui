@@ -472,13 +472,16 @@ declare class electron$Menu {
   static getApplicationMenu(): ?electron$Menu,
   static sendActionToFirstResponder(action: string): void,
   static buildFromTemplate(templates: Array<electron$MenuItemOptions>): electron$Menu,
-  popup(
-    browserWindow: electron$BrowserWindow,
+  popup({|
+    window?: electron$BrowserWindow,
     x?: number,
     y?: number,
     positioningItem?: number,
-  ): void,
-  popup(x?: number, y?: number, positioningItem?: number): void,
+    callback?: Function,
+    // Note: this is always true in Electron 2.0+.
+    async?: boolean,
+  |}): void,
+  closePopup(window?: electron$BrowserWindow): void,
   append(menuItem: electron$MenuItem): void,
   insert(pos: number, menuItem: electron$MenuItem): void,
   items: Array<electron$MenuItem>,
@@ -771,6 +774,7 @@ declare class electron$IpcRenderer {
   removeAllListeners(channel?: string): electron$IpcRenderer,
   send(channel: string, ...args: Array<any>): void,
   sendSync(channel: string, ...args: Array<any>): void,
+  sendTo(windowId: number, channel: string, ...args: Array<any>): void,
   sendToHost(channel: string, ...args: Array<any>): void,
 }
 
@@ -849,10 +853,6 @@ declare class electron$NativeImage {
   getSize(): {width: number, height: number},
   setTemplateImage(option: boolean): void,
   isTemplateImage(): boolean,
-  // Deprecated, but Atom is behind - so keep them around.
-  toPng(): Uint8Array,
-  toJpeg(quality: number): Uint8Array,
-  toDataUrl(): string,
 }
 
 /**

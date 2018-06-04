@@ -13,15 +13,13 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 // Slightly derived from https://github.com/nhunzaker/jest-electron-environment
 // which is licensed MIT.
 
-// eslint-disable-next-line rulesdir/no-unresolved
 const mock = require('jest-mock');
-// eslint-disable-next-line rulesdir/no-unresolved
 const {FakeTimers, installCommonGlobals} = require('jest-util');
 
 class AtomJestEnvironment {

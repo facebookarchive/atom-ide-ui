@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict
  * @format
  */
 
@@ -43,14 +43,14 @@
 
 export function scrollIntoView(el: Element, alignToTop?: boolean): void {
   const scrollTops = getScrollTops(el);
-  el.scrollIntoView(alignToTop); // eslint-disable-line rulesdir/dom-apis
+  el.scrollIntoView(alignToTop); // eslint-disable-line nuclide-internal/dom-apis
   restoreOverflowHiddenScrollTops(scrollTops);
 }
 
 export function scrollIntoViewIfNeeded(el: Element, center?: boolean): void {
   const scrollTops = getScrollTops(el);
   // $FlowIgnore: This should be added to the element type.
-  el.scrollIntoViewIfNeeded(center); // eslint-disable-line rulesdir/dom-apis
+  el.scrollIntoViewIfNeeded(center); // eslint-disable-line nuclide-internal/dom-apis
   restoreOverflowHiddenScrollTops(scrollTops);
 }
 
@@ -75,6 +75,7 @@ function restoreOverflowHiddenScrollTops(
 }
 
 function isOverflowHidden(el: Element): boolean {
+  // $FlowFixMe(>=0.68.0) Flow suppress (T27187857)
   const overflowStyle = el.style == null ? null : (el.style: any).overflow;
   const overflow = overflowStyle || getComputedStyle(el).overflow;
   return overflow === 'hidden';

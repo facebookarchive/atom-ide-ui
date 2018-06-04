@@ -26,7 +26,7 @@ type Props = {
   /** Icon name, without the `icon-` prefix. E.g. `'arrow-up'` */
   icon?: IconName,
   /** Optional specifier for special buttons, e.g. primary, info, success or error buttons. */
-  buttonType?: ButtonType,
+  buttonType?: ?ButtonType,
   selected?: boolean,
   /**  */
   size?: ButtonSize,
@@ -108,6 +108,7 @@ export class Button extends React.Component<Props> {
       // $FlowFixMe(>=0.53.0) Flow suppress
       <Wrapper
         className={newClassName}
+        // eslint-disable-next-line nuclide-internal/jsx-simple-callback-refs
         ref={ref}
         {...remainingProps}
         title={titleToolTip}>

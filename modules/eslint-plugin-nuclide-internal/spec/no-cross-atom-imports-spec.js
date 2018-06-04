@@ -13,7 +13,7 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 /* eslint-disable max-len */
@@ -1487,6 +1487,16 @@ ruleTester.run('no-cross-atom-imports', rule, {
     },
     {
       code: 'require("../nuclide-fake-atom-package-2/package.json");',
+      filename: path.join(__dirname, 'nuclide-fake-atom-package-1/index.js'),
+      errors: [
+        {
+          message: 'Atom package "nuclide-fake-atom-package-2" is not requireable from other packages.',
+          type: 'CallExpression',
+        },
+      ],
+    },
+    {
+      code: 'require.resolve("../nuclide-fake-atom-package-2/package.json");',
       filename: path.join(__dirname, 'nuclide-fake-atom-package-1/index.js'),
       errors: [
         {

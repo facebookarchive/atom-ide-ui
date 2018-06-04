@@ -61,6 +61,11 @@
         "0.0.0": "consumeDebuggerProvider"
       }
     },
+    "debugger.configurator": {
+      "versions": {
+        "0.0.0": "consumeDebuggerConfigurationProvider"
+      }
+    },
     "nuclide-current-working-directory": {
       "versions": {
         "0.0.0": "consumeCurrentWorkingDirectory"

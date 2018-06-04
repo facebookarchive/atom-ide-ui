@@ -30,26 +30,27 @@ type Separator = {
   type: 'separator',
 };
 
-export type Option =
-  | Separator
-  | {
-      type?: void,
-      value: any,
-      label: string,
-      selectedLabel?: string,
-      submenu?: void,
-      icon?: IconName,
-      iconset?: string,
-      disabled?: boolean,
-    }
-  | {
-      type: 'submenu',
-      label: string,
-      submenu: Array<Option>,
-      icon?: IconName,
-      iconset?: string,
-      disabled?: boolean,
-    };
+export type MenuItem = {
+  type?: void,
+  value: any,
+  label: string,
+  selectedLabel?: string,
+  submenu?: void,
+  icon?: IconName,
+  iconset?: string,
+  disabled?: boolean,
+};
+
+type SubMenuItem = {
+  type: 'submenu',
+  label: string,
+  submenu: Array<Option>,
+  icon?: IconName,
+  iconset?: string,
+  disabled?: boolean,
+};
+
+export type Option = Separator | MenuItem | SubMenuItem;
 
 type Props = {
   className: string,
@@ -84,6 +85,24 @@ export class Dropdown extends React.Component<Props> {
     value: (null: any),
     title: '',
   };
+
+  // Make sure that menus don't outlive the dropdown.
+  _menu: ?electron$Menu;
+
+  componentWillUnmount() {
+    this._closeMenu();
+  }
+
+  componentDidUpdate() {
+    this._closeMenu();
+  }
+
+  _closeMenu() {
+    if (this._menu != null) {
+      this._menu.closePopup();
+      this._menu = null;
+    }
+  }
 
   render(): React.Node {
     const {label: providedLabel, options, placeholder} = this.props;
@@ -135,9 +154,8 @@ export class Dropdown extends React.Component<Props> {
   }
 
   _handleDropdownClick = (event: SyntheticMouseEvent<>): void => {
-    const currentWindow = remote.getCurrentWindow();
-    const menu = this._menuFromOptions(this.props.options);
-    menu.popup(currentWindow, event.clientX, event.clientY);
+    this._menu = this._menuFromOptions(this.props.options);
+    this._menu.popup({x: event.clientX, y: event.clientY, async: true});
   };
 
   _menuFromOptions(options: $ReadOnlyArray<Option>): remote.Menu {

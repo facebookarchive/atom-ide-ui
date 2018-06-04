@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -15,13 +15,21 @@ export type {
   ControlButtonSpecification,
   DebuggerCapabilities,
   DebuggerConfigAction,
+  DebuggerConfigurationProvider,
   DebuggerProperties,
+  Device,
+  DevicePanelServiceApi,
+  IProcessConfig,
   IVspInstance,
   MessageProcessor,
   NuclideDebuggerProvider,
   VSAdapterExecutableInfo,
   VsAdapterType,
 } from './types';
+
+export {
+  getVSCodeDebuggerAdapterServiceByNuclideUri,
+} from './debug-adapter-service';
 
 export {
   default as DebuggerLaunchAttachProvider,

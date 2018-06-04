@@ -23,7 +23,8 @@ import V8Protocol from './V8Protocol';
 import {Observable, Subject} from 'rxjs';
 import idx from 'idx';
 import invariant from 'assert';
-import {trackTiming} from 'nuclide-commons/analytics';
+import {track, trackTiming} from 'nuclide-commons/analytics';
+import uuid from 'uuid';
 
 export interface AdapterExitedEvent extends DebugProtocol.DebugEvent {
   event: 'adapter-exited';
@@ -44,6 +45,10 @@ function raiseAdapterExitedEvent(exitCode: number): AdapterExitedEvent {
     body: {exitCode},
   };
 }
+
+type RunInTerminalHandler = (
+  arguments: DebugProtocol.RunInTerminalRequestArguments,
+) => Promise<void>;
 
 /**
  * Use V8 JSON-RPC protocol to send & receive messages
@@ -75,6 +80,7 @@ export default class VsDebugSession extends V8Protocol {
   _onDidLoadSource: Subject<DebugProtocol.LoadedSourceEvent>;
   _onDidCustom: Subject<DebugProtocol.DebugEvent>;
   _onDidEvent: Subject<DebugProtocol.Event | AdapterExitedEvent>;
+  _runInTerminalHandler: ?RunInTerminalHandler;
 
   constructor(
     id: string,
@@ -84,13 +90,18 @@ export default class VsDebugSession extends V8Protocol {
     spawner?: IVsAdapterSpawner,
     sendPreprocessors?: MessageProcessor[] = [],
     receivePreprocessors?: MessageProcessor[] = [],
+    runInTerminalHandler?: RunInTerminalHandler,
   ) {
     super(id, logger, sendPreprocessors, receivePreprocessors);
     this._adapterExecutable = adapterExecutable;
     this._logger = logger;
     this._readyForBreakpoints = false;
     this._spawner = spawner == null ? new VsAdapterSpawner() : spawner;
-    this._adapterAnalyticsExtras = {...adapterAnalyticsExtras};
+    this._adapterAnalyticsExtras = {
+      ...adapterAnalyticsExtras,
+      // $FlowFixMe flow doesn't consider uuid callable, but it is
+      debuggerSessionId: uuid(),
+    };
 
     this._onDidInitialize = new Subject();
     this._onDidStop = new Subject();
@@ -106,6 +117,7 @@ export default class VsDebugSession extends V8Protocol {
     this._onDidCustom = new Subject();
     this._onDidEvent = new Subject();
     this.capabilities = {};
+    this._runInTerminalHandler = runInTerminalHandler || null;
   }
 
   observeInitializeEvents(): Observable<DebugProtocol.InitializedEvent> {
@@ -180,8 +192,13 @@ export default class VsDebugSession extends V8Protocol {
     const operation = (): Promise<any> => {
       // Babel Bug: `super` isn't working with `async`
       return super.send(command, args).then(
-        response => {
+        (response: DebugProtocol.Response) => {
           this._logger.info('Received response:', response);
+          track('vs-debug-session:transaction', {
+            ...this._adapterAnalyticsExtras,
+            request: {command, arguments: args},
+            response,
+          });
           return response;
         },
         (errorResponse: DebugProtocol.ErrorResponse) => {
@@ -198,6 +215,11 @@ export default class VsDebugSession extends V8Protocol {
               `adapterExecutable: , ${JSON.stringify(this._adapterExecutable)}`,
             ].join(', ');
           }
+          track('vs-debug-session:transaction', {
+            ...this._adapterAnalyticsExtras,
+            request: {command, arguments: args},
+            response: errorResponse,
+          });
           throw new Error(formattedError);
         },
       );
@@ -218,6 +240,11 @@ export default class VsDebugSession extends V8Protocol {
       // $FlowFixMe `event.body` type def.
       event.body = {sessionId: this.getId()};
     }
+
+    track('vs-debug-session:transaction', {
+      ...this._adapterAnalyticsExtras,
+      event,
+    });
 
     this._onDidEvent.next(event);
 
@@ -453,12 +480,26 @@ export default class VsDebugSession extends V8Protocol {
     return (new Date().getTime() - this._startTime) / 1000;
   }
 
-  dispatchRequest(
+  async dispatchRequest(
     request: DebugProtocol.Request,
     response: DebugProtocol.Response,
-  ): void {
+  ): Promise<void> {
     if (request.command === 'runInTerminal') {
-      this._logger.error('TODO: runInTerminal', request);
+      const runInTerminalHandler = this._runInTerminalHandler;
+      if (runInTerminalHandler == null) {
+        this._logger.error(
+          "'runInTerminal' isn't supported for this debug session",
+          request,
+        );
+        return;
+      }
+      try {
+        await runInTerminalHandler((request.arguments: any));
+      } catch (error) {
+        response.success = false;
+        response.message = error.message;
+      }
+      this.sendResponse(response);
     } else if (request.command === 'handshake') {
       this._logger.error('TODO: handshake', request);
     } else {

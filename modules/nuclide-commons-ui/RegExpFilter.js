@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -66,7 +66,9 @@ export default class RegExpFilter extends React.Component<Props, State> {
   }
 
   render(): React.Node {
-    const {value: {text, isRegExp, invalid}} = this.props;
+    const {
+      value: {text, isRegExp, invalid},
+    } = this.props;
     const size = this.props.size || 'sm';
     const buttonSize = getButtonSize(size);
     const inputWidth =

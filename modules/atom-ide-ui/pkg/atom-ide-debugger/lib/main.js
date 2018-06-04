@@ -14,19 +14,19 @@ import type {
   DebuggerConfigAction,
   DebuggerLaunchAttachProvider,
   NuclideDebuggerProvider,
+  DebuggerConfigurationProvider,
 } from 'nuclide-debugger-common';
 import type {
   ConsoleService,
   DatatipProvider,
   DatatipService,
   RegisterExecutorFunction,
+  TerminalApi,
 } from 'atom-ide-ui';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {SerializedState, IBreakpoint} from './types';
 
-import {observableFromSubscribeFunction} from 'nuclide-commons/event';
-import {diffSets} from 'nuclide-commons/observable';
-import {Observable} from 'rxjs';
+import {observeRemovedHostnames} from 'nuclide-commons-atom/projects';
 import BreakpointManager from './BreakpointManager';
 import {AnalyticsEvents, DebuggerMode} from './constants';
 import BreakpointConfigComponent from './ui/BreakpointConfigComponent';
@@ -51,6 +51,7 @@ import {
   setDatatipService,
   setTerminalService,
   setRpcService,
+  addDebugConfigurationProvider,
 } from './AtomServiceContainer';
 import {wordAtPosition, trimRange} from 'nuclide-commons-atom/range';
 import DebuggerLayoutManager from './ui/DebuggerLayoutManager';
@@ -89,17 +90,22 @@ class Activation {
     this._connectionProviders = new Map();
     this._layoutManager = new DebuggerLayoutManager(this._service, state);
 
-    const removedHostnames = observableFromSubscribeFunction(
-      atom.project.onDidChangePaths.bind(atom.project),
-    )
-      .map(
-        paths =>
-          new Set(
-            paths.filter(nuclideUri.isRemote).map(nuclideUri.getHostname),
-          ),
-      )
-      .let(diffSets())
-      .flatMap(diff => Observable.from(diff.removed));
+    // Manually manipulate the `Debugger` top level menu order.
+    const insertIndex = atom.menu.template.findIndex(
+      item => item.role === 'window' || item.role === 'help',
+    );
+    if (insertIndex !== -1) {
+      const deuggerIndex = atom.menu.template.findIndex(
+        item => item.label === 'Debugger',
+      );
+      const menuItem = atom.menu.template.splice(deuggerIndex, 1)[0];
+      const newIndex =
+        insertIndex > deuggerIndex ? insertIndex - 1 : insertIndex;
+      atom.menu.template.splice(newIndex, 0, menuItem);
+      atom.menu.update();
+    }
+
+    const removedHostnames = observeRemovedHostnames();
 
     this._disposables = new UniversalDisposable(
       this._layoutManager,
@@ -502,16 +508,9 @@ class Activation {
     return disposable;
   }
 
-  _isReadonlyTarget(): boolean {
-    const {focusedProcess} = this._service.viewModel;
-    return focusedProcess == null
-      ? false
-      : focusedProcess.configuration.capabilities.readOnlyTarget;
-  }
-
   _continue() {
     const {focusedThread} = this._service.viewModel;
-    if (!this._isReadonlyTarget() && focusedThread != null) {
+    if (focusedThread != null) {
       track(AnalyticsEvents.DEBUGGER_STEP_CONTINUE);
       focusedThread.continue();
     }
@@ -527,7 +526,7 @@ class Activation {
 
   _stepOver() {
     const {focusedThread} = this._service.viewModel;
-    if (!this._isReadonlyTarget() && focusedThread != null) {
+    if (focusedThread != null) {
       track(AnalyticsEvents.DEBUGGER_STEP_OVER);
       focusedThread.next();
     }
@@ -535,7 +534,7 @@ class Activation {
 
   _stepInto() {
     const {focusedThread} = this._service.viewModel;
-    if (!this._isReadonlyTarget() && focusedThread != null) {
+    if (focusedThread != null) {
       track(AnalyticsEvents.DEBUGGER_STEP_INTO);
       focusedThread.stepIn();
     }
@@ -543,7 +542,7 @@ class Activation {
 
   _stepOut() {
     const {focusedThread} = this._service.viewModel;
-    if (!this._isReadonlyTarget() && focusedThread != null) {
+    if (focusedThread != null) {
       track(AnalyticsEvents.DEBUGGER_STEP_OUT);
       focusedThread.stepOut();
     }
@@ -827,7 +826,7 @@ class Activation {
     return setConsoleService(createConsole);
   }
 
-  consumeTerminal(terminalApi: nuclide$TerminalApi): IDisposable {
+  consumeTerminal(terminalApi: TerminalApi): IDisposable {
     return setTerminalService(terminalApi);
   }
 
@@ -846,6 +845,12 @@ class Activation {
     return new UniversalDisposable(() => {
       this._uiModel.removeDebuggerProvider(provider);
     });
+  }
+
+  consumeDebuggerConfigurationProvider(
+    provider: DebuggerConfigurationProvider,
+  ): IDisposable {
+    return addDebugConfigurationProvider(provider);
   }
 
   consumeToolBar(getToolBar: toolbar$GetToolbar): IDisposable {

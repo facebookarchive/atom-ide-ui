@@ -13,7 +13,7 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 /**
@@ -25,25 +25,13 @@
  * Tests will have to mock out Atom configs if they rely on these.
  */
 
-// TODO(#21523621): Use a regular require once Yarn workspaces are enforced
-// eslint-disable-next-line rulesdir/modules-dependencies
-require('../nuclide-node-transpiler');
+// eslint-disable-next-line nuclide-internal/modules-dependencies
+require('nuclide-node-transpiler');
 
-// Patch `console` to output through the main process.
-const {Console} = require('console');
-const {ipcRenderer} = require('electron');
-global.console = new Console(
-  /* stdout */ {
-    write(chunk) {
-      ipcRenderer.send('write-to-stdout', chunk);
-    },
-  },
-  /* stderr */ {
-    write(chunk) {
-      ipcRenderer.send('write-to-stderr', chunk);
-    },
-  }
-);
+// Patch Atom's console to output to stdio.
+// eslint-disable-next-line nuclide-internal/modules-dependencies
+const patchAtomConsole = require('nuclide-commons/patch-atom-console');
+patchAtomConsole();
 
 module.exports = function(params) {
   return params.legacyTestRunner(params)
@@ -51,7 +39,7 @@ module.exports = function(params) {
       return new Promise(resolve => {
         const temp = require('temp');
         if (statusCode === 0) {
-          // eslint-disable-next-line rulesdir/modules-dependencies
+          // eslint-disable-next-line nuclide-internal/modules-dependencies
           const {writeCoverage} = require('../nuclide-commons/test-helpers');
           writeCoverage();
 
@@ -60,7 +48,7 @@ module.exports = function(params) {
             resolve(statusCode);
             if (err && err.message !== 'not tracking') {
               // eslint-disable-next-line no-console
-              console.log(`temp.cleanup() failed. ${err}`);
+              console.log('temp.cleanup() failed.', err);
             }
           });
         } else {

@@ -23,7 +23,9 @@ import type {
 } from 'nuclide-commons-ui/RegExpFilter';
 
 import analytics from 'nuclide-commons/analytics';
+import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import DiagnosticsTable from './DiagnosticsTable';
+import nullthrows from 'nullthrows';
 import showModal from 'nuclide-commons-ui/showModal';
 import {Toggle} from 'nuclide-commons-ui/Toggle';
 import {Toolbar} from 'nuclide-commons-ui/Toolbar';
@@ -66,10 +68,27 @@ export type Props = {
  * Dismissable panel that displays the diagnostics from nuclide-diagnostics-store.
  */
 export default class DiagnosticsView extends React.Component<Props> {
+  _diagnosticsTableWrapperEl: ?HTMLDivElement;
+  _disposables: ?UniversalDisposable;
+  _filterComponent: ?RegExpFilter;
   _table: ?DiagnosticsTable;
 
   shouldComponentUpdate(nextProps: Props): boolean {
     return nextProps.isVisible;
+  }
+
+  componentDidMount() {
+    this._disposables = new UniversalDisposable(
+      atom.commands.add(
+        nullthrows(this._diagnosticsTableWrapperEl),
+        'atom-ide:filter',
+        () => this._focusFilter(),
+      ),
+    );
+  }
+
+  componentWillUnmount() {
+    nullthrows(this._disposables).dispose();
   }
 
   render(): React.Element<any> {
@@ -121,6 +140,7 @@ export default class DiagnosticsView extends React.Component<Props> {
               ))}
             </ButtonGroup>
             <RegExpFilter
+              ref={component => (this._filterComponent = component)}
               value={this.props.textFilter}
               onChange={this.props.onTextFilterChange}
             />
@@ -156,19 +176,23 @@ export default class DiagnosticsView extends React.Component<Props> {
             />
           </ToolbarRight>
         </Toolbar>
-        <DiagnosticsTable
-          ref={table => {
-            this._table = table;
-          }}
-          showFileName={!this.props.filterByActiveTextEditor}
-          diagnostics={diagnostics}
-          descriptions={descriptions}
-          showDirectoryColumn={showDirectoryColumn}
-          showTraces={showTraces}
-          selectedMessage={this.props.selectedMessage}
-          selectMessage={this.props.selectMessage}
-          gotoMessageLocation={this.props.gotoMessageLocation}
-        />
+        <div
+          className="atom-ide-filterable"
+          ref={el => (this._diagnosticsTableWrapperEl = el)}>
+          <DiagnosticsTable
+            ref={table => {
+              this._table = table;
+            }}
+            showFileName={!this.props.filterByActiveTextEditor}
+            diagnostics={diagnostics}
+            descriptions={descriptions}
+            showDirectoryColumn={showDirectoryColumn}
+            showTraces={showTraces}
+            selectedMessage={this.props.selectedMessage}
+            selectMessage={this.props.selectMessage}
+            gotoMessageLocation={this.props.gotoMessageLocation}
+          />
+        </div>
       </div>
     );
   }
@@ -197,6 +221,12 @@ export default class DiagnosticsView extends React.Component<Props> {
       'diagnostics:open-all-files-with-errors',
     );
   };
+
+  _focusFilter(): void {
+    if (this._filterComponent != null) {
+      this._filterComponent.focus();
+    }
+  }
 
   _handleFocus = (event: SyntheticMouseEvent<*>): void => {
     if (this._table == null) {

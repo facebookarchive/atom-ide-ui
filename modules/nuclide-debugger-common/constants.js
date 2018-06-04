@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -15,9 +15,10 @@ import type {VsAdapterType} from './types';
 export const VsAdapterTypes = Object.freeze({
   HHVM: 'hhvm',
   PYTHON: 'python',
-  REACT_NATIVE: 'react_native',
+  REACT_NATIVE: 'react-native',
   NODE: 'node',
   JAVA: 'java',
+  JAVA_ANDROID: 'java_android',
   PREPACK: 'prepack',
   OCAML: 'ocaml',
   MOBILEJS: 'mobilejs',

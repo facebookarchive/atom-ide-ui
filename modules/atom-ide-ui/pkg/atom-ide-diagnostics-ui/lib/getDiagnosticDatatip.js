@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -29,7 +29,7 @@ const gotoLine = (file: string, line: number) => goToLocation(file, {line});
 function makeDatatipComponent(
   messages: Array<DiagnosticMessage>,
   diagnosticUpdater: DiagnosticUpdater,
-): React.ComponentType<*> {
+): React.ComponentType<mixed> {
   const fixer = message => diagnosticUpdater.applyFix(message);
   return bindObservableAsProps(
     Observable.combineLatest(

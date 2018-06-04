@@ -1,6 +1,6 @@
 {
   "name": "atom-ide-ui",
-  "version": "0.5.1-dev",
+  "version": "0.7.1-dev",
   "description": "A suite of language service UIs for Atom.",
   "author": "NEEDS OWNER",
   "license": "BSD-3-Clause",
@@ -16,7 +16,6 @@
     "atom": ">= 1.17.0"
   },
   "dependencies": {
-    "async-to-generator": "1.1.0",
     "classnames": "2.2.5",
     "dompurify": "1.0.3",
     "fuzzaldrin-plus": "0.4.1",
@@ -24,14 +23,14 @@
     "immutable": "4.0.0-rc.9",
     "log4js": "1.1.1",
     "marked": "0.3.9",
-    "nuclide-commons": "0.5.1-dev",
-    "nuclide-commons-atom": "0.5.1-dev",
-    "nuclide-commons-ui": "0.5.1-dev",
-    "nuclide-debugger-common": "0.5.1-dev",
-    "nuclide-debugger-vsps": "0.5.1-dev",
+    "nuclide-commons": "0.7.1-dev",
+    "nuclide-commons-atom": "0.7.1-dev",
+    "nuclide-commons-ui": "0.7.1-dev",
+    "nuclide-debugger-common": "0.7.1-dev",
+    "nuclide-prebuilt-libs": "0.5.1",
     "nullthrows": "1.0.0",
-    "react": "16.2.0",
-    "react-dom": "16.2.0",
+    "react": "16.3.2",
+    "react-dom": "16.3.2",
     "react-virtualized": "9.13.0",
     "redux": "3.6.0",
     "reselect": "3.0.1",
@@ -40,7 +39,8 @@
     "shallowequal": "0.2.2",
     "strip-ansi": "3.0.1",
     "uuid": "3.0.1",
-    "vscode-debugprotocol": "1.24.0"
+    "vscode-debugprotocol": "1.24.0",
+    "xterm": "3.1.0"
   },
   "devDependencies": {
     "temp": "0.8.3"

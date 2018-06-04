@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -115,3 +115,13 @@ export type {
 export {
   default as DebuggerService,
 } from './pkg/atom-ide-debugger/lib/RemoteControlService';
+
+export type {
+  TerminalInfo,
+  TerminalInstance,
+  TerminalApi,
+} from './pkg/atom-ide-terminal/lib/types';
+
+export type {
+  Command as TerminalCommand,
+} from './pkg/atom-ide-terminal/lib/pty-service/rpc-types';

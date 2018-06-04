@@ -3,7 +3,7 @@ machine:
     PATH: "${PATH}:${HOME}/${CIRCLE_PROJECT_REPONAME}/node_modules/.bin"
     COVERAGE_DIR: "${HOME}/${CIRCLE_PROJECT_REPONAME}/.nyc_output"
   node:
-    version: 7.4.0
+    version: 8.9.3
 
 dependencies:
   override:

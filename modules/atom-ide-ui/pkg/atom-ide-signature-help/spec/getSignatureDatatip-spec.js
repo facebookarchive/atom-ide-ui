@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -40,7 +40,8 @@ describe('getSignatureDatatip', () => {
       markedStrings: [
         {
           type: 'markdown',
-          value: 'f&lt;T&gt;\\(\\_\\_arg\\_\\_, \\*args, **\\*\\*kwargs**\\)',
+          value:
+            'f&lt;T&gt;\\(\\_\\_arg\\_\\_, \\*args, <u>**\\*\\*kwargs**</u>\\)',
         },
         {type: 'markdown', value: 'parameter test'},
         {type: 'markdown', value: '**real markdown**'},
@@ -65,7 +66,7 @@ describe('getSignatureDatatip', () => {
       ),
     ).toEqual({
       markedStrings: [
-        {type: 'markdown', value: 'path\\(path, **path**, path\\)'},
+        {type: 'markdown', value: 'path\\(path, <u>**path**</u>, path\\)'},
       ],
       range,
     });

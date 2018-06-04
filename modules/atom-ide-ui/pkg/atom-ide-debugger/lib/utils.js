@@ -55,13 +55,25 @@ export async function openSourceLocation(
   path: string,
   line: number,
 ): Promise<atom$TextEditor> {
-  // eslint-disable-next-line rulesdir/atom-apis
+  // eslint-disable-next-line nuclide-internal/atom-apis
   const editor = await atom.workspace.open(path, {
     searchAllPanes: true,
     pending: true,
   });
+  if (editor == null) {
+    // Failed to open file. Return an empty text editor.
+    // eslint-disable-next-line nuclide-internal/atom-apis
+    return atom.workspace.open();
+  }
   editor.scrollToBufferPosition([line, 0]);
   editor.setCursorBufferPosition([line, 0]);
+
+  // Put the focus back in the console prompt.
+  atom.commands.dispatch(
+    atom.views.getView(atom.workspace),
+    'atom-ide-console:focus-console-prompt',
+  );
+
   return editor;
 }
 
@@ -161,4 +173,13 @@ export function onUnexpectedError(error: any) {
 
 export function capitalize(str: string): string {
   return str[0].toUpperCase() + str.slice(1);
+}
+
+export function notifyOpenDebugSession(): void {
+  atom.notifications.addInfo(
+    "Received a debug request, but there's an open debug session already!",
+    {
+      detail: 'Please terminate your existing debug session',
+    },
+  );
 }

@@ -11,8 +11,11 @@
  */
 /* global localStorage */
 
-import type {DebuggerLaunchAttachProvider} from 'nuclide-debugger-common';
-import type {DebuggerConfigAction} from 'nuclide-debugger-common';
+import type {
+  DebuggerConfigAction,
+  DebuggerLaunchAttachProvider,
+} from 'nuclide-debugger-common';
+import type {Tab} from 'nuclide-commons-ui/Tabs';
 
 import * as React from 'react';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
@@ -23,13 +26,24 @@ import {Dropdown} from 'nuclide-commons-ui/Dropdown';
 import Tabs from 'nuclide-commons-ui/Tabs';
 import {Observable} from 'rxjs';
 import invariant from 'assert';
+import {isNuclideEnvironment} from '../AtomServiceContainer';
+
+type ConnectionOption = {
+  value: string,
+  label: string,
+};
+
+type EnabledProvider = {|
+  provider: DebuggerLaunchAttachProvider,
+  debuggerName: string,
+|};
 
 type Props = {|
   +dialogMode: DebuggerConfigAction,
   +connection: string,
   +connectionChanged: (newValue: ?string) => void,
   // $FlowFixMe
-  +connectionOptions: Array<{value: string, label: string}>,
+  +connectionOptions: Array<ConnectionOption>,
   +providers: Map<string, Array<DebuggerLaunchAttachProvider>>,
   +dialogCloser: () => void,
 |};
@@ -37,10 +51,7 @@ type Props = {|
 type State = {
   selectedProviderTab: ?string,
   configIsValid: boolean,
-  enabledProviders: Array<{
-    provider: DebuggerLaunchAttachProvider,
-    debuggerName: string,
-  }>,
+  enabledProviders: Array<EnabledProvider>,
 };
 
 // TODO those should be managed by the debugger store state
@@ -161,23 +172,21 @@ export default class DebuggerLaunchAttachUI extends React.Component<
       ),
     )
       .filter(provider => provider != null)
-      .subscribe(provider => {
+      .map(provider => {
         invariant(provider != null);
-        const enabledProviders = this.state.enabledProviders.concat(
-          ...provider
-            .getCallbacksForAction(this.props.dialogMode)
-            .getDebuggerTypeNames()
-            .map(debuggerName => {
-              return {
-                provider,
-                debuggerName,
-              };
-            }),
-        );
-
-        this.setState({
-          enabledProviders,
-        });
+        return provider
+          .getCallbacksForAction(this.props.dialogMode)
+          .getDebuggerTypeNames()
+          .map(debuggerName => {
+            return {
+              provider,
+              debuggerName,
+            };
+          });
+      })
+      .scan((arr, provider) => arr.concat(provider), [])
+      .subscribe(enabledProviders => {
+        this.setState({enabledProviders});
       });
   }
 
@@ -187,7 +196,7 @@ export default class DebuggerLaunchAttachUI extends React.Component<
     });
   };
 
-  render(): React.Node {
+  _getTabsFromEnabledProviders(enabledProviders: EnabledProvider[]): Tab[] {
     const tabs = this.state.enabledProviders
       .map(debuggerType => ({
         name: debuggerType.debuggerName,
@@ -198,7 +207,35 @@ export default class DebuggerLaunchAttachUI extends React.Component<
         ),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
+    return tabs;
+  }
 
+  setState(
+    partialState: $Shape<State> | ((State, Props) => $Shape<State> | void),
+    callback?: () => mixed,
+  ): void {
+    if (typeof partialState === 'function') {
+      super.setState(partialState, callback);
+    } else {
+      const fullState = {
+        ...this.state,
+        ...partialState,
+      };
+      if (fullState.selectedProviderTab == null) {
+        const tabs = this._getTabsFromEnabledProviders(
+          fullState.enabledProviders,
+        );
+        if (tabs.length > 0) {
+          const firstTab = tabs[0];
+          fullState.selectedProviderTab = firstTab.name;
+        }
+      }
+      super.setState(fullState, callback);
+    }
+  }
+
+  render(): React.Node {
+    const tabs = this._getTabsFromEnabledProviders(this.state.enabledProviders);
     let providerContent = null;
     if (tabs.length > 0) {
       let selectedTab =
@@ -234,36 +271,36 @@ export default class DebuggerLaunchAttachUI extends React.Component<
           </div>
         </div>
       );
-
-      if (this.state.selectedProviderTab == null) {
-        // Select the first tab.
-        this.setState({selectedProviderTab: tabs[0].name});
-      }
     } else {
       // No debugging providers available.
       providerContent = (
         <div className="debugger-launch-attach-tabcontent">
-          There are no debuggers available.
+          No debuggers installed, look for available debuggers on{' '}
+          <a href="https://atom.io/packages/search?q=atom-ide-debugger-">
+            atom.io/packages
+          </a>
         </div>
       );
     }
 
     return (
       <div className="padded debugger-launch-attach-container">
-        <h1 className="debugger-launch-attach-header">
-          <span className="padded">
-            {this.props.dialogMode === 'attach'
-              ? 'Attach debugger to '
-              : 'Launch debugger on '}
-          </span>
-          <Dropdown
-            className="inline"
-            options={this.props.connectionOptions}
-            onChange={(value: ?string) => this.props.connectionChanged(value)}
-            size="xs"
-            value={this.props.connection}
-          />
-        </h1>
+        {isNuclideEnvironment() ? (
+          <h1 className="debugger-launch-attach-header">
+            <span className="padded">
+              {this.props.dialogMode === 'attach'
+                ? 'Attach debugger to '
+                : 'Launch debugger on '}
+            </span>
+            <Dropdown
+              className="inline"
+              options={this.props.connectionOptions}
+              onChange={(value: ?string) => this.props.connectionChanged(value)}
+              size="xs"
+              value={this.props.connection}
+            />
+          </h1>
+        ) : null}
         {providerContent}
         <div className="debugger-launch-attach-actions">
           <ButtonGroup>

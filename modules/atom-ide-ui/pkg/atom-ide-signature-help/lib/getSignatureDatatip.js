@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -55,9 +55,9 @@ export default function getSignatureDatatip(
         if (idx !== -1) {
           markedStrings[0].value =
             escapeMarkdown(activeSignature.label.substr(0, idx)) +
-            '**' +
+            '<u>**' +
             escapeMarkdown(activeParameter.label) +
-            '**' +
+            '**</u>' +
             escapeMarkdown(
               activeSignature.label.substr(idx + activeParameter.label.length),
             );

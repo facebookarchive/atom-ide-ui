@@ -13,13 +13,13 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 const path = require('path');
 const resolveFrom = require('resolve-from');
 
-// eslint-disable-next-line rulesdir/modules-dependencies
+// eslint-disable-next-line nuclide-internal/modules-dependencies
 const pkgJson = require('../../package.json');
 const {isRequire, ATOM_BUILTIN_PACKAGES} = require('./utils');
 const MODULES_DIR = path.dirname(__dirname);
@@ -33,8 +33,7 @@ module.exports = function(context) {
       !id.includes('/') &&
       !ATOM_BUILTIN_PACKAGES.has(id) &&
       !pkgJson.dependencies.hasOwnProperty(id) &&
-      (!filename.includes('/spec/') ||
-        !pkgJson.devDependencies.hasOwnProperty(id)) &&
+      !filename.includes('/spec/') &&
       !filename.includes('/scripts/') &&
       !filename.includes('.eslintrc.js') &&
       resolvedPath !== id &&

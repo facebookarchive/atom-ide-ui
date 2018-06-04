@@ -13,17 +13,21 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 const idx = require('idx');
 const path = require('path');
 const resolveFrom = require('resolve-from');
 
-const {ATOM_BUILTIN_PACKAGES, getPackage, isRequire} = require('./utils');
+const {
+  ATOM_BUILTIN_PACKAGES,
+  getPackage,
+  isRequire,
+  isRequireResolve,
+} = require('./utils');
 
 const MODULES_DIR = path.join(__dirname, '..', '..', 'modules');
-const ASYNC_TO_GENERATOR = 'async-to-generator';
 
 function isType(kind) {
   return kind === 'type' || kind === 'typeof';
@@ -88,16 +92,9 @@ module.exports = function(context) {
     }
   }
 
-  function checkAsyncToGenerator(node) {
-    if (node.async) {
-      checkDependency(node, ASYNC_TO_GENERATOR);
-    }
-  }
-
   return {
-    ArrowFunctionExpression: checkAsyncToGenerator,
     CallExpression(node) {
-      if (!isRequire(node)) {
+      if (!isRequire(node) && !isRequireResolve(node)) {
         return;
       }
       // require("…")
@@ -115,8 +112,6 @@ module.exports = function(context) {
         checkDependency(node, node.source.value);
       }
     },
-    FunctionDeclaration: checkAsyncToGenerator,
-    FunctionExpression: checkAsyncToGenerator,
     ImportDeclaration(node) {
       if (!isType(node.importKind)) {
         // import foo from "…"

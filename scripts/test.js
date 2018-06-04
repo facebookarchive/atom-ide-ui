@@ -14,7 +14,7 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 /* eslint-disable no-console */
 
@@ -26,9 +26,6 @@ const child_process = require('child_process');
 const {getModules} = require('./util');
 
 getModules().forEach(dirpath => {
-  if (dirpath.includes('nuclide-debugger-vsps')) {
-    return;
-  }
   console.log('Running tests for ' + dirpath);
   try {
     child_process.execFileSync('npm', ['test'], {

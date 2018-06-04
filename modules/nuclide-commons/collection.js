@@ -88,6 +88,19 @@ export function arrayFindLastIndex<T>(
 }
 
 /**
+ * Return the first index in array where subarray is equal to the next
+ * subarray-sized slice of array. Return -1 if no match is found.
+ */
+export function findSubArrayIndex<T>(
+  array: Array<T>,
+  subarr: Array<T>,
+): number {
+  return array.findIndex((_, offset) =>
+    arrayEqual(array.slice(offset, offset + subarr.length), subarr),
+  );
+}
+
+/**
  * Merges a given arguments of maps into one Map, with the latest maps
  * overriding the values of the prior maps.
  */
@@ -261,7 +274,7 @@ export function isEmpty(obj: Object): boolean {
  *
  * Based off the equivalent function in www.
  */
-export function keyMirror<T: Object>(obj: T): {[key: $Enum<T>]: $Enum<T>} {
+export function keyMirror<T: Object>(obj: T): $ObjMapi<T, <K>(k: K) => K> {
   const ret = {};
   Object.keys(obj).forEach(key => {
     ret[key] = key;
@@ -601,4 +614,23 @@ export function distinct<T>(array: T[], keyFn?: (t: T) => string): T[] {
     seenKeys.add(key);
     return true;
   });
+}
+
+export class DefaultMap<K, V> extends Map<K, V> {
+  _factory: () => V;
+
+  constructor(factory: () => V, iterable: ?Iterable<[K, V]>) {
+    super(iterable);
+    this._factory = factory;
+  }
+
+  get(key: K): V {
+    if (!this.has(key)) {
+      const value = this._factory();
+      this.set(key, value);
+      return value;
+    }
+    // If the key is present we must have a value of type V.
+    return (super.get(key): any);
+  }
 }

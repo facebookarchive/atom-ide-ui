@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -19,6 +19,7 @@ import * as Actions from './Actions';
 const RECORD_PROPERTIES_TO_COMPARE = [
   'text',
   'level',
+  'format',
   'scopeName',
   'sourceId',
   'kind',

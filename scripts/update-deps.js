@@ -14,7 +14,7 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 /* eslint-disable no-console */
 
@@ -58,26 +58,16 @@ function sortObject(obj) {
   return newObject;
 }
 
-// Core dev dependencies.
-const devDependencies = require(path.join(__dirname, 'devDependencies.json'));
-addDependencies(pkgJson.devDependencies, devDependencies, false);
-
 // Pull in dependencies from modules.
+const baseDependencies = {};
 modulePaths.forEach(dirpath => {
   const modulePkg = require(path.join(dirpath, 'package.json'));
-  addDependencies(pkgJson.dependencies, modulePkg.dependencies || {});
-  addDependencies(pkgJson.devDependencies, modulePkg.devDependencies || {});
-});
-
-// Don't list a dependency twice!
-Object.keys(pkgJson.devDependencies).forEach(dep => {
-  if (pkgJson.dependencies[dep]) {
-    delete pkgJson.devDependencies[dep];
+  if (modulePkg.private) {
+    return;
   }
+  addDependencies(baseDependencies, modulePkg.dependencies || {});
 });
-
-pkgJson.dependencies = sortObject(pkgJson.dependencies);
-pkgJson.devDependencies = sortObject(pkgJson.devDependencies);
+pkgJson.dependencies = sortObject(baseDependencies);
 
 fs.writeFileSync(
   require.resolve('../package.json'),

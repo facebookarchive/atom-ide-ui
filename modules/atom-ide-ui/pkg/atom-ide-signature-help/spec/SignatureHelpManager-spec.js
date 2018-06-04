@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -147,9 +147,17 @@ describe('SignatureHelpManager', () => {
       Object.defineProperty(escape, 'keyCode', {value: 27});
       editor.getElement().dispatchEvent(escape);
 
-      editor.insertText('x');
+      // Contains a trigger character, but has the wrong cursor.
+      editor.insertText('x(y');
       advanceClock(500); // debounce
       expect(signatureSpy.callCount).toBe(1);
+
+      // Test the autocomplete-plus scenario: insertion + selection
+      const startCol = editor.getCursorBufferPosition().column;
+      editor.insertText('abc(arg1, arg2)');
+      editor.setSelectedBufferRange([[0, startCol + 4], [0, startCol + 7]]);
+      advanceClock(1); // debounce
+      expect(signatureSpy.callCount).toBe(2);
     });
   });
 
@@ -166,6 +174,29 @@ describe('SignatureHelpManager', () => {
       advanceClock(1); // debounce
       expect(signatureSpy.callCount).toBe(1);
       expect(signatureSpy.calls[0].args).toEqual([editor, new Point(0, 1)]);
+    });
+  });
+
+  it('can be dynamically toggled via config', () => {
+    waitsForPromise(async () => {
+      atom.config.set('atom-ide-signature-help.enable', false);
+
+      editor.setText('test');
+      advanceClock(1); // debounce
+      const signatureSpy = testProvider.getSignatureHelp;
+      expect(signatureSpy.callCount).toBe(0);
+
+      editor.insertText('(');
+      expect(editor.getText()).toBe('test(');
+      advanceClock(1); // debounce
+      expect(signatureSpy.callCount).toBe(0);
+
+      atom.config.set('atom-ide-signature-help.enable', true);
+
+      editor.insertText('(');
+      expect(editor.getText()).toBe('test((');
+      advanceClock(1); // debounce
+      expect(signatureSpy.callCount).toBe(1);
     });
   });
 });

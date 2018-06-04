@@ -13,7 +13,7 @@
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  rulesdir/no-commonjs: 0,
+  nuclide-internal/no-commonjs: 0,
   */
 
 const path = require('path');
@@ -126,20 +126,6 @@ ruleTester.run('atom-commands', rule, {
       filename: 'in/a/nonspec/folder.js',
       errors: [{
         message: rule.DISALLOWED_WORKSPACE_METHODS.open,
-      }],
-    },
-    {
-      code: 'atom.workspace.observeTextEditors()',
-      filename: 'not-a-test.js',
-      errors: [{
-        message: rule.DISALLOWED_WORKSPACE_METHODS.observeTextEditors,
-      }],
-    },
-    {
-      code: 'atom.workspace.isTextEditor()',
-      filename: 'not-a-test.js',
-      errors: [{
-        message: rule.DISALLOWED_WORKSPACE_METHODS.isTextEditor,
       }],
     },
   ],
