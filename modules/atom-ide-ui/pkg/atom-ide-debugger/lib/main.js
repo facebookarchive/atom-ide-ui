@@ -25,6 +25,7 @@ import type {
 } from 'atom-ide-ui';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {SerializedState, IBreakpoint} from './types';
+import type {GatekeeperService} from 'nuclide-commons-atom/types';
 
 import {observeRemovedHostnames} from 'nuclide-commons-atom/projects';
 import BreakpointManager from './BreakpointManager';
@@ -443,6 +444,10 @@ class Activation {
     this._disposables.dispose();
   }
 
+  consumeGatekeeperService(service: GatekeeperService): IDisposable {
+    return this._layoutManager.consumeGatekeeperService(service);
+  }
+
   _registerCommandsContextMenuAndOpener(): UniversalDisposable {
     const disposable = new UniversalDisposable(
       atom.workspace.addOpener(uri => {
@@ -705,6 +710,7 @@ class Activation {
     const hostEl = document.createElement('div');
     const pane = atom.workspace.addModalPanel({
       item: hostEl,
+      className: 'debugger-config-dialog',
     });
 
     const parentEl: HTMLElement = (hostEl.parentElement: any);

@@ -10,9 +10,12 @@
  * @format
  */
 
+/* eslint-env browser */
+
 import invariant from 'assert';
 import {Emitter} from 'atom';
 import {shell, clipboard} from 'electron';
+import observePaneItemVisibility from 'nuclide-commons-atom/observePaneItemVisibility';
 import {
   observeAddedHostnames,
   observeRemovedHostnames,
@@ -22,6 +25,7 @@ import {Observable} from 'rxjs';
 import url from 'url';
 import {Terminal} from 'xterm';
 import * as Fit from 'xterm/lib/addons/fit/fit';
+import * as WebLinks from 'xterm/lib/addons/webLinks/webLinks';
 
 import {getPtyServiceByNuclideUri} from './AtomServiceContainer';
 import featureConfig from 'nuclide-commons-atom/feature-config';
@@ -67,6 +71,9 @@ const PRESERVED_COMMANDS_CONFIG = 'atom-ide-terminal.preservedCommands';
 const SCROLLBACK_CONFIG = 'atom-ide-terminal.scrollback';
 const CURSOR_STYLE_CONFIG = 'atom-ide-terminal.cursorStyle';
 const CURSOR_BLINK_CONFIG = 'atom-ide-terminal.cursorBlink';
+const OPTION_IS_META_CONFIG = 'atom-ide-terminal.optionIsMeta';
+const TRANSPARENCY_CONFIG = 'atom-ide-terminal.allowTransparency';
+const CHAR_ATLAS_CONFIG = 'atom-ide-terminal.charAtlas';
 const FONT_FAMILY_CONFIG = 'atom-ide-terminal.fontFamily';
 const FONT_SCALE_CONFIG = 'atom-ide-terminal.fontScale';
 const LINE_HEIGHT_CONFIG = 'atom-ide-terminal.lineHeight';
@@ -107,11 +114,15 @@ export class TerminalView implements PtyClient, TerminalInstance {
   _initialInput: string;
 
   constructor(paneUri: string) {
+    // Load the addons on-demand the first time we create a terminal.
     if (Terminal.fit == null) {
       // The 'fit' add-on resizes the terminal based on the container size
       // and the font size such that the terminal fills the container.
-      // Load the addon on-demand the first time we create a terminal.
       Terminal.applyAddon(Fit);
+    }
+    if (Terminal.webLinksInit == null) {
+      // The 'webLinks' add-on linkifies http URL strings.
+      Terminal.applyAddon(WebLinks);
     }
 
     this._paneUri = paneUri;
@@ -173,20 +184,16 @@ export class TerminalView implements PtyClient, TerminalInstance {
       cursorBlink: featureConfig.get(CURSOR_BLINK_CONFIG),
       cursorStyle: featureConfig.get(CURSOR_STYLE_CONFIG),
       scrollback: featureConfig.get(SCROLLBACK_CONFIG),
+      macOptionIsMeta: featureConfig.get(OPTION_IS_META_CONFIG),
+      allowTransparency: featureConfig.get(TRANSPARENCY_CONFIG),
+      experimentalCharAtlas: featureConfig.get(CHAR_ATLAS_CONFIG),
     }));
-    (div: any).terminal = terminal;
-    terminal.open(this._div);
-    terminal.setHypertextLinkHandler(openLink);
     terminal.attachCustomKeyEventHandler(
       this._checkIfKeyBoundOrDivertToXTerm.bind(this),
     );
-    this._subscriptions.add(() => terminal.destroy());
+    this._subscriptions.add(() => terminal.dispose());
+    terminal.webLinksInit(openLink);
     registerLinkHandlers(terminal, this._cwd);
-
-    if (featureConfig.get(DOCUMENTATION_MESSAGE_CONFIG)) {
-      const docsUrl = 'https://nuclide.io/docs/features/terminal';
-      terminal.writeln(`For more info check out the docs: ${docsUrl}`);
-    }
 
     this._subscriptions.add(
       atom.commands.add(div, 'core:copy', () => {
@@ -201,33 +208,6 @@ export class TerminalView implements PtyClient, TerminalInstance {
         this._addEscapePrefix.bind(this),
       ),
       atom.commands.add(div, 'atom-ide-terminal:clear', this._clear.bind(this)),
-      featureConfig
-        .observeAsStream(CURSOR_STYLE_CONFIG)
-        .skip(1)
-        .subscribe(cursorStyle =>
-          terminal.setOption('cursorStyle', cursorStyle),
-        ),
-      featureConfig
-        .observeAsStream(CURSOR_BLINK_CONFIG)
-        .skip(1)
-        .subscribe(cursorBlink =>
-          terminal.setOption('cursorBlink', cursorBlink),
-        ),
-      featureConfig
-        .observeAsStream(SCROLLBACK_CONFIG)
-        .skip(1)
-        .subscribe(scrollback => terminal.setOption('scrollback', scrollback)),
-      Observable.merge(
-        observableFromSubscribeFunction(cb =>
-          atom.config.onDidChange('editor.fontSize', cb),
-        ),
-        featureConfig.observeAsStream(FONT_SCALE_CONFIG).skip(1),
-        featureConfig.observeAsStream(FONT_FAMILY_CONFIG).skip(1),
-        featureConfig.observeAsStream(LINE_HEIGHT_CONFIG).skip(1),
-        Observable.fromEvent(this._terminal, 'focus'),
-        Observable.fromEvent(window, 'resize'),
-        new ResizeObservable(this._div),
-      ).subscribe(this._syncFontAndFit),
     );
 
     if (process.platform === 'win32') {
@@ -263,9 +243,61 @@ export class TerminalView implements PtyClient, TerminalInstance {
     (this._div: any).focus = () => terminal.focus();
     (this._div: any).blur = () => terminal.blur();
 
-    this._spawn(cwd)
-      .then(pty => this._onPtyFulfill(pty))
-      .catch(error => this._onPtyFail(error));
+    // Terminal.open only works after its div has been attached to the DOM,
+    // which happens in getElement, not in this constructor. Therefore delay
+    // open and spawn until the div is visible, which means it is in the DOM.
+    this._subscriptions.add(
+      observePaneItemVisibility(this)
+        .filter(Boolean)
+        .first()
+        .subscribe(() => {
+          terminal.open(this._div);
+          (div: any).terminal = terminal;
+          if (featureConfig.get(DOCUMENTATION_MESSAGE_CONFIG)) {
+            const docsUrl = 'https://nuclide.io/docs/features/terminal';
+            terminal.writeln(`For more info check out the docs: ${docsUrl}`);
+          }
+          terminal.focus();
+          this._subscriptions.add(this._subscribeFitEvents());
+          this._spawn(cwd)
+            .then(pty => this._onPtyFulfill(pty))
+            .catch(error => this._onPtyFail(error));
+        }),
+    );
+  }
+
+  _subscribeFitEvents(): UniversalDisposable {
+    return new UniversalDisposable(
+      featureConfig
+        .observeAsStream(CURSOR_STYLE_CONFIG)
+        .skip(1)
+        .subscribe(cursorStyle =>
+          this._terminal.setOption('cursorStyle', cursorStyle),
+        ),
+      featureConfig
+        .observeAsStream(CURSOR_BLINK_CONFIG)
+        .skip(1)
+        .subscribe(cursorBlink =>
+          this._terminal.setOption('cursorBlink', cursorBlink),
+        ),
+      featureConfig
+        .observeAsStream(SCROLLBACK_CONFIG)
+        .skip(1)
+        .subscribe(scrollback =>
+          this._terminal.setOption('scrollback', scrollback),
+        ),
+      Observable.merge(
+        observableFromSubscribeFunction(cb =>
+          atom.config.onDidChange('editor.fontSize', cb),
+        ),
+        featureConfig.observeAsStream(FONT_SCALE_CONFIG).skip(1),
+        featureConfig.observeAsStream(FONT_FAMILY_CONFIG).skip(1),
+        featureConfig.observeAsStream(LINE_HEIGHT_CONFIG).skip(1),
+        Observable.fromEvent(this._terminal, 'focus'),
+        Observable.fromEvent(window, 'resize'),
+        new ResizeObservable(this._div),
+      ).subscribe(this._syncFontAndFit),
+    );
   }
 
   _spawn(cwd: ?NuclideUri): Promise<Pty> {
@@ -802,10 +834,8 @@ function getTerminalColors(): {[$Keys<typeof COLOR_CONFIGS>]: string} {
 
 function getTerminalTheme(div: HTMLDivElement): any {
   const style = window.getComputedStyle(div);
-  const foreground = convertRgbToHash(style.getPropertyValue('color'));
-  const background = convertRgbToHash(
-    style.getPropertyValue('background-color'),
-  );
+  const foreground = style.getPropertyValue('color');
+  const background = style.getPropertyValue('background-color');
   // return type: https://git.io/vxooH
   return {
     foreground,
@@ -813,22 +843,4 @@ function getTerminalTheme(div: HTMLDivElement): any {
     cursor: foreground,
     ...getTerminalColors(),
   };
-}
-
-// Terminal only allows colors of the form '#rrggbb' or '#rgb' and falls back
-// to black otherwise. https://git.io/vNE8a  :-(
-const rgbRegex = / *rgb *\( *([0-9]+) *, *([0-9]+) *, *([0-9]+) *\) */;
-function convertRgbToHash(rgb: string): string {
-  const matches = rgb.match(rgbRegex);
-  if (matches == null) {
-    return rgb;
-  }
-  return (
-    '#' +
-    matches
-      .slice(1, 4)
-      .map(Number)
-      .map(n => (n < 0x10 ? '0' : '') + n.toString(16))
-      .join('')
-  );
 }

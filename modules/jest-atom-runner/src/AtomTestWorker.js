@@ -111,7 +111,24 @@ class AtomTestWorker {
       });
 
       this._childProcess = spawn('atom', ['-t', atomPathArg], {
-        stdio: ['inherit', 'inherit', 'inherit'],
+        stdio: [
+          'inherit',
+          // redirect child process' stdout to parent process stderr, so it
+          // doesn't break any tools that depend on stdout (like the ones
+          // that consume a generated JSON report from jest's stdout)
+          process.stderr,
+          'inherit',
+        ],
+      });
+
+      const crash = error => {
+        for (const {reject} of this._runningTests.values()) {
+          reject(error);
+        }
+      };
+      this._childProcess.on('error', crash);
+      this._childProcess.on('close', code => {
+        crash(new Error(`child process exited with code: ${code}`));
       });
     });
   }
@@ -145,7 +162,10 @@ class AtomTestWorker {
              `);
         }
 
-        runningTest.resolve(testResult);
+        testResult.testExecError != null
+          ? // $FlowFixMe jest expects it to be rejected with an object
+            runningTest.reject(testResult.testExecError)
+          : runningTest.resolve(testResult);
         this._runningTests.delete(testFilePath);
       }
     }
@@ -154,7 +174,7 @@ class AtomTestWorker {
   runTest(test: Test): Promise<TestResult> {
     if (this._runningTests.has(test.path)) {
       throw new Error(
-        "Can't run the same times in the same worker at the same time",
+        "Can't run the same test in the same worker at the same time",
       );
     }
     return new Promise((resolve, reject) => {

@@ -12,17 +12,41 @@
 
 /* eslint-disable nuclide-internal/no-commonjs */
 
-import JSDom from 'jest-environment-jsdom';
+import type {ProjectConfig} from './types';
 
-class Atom extends JSDom {
-  constructor(...args: any) {
-    super(...args);
-    this.global.atom = global.atom;
+import mock from 'jest-mock';
+
+class Atom {
+  global: Object;
+  moduleMocker: Object;
+  fakeTimers: Object;
+
+  constructor(config: ProjectConfig) {
+    this.global = global;
+    // __buildAtomGlobal should be set at the atom entry point. It depends
+    // on the data Atom test runner provides.
+    global.atom = global.__buildAtomGlobal();
+    this.moduleMocker = new mock.ModuleMocker(global);
+    this.fakeTimers = {
+      useFakeTimers() {
+        throw new Error('fakeTimers are not supproted in atom environment');
+      },
+    };
   }
 
   async setup() {
-    await super.setup();
-    await this.global.atom.reset();
+    // make sure we start from a clean state
+    window.document.body.innerHTML = '';
+  }
+
+  async teardown() {}
+
+  runScript(script: any): ?any {
+    // unfortunately electron crashes if we try to access anything
+    // on global from within a vm content. The only workaround i found
+    // is to lose sandboxing and run everything in a single context.
+    // We should look into using iframes/webviews in the future.
+    return script.runInThisContext();
   }
 }
 
