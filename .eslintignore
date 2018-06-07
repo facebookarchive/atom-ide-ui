@@ -3,3 +3,7 @@
 **/flow-libs/**
 **/flow-typed/**
 **/VendorLib/**
+
+# TODO: remove when fixed
+**/__atom_tests__/**
+**/__tests__/**

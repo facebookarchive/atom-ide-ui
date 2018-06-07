@@ -1,5 +1,11 @@
 # Changelog
 
+## Next Release
+
+- Updated xterm dependency to [3.4.1](https://github.com/xtermjs/xterm.js/releases/tag/3.4.1)
+- Disable text selection when dragging datatips (#264)
+- Fixed debugger attach/launch dialogs in some themes
+
 ## v0.12.0
 
 - Atom 1.25 is now the minimum required version.
