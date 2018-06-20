@@ -2,9 +2,26 @@
 
 ## Next Release
 
+### Terminal
+
 - Updated xterm dependency to [3.4.1](https://github.com/xtermjs/xterm.js/releases/tag/3.4.1)
+- Terminals now open in the bottom by default.
+- Added a 'new user experience' for the terminal icon in the toolbar (if available.)
+
+### Datatips
+
 - Disable text selection when dragging datatips (#264)
-- Fixed debugger attach/launch dialogs in some themes
+- Preserve newlines in markdown datatips.
+
+### Console
+
+- Added a new icon.
+- Fixed some color issues.
+
+### Debugger
+
+- Fixed debugger attach/launch dialogs in some themes.
+- Fixed inability to copy values from scopes pane.
 
 ## v0.12.0
 
