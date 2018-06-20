@@ -69,14 +69,14 @@ export function getNativeAutoGenConfig(
 ): AutoGenConfig {
   const program = {
     name: 'program',
-    type: 'string',
+    type: 'path',
     description: 'Input the program/executable you want to launch',
     required: true,
     visible: true,
   };
   const cwd = {
     name: 'cwd',
-    type: 'string',
+    type: 'path',
     description: 'Working directory for the launched executable',
     required: true,
     visible: true,
@@ -102,7 +102,7 @@ export function getNativeAutoGenConfig(
   };
   const sourcePath = {
     name: 'sourcePath',
-    type: 'string',
+    type: 'path',
     description: '(Optional) base path for sources',
     required: false,
     defaultValue: '',
@@ -122,6 +122,14 @@ export function getNativeAutoGenConfig(
     scriptExtension: '.c',
     cwdPropertyName: 'working directory',
     header: <p>Debug native programs {debugTypeMessage}.</p>,
+    getProcessName(values) {
+      let processName = values.program;
+      const lastSlash = processName.lastIndexOf('/');
+      if (lastSlash >= 0) {
+        processName = processName.substring(lastSlash + 1, processName.length);
+      }
+      return processName;
+    },
   };
 
   const pid = {
@@ -137,6 +145,9 @@ export function getNativeAutoGenConfig(
     threads: true,
     properties: [pid, sourcePath],
     header: <p>Attach to a running native process {debugTypeMessage}</p>,
+    getProcessName(values) {
+      return 'Pid: ' + values.pid + ' (' + debugTypeMessage + ')';
+    },
   };
   return {
     launch: autoGenLaunchConfig,

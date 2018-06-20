@@ -27,7 +27,7 @@ import nullthrows from 'nullthrows';
 // Debugger views
 import DebuggerControlsView from './DebuggerControlsView';
 import ThreadsView from './ThreadsView';
-import MultiTargettedDebuggingView from './MultiTargettedDebuggerView';
+import DebuggerProcessTreeView from './DebuggerProcessTreeView';
 import DebuggerCallstackComponent from './DebuggerCallstackComponent';
 import BreakpointsView from './BreakpointsView';
 import ScopesView from './ScopesView';
@@ -266,13 +266,16 @@ export default class DebuggerLayoutManager {
         title: () =>
           getFocusedProcess() == null
             ? 'Threads'
-            : nullthrows(getFocusedProcess()).configuration.properties
-                .threadsComponentTitle,
+            : nullthrows(getFocusedProcess()).configuration
+                .threadsComponentTitle || 'Threads',
         isEnabled: () =>
           getFocusedProcess() == null
             ? false
-            : nullthrows(getFocusedProcess()).configuration.capabilities
-                .threads,
+            : nullthrows(getFocusedProcess()).configuration.showThreads == null
+              ? true
+              : Boolean(
+                  nullthrows(getFocusedProcess()).configuration.showThreads,
+                ),
         createView: () => <ThreadsView service={this._service} />,
         debuggerModeFilter: (mode: DebuggerModeType) =>
           mode !== DebuggerMode.STOPPED,
@@ -390,12 +393,14 @@ export default class DebuggerLayoutManager {
       _gkService.passesGK('nuclide_multitarget_debugging').then(passes => {
         if (passes) {
           this._debuggerPanes.splice(1, 0, {
-            uri: DEBUGGER_URI_BASE + 'multitargetteddebugging',
+            uri: DEBUGGER_URI_BASE + 'multitargetteddebugger',
             isLifetimeView: false,
             defaultLocation: DEBUGGER_PANELS_DEFAULT_LOCATION,
-            title: () => 'Multi targetted debugging',
+            title: () => 'Multi-Targetted Debugger',
             isEnabled: () => true,
-            createView: () => <MultiTargettedDebuggingView />,
+            createView: () => (
+              <DebuggerProcessTreeView service={this._service} />
+            ),
           });
           if (this._debuggerVisible) {
             this.showDebuggerViews();

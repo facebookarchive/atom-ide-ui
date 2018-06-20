@@ -10,6 +10,7 @@
  * @format
  */
 
+import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {DebuggerConfigAction} from './types';
 import type {LaunchAttachProviderIsEnabled, AutoGenConfig} from './types';
 
@@ -25,7 +26,7 @@ const LaunchAttachProviderDefaultIsEnabled = (
   return Promise.resolve(config[action] != null);
 };
 
-export default class AutoGenLaunchAttachProvider extends DebuggerLaunchAttachProvider {
+export class AutoGenLaunchAttachProvider extends DebuggerLaunchAttachProvider {
   _config: AutoGenConfig;
   _isEnabled: LaunchAttachProviderIsEnabled;
 
@@ -40,6 +41,29 @@ export default class AutoGenLaunchAttachProvider extends DebuggerLaunchAttachPro
     this._isEnabled = isEnabled;
   }
 
+  async _resolvePath(project: NuclideUri, filePath: string): Promise<string> {
+    let rpcService: ?nuclide$RpcService = null;
+    // Atom's service hub is synchronous.
+    atom.packages.serviceHub
+      .consume('nuclide-rpc-services', '0.0.0', provider => {
+        rpcService = provider;
+      })
+      .dispose();
+    if (rpcService != null) {
+      const fsService = rpcService.getServiceByNuclideUri(
+        'FileSystemService',
+        project,
+      );
+      if (fsService != null) {
+        try {
+          return fsService.expandHomeDir(filePath);
+        } catch (_) {}
+      }
+    }
+
+    return Promise.resolve(filePath);
+  }
+
   getCallbacksForAction(action: DebuggerConfigAction) {
     return {
       /**
@@ -50,31 +74,36 @@ export default class AutoGenLaunchAttachProvider extends DebuggerLaunchAttachPro
       },
 
       /**
-       * Returns a list of supported debugger types + environments for the specified action.
-       */
-      getDebuggerTypeNames: super.getCallbacksForAction(action)
-        .getDebuggerTypeNames,
-
-      /**
        * Returns the UI component for configuring the specified debugger type and action.
        */
       getComponent: (
         debuggerTypeName: string,
         configIsValidChanged: (valid: boolean) => void,
+        defaultConfig: ?{[string]: mixed},
       ) => {
         const launchOrAttachConfig = this._config[action];
         invariant(launchOrAttachConfig != null);
+        if (defaultConfig != null) {
+          launchOrAttachConfig.properties = launchOrAttachConfig.properties.map(
+            p => ({
+              ...p,
+              defaultValue:
+                defaultConfig[p.name] == null
+                  ? p.defaultValue
+                  : defaultConfig[p.name],
+            }),
+          );
+        }
         return (
           <AutoGenLaunchAttachUiComponent
             targetUri={this.getTargetUri()}
             configIsValidChanged={configIsValidChanged}
             config={launchOrAttachConfig}
             debuggerTypeName={debuggerTypeName}
+            pathResolver={this._resolvePath}
           />
         );
       },
     };
   }
-
-  dispose(): void {}
 }

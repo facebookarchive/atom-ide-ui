@@ -66,6 +66,8 @@ import {shellQuote} from './string';
 
 export const LOG_CATEGORY = 'nuclide-commons/process';
 
+const NUCLIDE_DO_NOT_LOG = global.NUCLIDE_DO_NOT_LOG;
+
 const logger = getLogger(LOG_CATEGORY);
 
 /**
@@ -422,8 +424,9 @@ export function scriptifyCommand<T>(
 export function killProcess(
   proc: child_process$ChildProcess,
   killTree: boolean,
+  killTreeSignal: ?string,
 ): void {
-  _killProcess(proc, killTree).then(
+  _killProcess(proc, killTree, killTreeSignal).then(
     () => {},
     error => {
       logger.error(`Killing process ${proc.pid} failed`, error);
@@ -590,7 +593,7 @@ export function parsePsOutput(
   });
 }
 
-// Use `ps` to get memory usage for an array of process id's as a map.
+// Use `ps` to get memory usage in kb for an array of process id's as a map.
 export async function memoryUsagePerPid(
   pids: Array<number>,
 ): Promise<Map<number, number>> {
@@ -724,6 +727,7 @@ type CreateProcessStreamOptions = (
   | child_process$forkOpts
 ) & {
   killTreeWhenDone?: ?boolean,
+  killTreeSignal?: string,
   timeout?: ?number,
   input?: ?(string | Observable<string>),
   dontLogInNuclide?: ?boolean,
@@ -899,6 +903,57 @@ function logCall(duration: number, command: string, args: Array<string>) {
 }
 
 /**
+ * Attempt to get the fully qualified binary name from a process id. This is
+ * surprisingly tricky. 'ps' only reports the path as invoked, and in some cases
+ * not even that.
+ *
+ * On Linux, the /proc filesystem can be used to find it.
+ * macOS doesn't have /proc, so we rely on the fact that the process holds
+ * an open FD to the executable. This can fail for various reasons (mostly
+ * not having permissions to execute lsof on the pid.)
+ */
+export async function getAbsoluteBinaryPathForPid(
+  pid: number,
+): Promise<?string> {
+  if (process.platform === 'linux') {
+    return _getLinuxBinaryPathForPid(pid);
+  }
+
+  if (process.platform === 'darwin') {
+    return _getDarwinBinaryPathForPid(pid);
+  }
+
+  return null;
+}
+
+async function _getLinuxBinaryPathForPid(pid: number): Promise<?string> {
+  const exeLink = `/proc/${pid}/exe`;
+  // /proc/xxx/exe is a symlink to the real binary in the file system.
+  return runCommand('/bin/realpath', ['-q', '-e', exeLink])
+    .catch(_ => Observable.of(null))
+    .toPromise();
+}
+
+async function _getDarwinBinaryPathForPid(pid: number): Promise<?string> {
+  return runCommand('/usr/sbin/lsof', ['-p', `${pid}`])
+    .catch(_ => {
+      return Observable.of(null);
+    })
+    .map(
+      stdout =>
+        stdout == null
+          ? null
+          : stdout
+              .split('\n')
+              .map(line => line.trim().split(/\s+/))
+              .filter(line => line[3] === 'txt')
+              .map(line => line[8])[0],
+    )
+    .take(1)
+    .toPromise();
+}
+
+/**
  * Creates an observable with the following properties:
  *
  * 1. It contains a process that's created using the provided factory when you subscribe.
@@ -928,7 +983,12 @@ function createProcessStream(
   return observableFromSubscribeFunction(whenShellEnvironmentLoaded)
     .take(1)
     .switchMap(() => {
-      const {dontLogInNuclide, killTreeWhenDone, timeout} = options;
+      const {
+        dontLogInNuclide,
+        killTreeWhenDone,
+        killTreeSignal,
+        timeout,
+      } = options;
       // flowlint-next-line sketchy-null-number:off
       const enforceTimeout = timeout
         ? x =>
@@ -969,7 +1029,7 @@ function createProcessStream(
         .filter(isRealExit)
         .take(1);
 
-      if (dontLogInNuclide !== true) {
+      if (dontLogInNuclide !== true && NUCLIDE_DO_NOT_LOG !== true) {
         // Log the completion of the process. Note that we intentionally don't merge this with the
         // returned observable because we don't want to cancel the side-effect when the user
         // unsubscribes or when the process exits ("close" events come after "exit" events).
@@ -1043,7 +1103,7 @@ function createProcessStream(
         .finally(() => {
           // $FlowFixMe(>=0.68.0) Flow suppress (T27187857)
           if (!proc.wasKilled && !finished) {
-            killProcess(proc, Boolean(killTreeWhenDone));
+            killProcess(proc, Boolean(killTreeWhenDone), killTreeSignal);
           }
         });
     });
@@ -1057,10 +1117,15 @@ function isRealExit(event: {exitCode: ?number, signal: ?string}): boolean {
 async function _killProcess(
   proc: child_process$ChildProcess & {wasKilled?: boolean},
   killTree: boolean,
+  killTreeSignal: ?string,
 ): Promise<void> {
   proc.wasKilled = true;
   if (!killTree) {
-    proc.kill();
+    if (killTreeSignal != null && killTreeSignal !== '') {
+      proc.kill(killTreeSignal);
+    } else {
+      proc.kill();
+    }
     return;
   }
   if (/^win/.test(process.platform)) {

@@ -184,6 +184,10 @@ function getHostnameOpt(remoteUri: ?NuclideUri): ?string {
 }
 
 function join(uri: NuclideUri, ...relativePath: Array<string>): NuclideUri {
+  return joinArray(uri, relativePath);
+}
+
+function joinArray(uri: NuclideUri, relativePath: Array<string>): NuclideUri {
   _testForIllegalUri(uri);
   const uriPathModule = _pathModuleFor(uri);
   if (isRemote(uri)) {
@@ -372,7 +376,7 @@ function nuclideUriToUri(uri: NuclideUri): string {
 }
 
 /**
- * Returns true if child is equal to, or is a proper child of parent.
+ * Returns true if child is equal to, or is a proper descendant of parent.
  */
 function contains(parent: NuclideUri, child: NuclideUri): boolean {
   _testForIllegalUri(parent);
@@ -855,6 +859,7 @@ export default {
   getHostname,
   getHostnameOpt,
   join,
+  joinArray,
   archiveJoin,
   relative,
   looksLikeImageUri,

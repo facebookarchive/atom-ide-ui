@@ -347,7 +347,7 @@ async-limiter@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/async-limiter/-/async-limiter-1.0.0.tgz#78faed8c3d074ab81f22b4e985d79e8738f720f8"
 
-async@^1.4.0:
+async@^1.4.0, async@^1.5.2:
   version "1.5.2"
   resolved "https://registry.yarnpkg.com/async/-/async-1.5.2.tgz#ec6a61ae56480c0c3cb241c95618e20892f9672a"
 
@@ -1005,7 +1005,7 @@ codecov@2.3.0:
     request "2.81.0"
     urlgrey "0.4.4"
 
-coffee-script@>=1.0.1:
+coffee-script@>=1.0.1, coffee-script@^1.10.0:
   version "1.12.7"
   resolved "https://registry.yarnpkg.com/coffee-script/-/coffee-script-1.12.7.tgz#c05dae0cb79591d05b3070a8433a98c9a89ccc53"
 
@@ -1125,6 +1125,12 @@ cryptiles@3.x.x:
   dependencies:
     boom "5.x.x"
 
+cson-parser@^1.3.0:
+  version "1.3.5"
+  resolved "https://registry.yarnpkg.com/cson-parser/-/cson-parser-1.3.5.tgz#7ec675e039145533bf2a6a856073f1599d9c2d24"
+  dependencies:
+    coffee-script "^1.10.0"
+
 cssom@0.3.x, "cssom@>= 0.3.2 < 0.4.0":
   version "0.3.2"
   resolved "https://registry.yarnpkg.com/cssom/-/cssom-0.3.2.tgz#b8036170c79f07a90ff2f16e22284027a243848b"
@@ -1148,6 +1154,12 @@ dashdash@^1.12.0:
 date-format@^0.0.0:
   version "0.0.0"
   resolved "https://registry.yarnpkg.com/date-format/-/date-format-0.0.0.tgz#09206863ab070eb459acea5542cbd856b11966b3"
+
+debrief@^0.2.3:
+  version "0.2.3"
+  resolved "https://registry.yarnpkg.com/debrief/-/debrief-0.2.3.tgz#8b134b774296fa840a9000eca745e90581b83fbd"
+  dependencies:
+    babel-runtime "^6.26.0"
 
 debug-log@^1.0.1:
   version "1.0.1"
@@ -1182,6 +1194,13 @@ decamelize@^1.0.0, decamelize@^1.1.1:
 decode-uri-component@^0.2.0:
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/decode-uri-component/-/decode-uri-component-0.2.0.tgz#eb3913333458775cb84cd1a1fae062106bb87545"
+
+decoders@1.6.1:
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/decoders/-/decoders-1.6.1.tgz#733cbe842055fd21a541cec446ca10eb688aac86"
+  dependencies:
+    debrief "^0.2.3"
+    lemons "^1.1.0"
 
 dedent@0.7.0:
   version "0.7.0"
@@ -1831,6 +1850,15 @@ fs-plus@2.9.3:
     async "~0.2.9"
     mkdirp "~0.3.5"
     rimraf "~2.2.2"
+    underscore-plus "1.x"
+
+fs-plus@^3.0.0:
+  version "3.0.2"
+  resolved "https://registry.yarnpkg.com/fs-plus/-/fs-plus-3.0.2.tgz#6b5f52a7712894c4dde9fd8f81fa8c60df041f3d"
+  dependencies:
+    async "^1.5.2"
+    mkdirp "^0.5.1"
+    rimraf "^2.5.2"
     underscore-plus "1.x"
 
 fs-readdir-recursive@^1.0.0:
@@ -3076,6 +3104,10 @@ left-pad@^1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/left-pad/-/left-pad-1.2.0.tgz#d30a73c6b8201d8f7d8e7956ba9616087a68e0ee"
 
+lemons@^1.1.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/lemons/-/lemons-1.2.0.tgz#06ed02e7622c03501c2fd088e05147ab7652fb47"
+
 leven@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/leven/-/leven-2.1.0.tgz#c2e7a9f772094dee9d34202ae8acce4687875580"
@@ -4261,7 +4293,7 @@ right-align@^0.1.1:
   dependencies:
     align-text "^0.1.1"
 
-rimraf@2, rimraf@2.6.2, rimraf@^2.3.3, rimraf@^2.5.1, rimraf@^2.5.4, rimraf@^2.6.1:
+rimraf@2, rimraf@2.6.2, rimraf@^2.3.3, rimraf@^2.5.1, rimraf@^2.5.2, rimraf@^2.5.4, rimraf@^2.6.1:
   version "2.6.2"
   resolved "https://registry.yarnpkg.com/rimraf/-/rimraf-2.6.2.tgz#2ed8150d24a16ea8651e6d6ef0f47c4158ce7a36"
   dependencies:
@@ -4340,6 +4372,14 @@ sane@^2.0.0:
 sax@^1.2.4:
   version "1.2.4"
   resolved "https://registry.yarnpkg.com/sax/-/sax-1.2.4.tgz#2816234e2378bddc4e5354fab5caa895df7100d9"
+
+season@6.0.2:
+  version "6.0.2"
+  resolved "https://registry.yarnpkg.com/season/-/season-6.0.2.tgz#9da58fb1ddd24824d7621b2dc63a7123b50217b6"
+  dependencies:
+    cson-parser "^1.3.0"
+    fs-plus "^3.0.0"
+    yargs "^3.23.0"
 
 "semver@2 || 3 || 4 || 5", semver@^5.3.0:
   version "5.4.1"
@@ -4833,6 +4873,10 @@ to-regex@^3.0.1, to-regex@^3.0.2:
     regex-not "^1.0.2"
     safe-regex "^1.1.0"
 
+toml@2.3.3:
+  version "2.3.3"
+  resolved "https://registry.yarnpkg.com/toml/-/toml-2.3.3.tgz#8d683d729577cb286231dfc7a8affe58d31728fb"
+
 tough-cookie@>=2.3.3, tough-cookie@^2.3.3, tough-cookie@~2.3.3:
   version "2.3.4"
   resolved "https://registry.yarnpkg.com/tough-cookie/-/tough-cookie-2.3.4.tgz#ec60cee38ac675063ffc97a5c18970578ee83655"
@@ -5163,7 +5207,7 @@ yargs-parser@^9.0.2:
   dependencies:
     camelcase "^4.1.0"
 
-yargs@3.32.0:
+yargs@3.32.0, yargs@^3.23.0:
   version "3.32.0"
   resolved "https://registry.yarnpkg.com/yargs/-/yargs-3.32.0.tgz#03088e9ebf9e756b69751611d2a5ef591482c995"
   dependencies:

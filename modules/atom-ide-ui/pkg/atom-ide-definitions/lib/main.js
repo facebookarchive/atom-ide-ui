@@ -41,6 +41,7 @@ import FeatureConfig from 'nuclide-commons-atom/feature-config';
 import {wordAtPosition} from 'nuclide-commons-atom/range';
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import ProviderRegistry from 'nuclide-commons-atom/ProviderRegistry';
+import performanceNow from 'nuclide-commons/performanceNow';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {goToLocation} from 'nuclide-commons-atom/go-to-location';
 
@@ -112,14 +113,12 @@ class Activation {
     position: atom$Point,
   ): Promise<?DefinitionQueryResult> {
     return this._definitionCache.get(editor, position, () => {
-      if (Math.random() < TRACK_TIMING_SAMPLE_RATIO) {
-        return analytics.trackTiming(
-          'get-definition',
-          () => this._getDefinition(editor, position),
-          {path: editor.getPath()},
-        );
-      }
-      return this._getDefinition(editor, position);
+      return analytics.trackTimingSampled(
+        'get-definition',
+        () => this._getDefinition(editor, position),
+        TRACK_TIMING_SAMPLE_RATIO,
+        {path: editor.getPath()},
+      );
     });
   }
 
@@ -127,7 +126,9 @@ class Activation {
     editor: atom$TextEditor,
     position: atom$Point,
   ): Promise<?HyperclickSuggestion> {
+    const startTime = performanceNow();
     const result = await this._getDefinitionCached(editor, position);
+    const duration = performanceNow() - startTime;
     if (result == null) {
       return null;
     }
@@ -149,6 +150,7 @@ class Activation {
           line: definition.position.row,
           column: definition.position.column,
           from: editor.getPath(),
+          duration,
         });
       };
     }

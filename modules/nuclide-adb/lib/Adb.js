@@ -10,19 +10,24 @@
  * @format
  */
 
-import type {AndroidJavaProcess, SimpleProcess} from '../types';
+import type {AndroidJavaProcess, SimpleProcess, AdbDevice} from './types';
 import type {LegacyProcessMessage} from 'nuclide-commons/process';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import invariant from 'assert';
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import {Observable} from 'rxjs';
-import {DebugBridge} from '../common/DebugBridge';
-import {createConfigObs} from '../common/Store';
-import {parsePsTableOutput} from '../common/ps';
+import {parsePsTableOutput} from './common/ps';
+import {runCommand, observeProcess} from 'nuclide-commons/process';
 
-export class Adb extends DebugBridge {
-  static configObs = createConfigObs('adb');
+const ADB_TIMEOUT = 5000;
+
+export class Adb {
+  _serial: string;
+
+  constructor(serial: string) {
+    this._serial = serial;
+  }
 
   getAndroidProp(key: string): Observable<string> {
     return this.runShortCommand('shell', 'getprop', key).map(s => s.trim());
@@ -90,8 +95,8 @@ export class Adb extends DebugBridge {
         wifi_ip,
       ]) => {
         return new Map([
-          ['name', this._device.name],
-          ['adb_port', String(this._device.port)],
+          ['name', this._serial],
+          ['adb_port', '5037'],
           ['architecture', architecture],
           ['api_version', apiVersion],
           ['model', model],
@@ -367,10 +372,7 @@ export class Adb extends DebugBridge {
   }
 
   getDeviceArgs(): Array<string> {
-    const portArg =
-      this._device.port != null ? ['-P', String(this._device.port)] : [];
-    const deviceArg = this._device.name !== '' ? ['-s', this._device.name] : [];
-    return deviceArg.concat(portArg);
+    return this._serial !== '' ? ['-s', this._serial] : [];
   }
 
   getProcesses(): Observable<Array<SimpleProcess>> {
@@ -380,5 +382,93 @@ export class Adb extends DebugBridge {
         return {user: info[0], pid: info[1], name: info[info.length - 1]};
       }),
     );
+  }
+
+  runShortCommand(...command: string[]): Observable<string> {
+    return runCommand('adb', this.getDeviceArgs().concat(command));
+  }
+
+  runLongCommand(...command: string[]): Observable<LegacyProcessMessage> {
+    // TODO(T17463635)
+    return observeProcess('adb', this.getDeviceArgs().concat(command), {
+      killTreeWhenDone: true,
+      /* TODO(T17353599) */ isExitError: () => false,
+    }).catch(error => Observable.of({kind: 'error', error})); // TODO(T17463635)
+  }
+
+  static _parseDevicesCommandOutput(stdout: string): Array<AdbDevice> {
+    return stdout
+      .split(/\n+/g)
+      .slice(1)
+      .filter(s => s.length > 0 && !s.trim().startsWith('*'))
+      .map(s => s.split(/\s+/g))
+      .filter(a => a[0] !== '')
+      .map(a => {
+        const serial = a[0];
+        const props = a.slice(2);
+        let product;
+        let model;
+        let device;
+        let usb;
+        let transportId;
+        for (const prop of props) {
+          const pair = prop.split(':');
+          if (pair.length !== 2) {
+            continue;
+          }
+          switch (pair[0]) {
+            case 'product':
+              product = pair[1];
+              break;
+            case 'model':
+              model = pair[1];
+              break;
+            case 'device':
+              device = pair[1];
+              break;
+            case 'usb':
+              usb = pair[1];
+              break;
+            case 'transport_id':
+              transportId = pair[1];
+              break;
+            default:
+              break;
+          }
+        }
+        return {
+          serial,
+          product,
+          model,
+          device,
+          usb,
+          transportId,
+        };
+      });
+  }
+
+  static getDevices(): Promise<Array<AdbDevice>> {
+    return runCommand('adb', ['devices', '-l'])
+      .map(stdout => this._parseDevicesCommandOutput(stdout))
+      .timeout(ADB_TIMEOUT)
+      .toPromise();
+  }
+
+  static killServer(): Promise<void> {
+    return runCommand('adb', ['kill-server'])
+      .mapTo(undefined)
+      .toPromise();
+  }
+
+  static getVersion(): Promise<string> {
+    return runCommand('adb', ['version'])
+      .map(versionString => {
+        const version = versionString.match(/version (\d+.\d+.\d+)/);
+        if (version) {
+          return version[1];
+        }
+        throw new Error(`No version found with "${versionString}"`);
+      })
+      .toPromise();
   }
 }
