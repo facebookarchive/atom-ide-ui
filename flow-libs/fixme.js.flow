@@ -1,0 +1,21 @@
+/**
+ * FIXME: Move these types somewhere else!
+ */
+declare module 'atom-ide-debugger-java/types' {
+  declare type SuggestedProjectPath = {
+    projectPath: string,
+    suggested: boolean,
+    hostLabel: string,
+  };
+
+  declare interface DebuggerSourcePathsService {
+    addKnownJavaSubdirectoryPaths(
+      remote: boolean,
+      translatedPath: string,
+      searchPaths: Array<string>,
+    ): void;
+    observeSuggestedAndroidProjectPaths(
+      callback: (Array<SuggestedProjectPath>) => void,
+    ): IDisposable;
+  }
+}
