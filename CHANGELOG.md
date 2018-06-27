@@ -1,5 +1,30 @@
 # Changelog
 
+## Next Release
+
+- Experimental: Added "rename" functionality.
+
+### Terminal
+
+- Updated xterm dependency to [3.4.1](https://github.com/xtermjs/xterm.js/releases/tag/3.4.1)
+- Terminals now open in the bottom by default.
+- Fixed a performance issue with Atom 1.28.
+
+### Datatips
+
+- Disable text selection when dragging datatips (#264)
+- Preserve newlines in markdown datatips.
+
+### Console
+
+- Added a new icon.
+- Fixed some color issues.
+
+### Debugger
+
+- Fixed debugger attach/launch dialogs in some themes.
+- Fixed inability to copy values from scopes pane.
+
 ## v0.12.0
 
 - Atom 1.25 is now the minimum required version.

@@ -149,6 +149,30 @@ export function shellParse(str: string, env?: Object): Array<string> {
 }
 
 /**
+ * shell-quote's parse allows pipe operators and comments and globs
+ * We treat glob patterns as normal strings. For the other operators, we throw.
+ */
+export function shellParseWithGlobs(str: string, env?: Object): Array<string> {
+  const result = parse(str, env);
+  for (let i = 0; i < result.length; i++) {
+    if (typeof result[i] !== 'string') {
+      if (result[i].op === 'glob') {
+        result[i] = result[i].pattern;
+      } else if (result[i].op != null) {
+        throw new Error(
+          `Unexpected operator "${result[i].op}" provided to shellParse`,
+        );
+      } else {
+        throw new Error(
+          `Unexpected comment "${result[i].comment}" provided to shellParse`,
+        );
+      }
+    }
+  }
+  return result;
+}
+
+/**
  * Technically you can pass in { operator: string } here,
  * but we don't use that in most APIs.
  */
@@ -267,3 +291,4 @@ export function escapeMarkdown(markdown: string): string {
 export const URL_REGEX = /(https?:\/\/(?:www\.)?[-\w@:%.+~#=]{2,256}\.[a-z]{2,6}\b[-\w@:%+.~#?&/=!]*|www\.[-\w@:%.+~#=]{2,256}\.[a-z]{2,6}\b[-\w@:%+.~#?&/=!]*)/;
 
 export const ELLIPSIS_CHAR = '\u2026';
+export const ZERO_WIDTH_SPACE = '\u200B';

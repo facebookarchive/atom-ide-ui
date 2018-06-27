@@ -12,6 +12,7 @@
 /* global localStorage */
 
 import type {DebuggerModeType, IDebugService, SerializedState} from '../types';
+import type {GatekeeperService} from 'nuclide-commons-atom/types';
 
 import * as React from 'react';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
@@ -26,12 +27,14 @@ import nullthrows from 'nullthrows';
 // Debugger views
 import DebuggerControlsView from './DebuggerControlsView';
 import ThreadsView from './ThreadsView';
+import DebuggerProcessTreeView from './DebuggerProcessTreeView';
 import DebuggerCallstackComponent from './DebuggerCallstackComponent';
 import BreakpointsView from './BreakpointsView';
 import ScopesView from './ScopesView';
 import WatchView from './WatchView';
 
 const CONSOLE_VIEW_URI = 'atom://nuclide/console';
+const DEBUGGER_URI_BASE = 'atom://nuclide/debugger-';
 
 export type DebuggerPaneLocation = {
   dock: string,
@@ -79,6 +82,8 @@ export type DebuggerPaneConfig = {
   // Optional callback to be invoked when the pane is being resized (flex scale changed).
   onPaneResize?: (pane: atom$Pane, newFlexScale: number) => boolean,
 };
+
+let _gkService: ?GatekeeperService;
 
 export default class DebuggerLayoutManager {
   _disposables: UniversalDisposable;
@@ -187,7 +192,6 @@ export default class DebuggerLayoutManager {
   }
 
   _initializeDebuggerPanes(): void {
-    const debuggerUriBase = 'atom://nuclide/debugger-';
     const getFocusedProcess = () => this._service.viewModel.focusedProcess;
 
     // This configures the debugger panes. By default, they'll appear below the stepping
@@ -195,7 +199,7 @@ export default class DebuggerLayoutManager {
     // user is free to move them around.
     this._debuggerPanes = [
       {
-        uri: debuggerUriBase + 'controls',
+        uri: DEBUGGER_URI_BASE + 'controls',
         isLifetimeView: true,
         title: () => 'Debugger',
         defaultLocation: DEBUGGER_PANELS_DEFAULT_LOCATION,
@@ -207,7 +211,7 @@ export default class DebuggerLayoutManager {
           // override the layout to shrink the pane and remove extra vertical whitespace.
           const debuggerMode = this._service.getDebuggerMode();
           if (debuggerMode !== DebuggerMode.STOPPED) {
-            this._overridePaneInitialHeight(dockPane, newFlexScale, 100);
+            this._overridePaneInitialHeight(dockPane, newFlexScale, 250);
           }
 
           // If newFlexScale !== 1, that means the user must have resized this pane.
@@ -217,7 +221,7 @@ export default class DebuggerLayoutManager {
         },
       },
       {
-        uri: debuggerUriBase + 'callstack',
+        uri: DEBUGGER_URI_BASE + 'callstack',
         isLifetimeView: false,
         defaultLocation: DEBUGGER_PANELS_DEFAULT_LOCATION,
         title: () => 'Call Stack',
@@ -229,7 +233,7 @@ export default class DebuggerLayoutManager {
           mode !== DebuggerMode.STOPPED,
       },
       {
-        uri: debuggerUriBase + 'breakpoints',
+        uri: DEBUGGER_URI_BASE + 'breakpoints',
         isLifetimeView: false,
         defaultLocation: DEBUGGER_PANELS_DEFAULT_LOCATION,
         title: () => 'Breakpoints',
@@ -237,7 +241,7 @@ export default class DebuggerLayoutManager {
         createView: () => <BreakpointsView service={this._service} />,
       },
       {
-        uri: debuggerUriBase + 'scopes',
+        uri: DEBUGGER_URI_BASE + 'scopes',
         isLifetimeView: false,
         defaultLocation: DEBUGGER_PANELS_DEFAULT_LOCATION,
         title: () => 'Scopes',
@@ -247,7 +251,7 @@ export default class DebuggerLayoutManager {
           mode !== DebuggerMode.STOPPED,
       },
       {
-        uri: debuggerUriBase + 'watch-expressions',
+        uri: DEBUGGER_URI_BASE + 'watch-expressions',
         isLifetimeView: false,
         defaultLocation: 'bottom',
         previousDefaultLocation: DEBUGGER_PANELS_DEFAULT_LOCATION,
@@ -256,24 +260,31 @@ export default class DebuggerLayoutManager {
         createView: () => <WatchView service={this._service} />,
       },
       {
-        uri: debuggerUriBase + 'threads',
+        uri: DEBUGGER_URI_BASE + 'threads',
         isLifetimeView: false,
         defaultLocation: DEBUGGER_PANELS_DEFAULT_LOCATION,
         title: () =>
           getFocusedProcess() == null
             ? 'Threads'
-            : nullthrows(getFocusedProcess()).configuration.properties
-                .threadsComponentTitle,
+            : nullthrows(getFocusedProcess()).configuration
+                .threadsComponentTitle || 'Threads',
         isEnabled: () =>
           getFocusedProcess() == null
             ? false
-            : nullthrows(getFocusedProcess()).configuration.capabilities
-                .threads,
+            : nullthrows(getFocusedProcess()).configuration.showThreads == null
+              ? true
+              : Boolean(
+                  nullthrows(getFocusedProcess()).configuration.showThreads,
+                ),
         createView: () => <ThreadsView service={this._service} />,
         debuggerModeFilter: (mode: DebuggerModeType) =>
           mode !== DebuggerMode.STOPPED,
       },
     ];
+
+    if (_gkService != null) {
+      this.convertToDebuggerTreePanes();
+    }
 
     this._restoreDebuggerPaneLocations();
   }
@@ -378,6 +389,45 @@ export default class DebuggerLayoutManager {
     };
 
     return docks;
+  }
+
+  convertToDebuggerTreePanes() {
+    if (_gkService != null) {
+      _gkService.passesGK('nuclide_processtree_debugging').then(passes => {
+        if (passes) {
+          this._debuggerPanes.splice(1, 0, {
+            uri: DEBUGGER_URI_BASE + 'debuggertree',
+            isLifetimeView: false,
+            defaultLocation: DEBUGGER_PANELS_DEFAULT_LOCATION,
+            title: () => 'Processes',
+            isEnabled: () => true,
+            createView: () => (
+              <DebuggerProcessTreeView service={this._service} />
+            ),
+            debuggerModeFilter: (mode: DebuggerModeType) =>
+              mode !== DebuggerMode.STOPPED,
+          });
+          for (let i = 0; i < this._debuggerPanes.length; i++) {
+            const uri = this._debuggerPanes[i].uri;
+            if (
+              uri === DEBUGGER_URI_BASE + 'callstack' ||
+              uri === DEBUGGER_URI_BASE + 'threads'
+            ) {
+              this._debuggerPanes.splice(i, 1);
+            }
+          }
+          if (this._debuggerVisible) {
+            this.showDebuggerViews();
+          }
+        }
+      });
+    }
+  }
+
+  consumeGatekeeperService(service: GatekeeperService): UniversalDisposable {
+    _gkService = service;
+    this.convertToDebuggerTreePanes();
+    return new UniversalDisposable(() => (_gkService = null));
   }
 
   _isDockEmpty(dock: atom$AbstractPaneContainer): boolean {

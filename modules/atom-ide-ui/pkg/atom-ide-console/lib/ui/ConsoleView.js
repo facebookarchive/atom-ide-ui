@@ -69,7 +69,7 @@ const MAXIMUM_SCROLLING_TIME = 3000;
 let count = 0;
 
 export default class ConsoleView extends React.Component<Props, State> {
-  _consoleBodyEl: ?HTMLDivElement;
+  _consoleScrollPaneEl: ?HTMLDivElement;
   _consoleHeaderComponent: ?ConsoleHeader;
   _disposables: UniversalDisposable;
   _isScrolledNearBottom: boolean;
@@ -116,8 +116,14 @@ export default class ConsoleView extends React.Component<Props, State> {
           }
         },
       }),
+      atom.commands.add('atom-workspace', {
+        // eslint-disable-next-line nuclide-internal/atom-apis
+        'atom-ide-console:scroll-to-bottom': () => {
+          this._scrollToBottom();
+        },
+      }),
       atom.commands.add(
-        nullthrows(this._consoleBodyEl),
+        nullthrows(this._consoleScrollPaneEl),
         'atom-ide:filter',
         () => this._focusFilter(),
       ),
@@ -173,7 +179,7 @@ export default class ConsoleView extends React.Component<Props, State> {
     return scrollHeight - (offsetHeight + scrollTop) < 5;
   }
 
-  componentWillReceiveProps(nextProps: Props): void {
+  UNSAFE_componentWillReceiveProps(nextProps: Props): void {
     // If the messages were cleared, hide the notification.
     if (nextProps.displayableRecords.length === 0) {
       this._isScrolledNearBottom = true;
@@ -236,11 +242,10 @@ export default class ConsoleView extends React.Component<Props, State> {
 
           console-font-size is defined in main.js and updated via a user setting
         */}
-        <div
-          className="console-body atom-ide-filterable"
-          id={'console-font-size-' + this._id}
-          ref={el => (this._consoleBodyEl = el)}>
-          <div className="console-scroll-pane-wrapper">
+        <div className="console-body" id={'console-font-size-' + this._id}>
+          <div
+            className="console-scroll-pane-wrapper atom-ide-filterable"
+            ref={el => (this._consoleScrollPaneEl = el)}>
             <FilteredMessagesReminder
               filteredRecordCount={this.props.filteredRecordCount}
               onReset={this.props.resetAllFilters}
@@ -333,6 +338,9 @@ export default class ConsoleView extends React.Component<Props, State> {
     this._isScrolledNearBottom = isScrolledToBottom;
     this._stopScrollToBottom();
     this.setState({
+      // TODO: (wbinnssmith) T30771435 this setState depends on current state
+      // and should use an updater function rather than an object
+      // eslint-disable-next-line react/no-access-state-in-setstate
       unseenMessages: this.state.unseenMessages && !this._isScrolledNearBottom,
     });
   }

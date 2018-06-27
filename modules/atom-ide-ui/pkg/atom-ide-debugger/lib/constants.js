@@ -13,9 +13,11 @@
 import type {DebuggerModeType} from './types';
 
 export const AnalyticsEvents = Object.freeze({
+  ANDROID_DEBUGGER_SDK_SOURCES: 'android-debugger-sdk-sources',
   DEBUGGER_BREAKPOINT_ADD: 'debugger-breakpoint-add',
   DEBUGGER_BREAKPOINT_DELETE: 'debugger-breakpoint-delete',
   DEBUGGER_BREAKPOINT_DELETE_ALL: 'debugger-breakpoint-delete-all',
+  DEBUGGER_BREAKPOINT_SINGLE_ADD: 'debugger-breakpoint-single-add',
   DEBUGGER_BREAKPOINT_TOGGLE: 'debugger-breakpoint-toggle',
   DEBUGGER_BREAKPOINT_TOGGLE_ENABLED: 'debugger-breakpoint-toggle-enabled',
   DEBUGGER_BREAKPOINT_CONFIG_UI_SHOW: 'debugger-breakpoint-condition-shown',

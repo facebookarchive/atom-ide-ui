@@ -10,36 +10,32 @@
  * @format
  */
 
-import type {Process, SimpleProcess} from '../types';
+import type {Adb} from '../Adb';
+import type {Process} from '../types';
 
 import {arrayCompact} from 'nuclide-commons/collection';
 import {Observable} from 'rxjs';
 import os from 'os';
 
 type CPU_MEM = [number, number];
-interface Db {
-  runShortCommand(...command: string[]): Observable<string>;
-  getProcesses(): Observable<Array<SimpleProcess>>;
-  getDebuggableProcesses(): Observable<Array<SimpleProcess>>;
-}
 
 const VALID_PROCESS_REGEX = new RegExp(/\d+\s()/);
 
 export class Processes {
-  _db: Db;
+  _adb: Adb;
 
-  constructor(db: Db) {
-    this._db = db;
+  constructor(adb: Adb) {
+    this._adb = adb;
   }
 
   _getGlobalProcessStat(): Observable<string> {
-    return this._db
+    return this._adb
       .runShortCommand('shell', 'cat', '/proc/stat')
       .map(stdout => stdout.split(/\n/)[0].trim());
   }
 
   _getProcStats(): Observable<Array<string>> {
-    return this._db
+    return this._adb
       .runShortCommand(
         'shell',
         'for file in /proc/[0-9]*/stat; do cat "$file" 2>/dev/null || true; done',
@@ -52,13 +48,13 @@ export class Processes {
   }
 
   fetch(timeout: number): Observable<Process[]> {
-    const internalTimeout = timeout * 2 / 3;
+    const internalTimeout = (timeout * 2) / 3;
     return Observable.forkJoin(
-      this._db
+      this._adb
         .getProcesses()
         .timeout(internalTimeout)
         .catch(() => Observable.of([])),
-      this._db
+      this._adb
         .getDebuggableProcesses()
         .timeout(internalTimeout)
         .catch(() => Observable.of([])),
@@ -121,7 +117,7 @@ export class Processes {
           if (p0 != null) {
             const deltaProc = p1[0] - p0[0];
             const memUsage = p1[1];
-            cpuAndMemUsage.set(pid, [deltaProc / deltaCpu * 100, memUsage]);
+            cpuAndMemUsage.set(pid, [(deltaProc / deltaCpu) * 100, memUsage]);
           }
         });
         return cpuAndMemUsage;
@@ -164,7 +160,7 @@ export class Processes {
   async getPidFromPackageName(packageName: string): Promise<number> {
     let pidLines: string;
     try {
-      pidLines = await this._db
+      pidLines = await this._adb
         .runShortCommand('shell', 'ps', '|', 'grep', '-i', packageName)
         .toPromise();
     } catch (e) {

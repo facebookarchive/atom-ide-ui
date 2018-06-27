@@ -13,6 +13,8 @@
 <PROJECT_ROOT>/modules/nuclide-node-transpiler/spec/fixtures/.*
 ; large dirs that are not imported
 <PROJECT_ROOT>/docs/.*
+; TODO: remove when fixed
+<PROJECT_ROOT>.*/__tests__/.*
 
 [libs]
 flow-libs/
@@ -44,4 +46,4 @@ untyped-import
 untyped-type-import
 
 [version]
-0.73.0
+0.74.0

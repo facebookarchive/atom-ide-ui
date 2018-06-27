@@ -278,6 +278,7 @@ declare class atom$Disposable {
 declare class atom$Emitter {
   dispose(): void,
   on(name: string, callback: (v: any) => mixed): IDisposable,
+  once(name: string, callback: (v: any) => mixed): IDisposable,
   preempt(name: string, callback: (v: any) => void): IDisposable,
   // This is a flow hack to prevent emitting more than one value.
   // `EventEmitter` allows emitting any number of values - making this a land
@@ -471,7 +472,7 @@ declare class atom$Pane {
   onDidAddItem(cb: (event: {item: Object, index: number}) => void): IDisposable,
   onDidRemoveItem(cb: (event: {item: Object, index: number}) => void): IDisposable,
   onWillRemoveItem(cb: (event: {item: Object, index: number}) => void): IDisposable,
-  onDidDestroy(cb: () => void): IDisposable,
+  onDidDestroy(cb: () => mixed): IDisposable,
   onDidChangeFlexScale(cb: (newFlexScale: number) => void): IDisposable,
   onWillDestroy(cb: () => void): IDisposable,
   observeActiveItem(cb: (item: ?Object) => void): IDisposable,
@@ -725,6 +726,7 @@ type atom$TooltipsAddOptions = {
 };
 
 type atom$Tooltip = {
+  show(): void;
   hide(): void;
   getTooltipElement(): HTMLElement,
 };
@@ -735,6 +737,7 @@ declare class atom$TooltipManager {
     target: HTMLElement,
     options: atom$TooltipsAddOptions,
   ): IDisposable,
+  findTooltips(HTMLElement): Array<atom$Tooltip>,
 }
 
 type InsertTextOptions = {
@@ -967,6 +970,7 @@ declare class atom$TextEditor extends atom$Model {
       preserveFolds?: boolean,
     },
   ): void,
+  selectWordsContainingCursors(): void,
 
   // Folds
   unfoldAll(): void,
@@ -1679,11 +1683,11 @@ declare class atom$MenuManager {
   template: Array<Object>,
 }
 
-type atom$ProjectSpecification = {|
-  originPath?: string,
+type atom$ProjectSpecification = {
+  originPath: string,
   paths?: Array<string>,
   config?: {[string]: mixed}
-|};
+};
 
 declare class atom$Project {
   // Event Subscription
@@ -2099,7 +2103,7 @@ type atom$AutocompleteSuggestion = {
 type atom$AutocompleteRequest = {
   editor: TextEditor,
   bufferPosition: atom$Point,
-  scopeDescriptor: string,
+  scopeDescriptor: atom$ScopeDescriptor,
   prefix: string,
   activatedManually?: boolean,
 };

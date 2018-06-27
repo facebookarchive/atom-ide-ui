@@ -25,7 +25,9 @@ import type {
 } from 'atom-ide-ui';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {SerializedState, IBreakpoint} from './types';
+import type {GatekeeperService} from 'nuclide-commons-atom/types';
 
+import idx from 'idx';
 import {observeRemovedHostnames} from 'nuclide-commons-atom/projects';
 import BreakpointManager from './BreakpointManager';
 import {AnalyticsEvents, DebuggerMode} from './constants';
@@ -63,6 +65,12 @@ import ReactMountRootElement from 'nuclide-commons-ui/ReactMountRootElement';
 import {makeToolbarButtonSpec} from 'nuclide-commons-ui/ToolbarUtils';
 
 const DATATIP_PACKAGE_NAME = 'debugger-datatip';
+
+type LaunchAttachDialogArgs = {
+  dialogMode: DebuggerConfigAction,
+  selectedTabName?: string,
+  config?: {[string]: mixed},
+};
 
 class Activation {
   _disposables: UniversalDisposable;
@@ -138,10 +146,6 @@ class Activation {
         );
 
         for (const key of removedConnections) {
-          for (const provider of this._connectionProviders.get(key) || []) {
-            provider.dispose();
-          }
-
           this._connectionProviders.delete(key);
         }
 
@@ -157,15 +161,22 @@ class Activation {
       }),
       // Commands.
       atom.commands.add('atom-workspace', {
-        'debugger:show-attach-dialog': () => {
-          const boundFn = this._showLaunchAttachDialog.bind(this);
-          boundFn('attach');
+        'debugger:show-attach-dialog': event => {
+          const selectedTabName: any = idx(
+            event,
+            _ => _.detail.selectedTabName,
+          );
+          const config: any = idx(event, _ => _.detail.config);
+          this._showLaunchAttachDialog({
+            dialogMode: 'attach',
+            selectedTabName,
+            config,
+          });
         },
       }),
       atom.commands.add('atom-workspace', {
         'debugger:show-launch-dialog': () => {
-          const boundFn = this._showLaunchAttachDialog.bind(this);
-          boundFn('launch');
+          this._showLaunchAttachDialog({dialogMode: 'launch'});
         },
       }),
       atom.commands.add('atom-workspace', {
@@ -185,6 +196,10 @@ class Activation {
       }),
       atom.commands.add('atom-workspace', {
         'debugger:step-out': this._stepOut.bind(this),
+      }),
+      atom.commands.add('atom-workspace', {
+        // eslint-disable-next-line nuclide-internal/atom-apis
+        'debugger:add-breakpoint': this._addBreakpoint.bind(this),
       }),
       atom.commands.add('atom-workspace', {
         'debugger:toggle-breakpoint': this._toggleBreakpoint.bind(this),
@@ -443,6 +458,12 @@ class Activation {
     this._disposables.dispose();
   }
 
+  consumeGatekeeperService(service: GatekeeperService): IDisposable {
+    const disposable = this._layoutManager.consumeGatekeeperService(service);
+    disposable.add(this._service.consumeGatekeeperService(service));
+    return disposable;
+  }
+
   _registerCommandsContextMenuAndOpener(): UniversalDisposable {
     const disposable = new UniversalDisposable(
       atom.workspace.addOpener(uri => {
@@ -548,6 +569,12 @@ class Activation {
     }
   }
 
+  _addBreakpoint(event: any) {
+    return this._executeWithEditorPath(event, (filePath, lineNumber) => {
+      this._service.addSourceBreakpoint(filePath, lineNumber);
+    });
+  }
+
   _toggleBreakpoint(event: any) {
     return this._executeWithEditorPath(event, (filePath, lineNumber) => {
       this._service.toggleSourceBreakpoint(filePath, lineNumber);
@@ -647,7 +674,7 @@ class Activation {
 
   _renderConfigDialog(
     panel: atom$Panel,
-    dialogMode: DebuggerConfigAction,
+    args: LaunchAttachDialogArgs,
     dialogCloser: () => void,
   ): void {
     if (this._selectedDebugConnection == null) {
@@ -676,10 +703,16 @@ class Activation {
 
     ReactDOM.render(
       <DebuggerLaunchAttachUI
-        dialogMode={dialogMode}
+        dialogMode={args.dialogMode}
+        initialSelectedTabName={args.selectedTabName}
+        initialProviderConfig={args.config}
         connectionChanged={(newValue: ?string) => {
           this._selectedDebugConnection = newValue;
-          this._renderConfigDialog(panel, dialogMode, dialogCloser);
+          this._renderConfigDialog(
+            panel,
+            {dialogMode: args.dialogMode},
+            dialogCloser,
+          );
         }}
         connection={connection}
         connectionOptions={options}
@@ -690,7 +723,8 @@ class Activation {
     );
   }
 
-  _showLaunchAttachDialog(dialogMode: DebuggerConfigAction): void {
+  _showLaunchAttachDialog(args: LaunchAttachDialogArgs): void {
+    const {dialogMode} = args;
     if (
       this._visibleLaunchAttachDialogMode != null &&
       this._visibleLaunchAttachDialogMode !== dialogMode
@@ -705,13 +739,14 @@ class Activation {
     const hostEl = document.createElement('div');
     const pane = atom.workspace.addModalPanel({
       item: hostEl,
+      className: 'debugger-config-dialog',
     });
 
     const parentEl: HTMLElement = (hostEl.parentElement: any);
     parentEl.style.maxWidth = '100em';
 
     // Function callback that closes the dialog and frees all of its resources.
-    this._renderConfigDialog(pane, dialogMode, () => disposables.dispose());
+    this._renderConfigDialog(pane, args, () => disposables.dispose());
     this._lauchAttachDialogCloser = () => disposables.dispose();
     disposables.add(
       pane.onDidChangeVisible(visible => {
@@ -802,10 +837,7 @@ class Activation {
         }
       }
     };
-    const boundUpdateSelectedColumn = updateSelectedConnection.bind(this);
-    const disposable = cwdApi.observeCwd(directory =>
-      boundUpdateSelectedColumn(directory),
-    );
+    const disposable = cwdApi.observeCwd(updateSelectedConnection);
     this._disposables.add(disposable);
     return new UniversalDisposable(() => {
       disposable.dispose();
@@ -847,10 +879,15 @@ class Activation {
     });
   }
 
-  consumeDebuggerConfigurationProvider(
-    provider: DebuggerConfigurationProvider,
+  consumeDebuggerConfigurationProviders(
+    providers: Array<DebuggerConfigurationProvider>,
   ): IDisposable {
-    return addDebugConfigurationProvider(provider);
+    invariant(Array.isArray(providers));
+    const disposable = new UniversalDisposable();
+    providers.forEach(provider =>
+      disposable.add(addDebugConfigurationProvider(provider)),
+    );
+    return disposable;
   }
 
   consumeToolBar(getToolBar: toolbar$GetToolbar): IDisposable {

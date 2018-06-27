@@ -10,25 +10,26 @@
  * @format
  */
 
+import type {TextEdit} from 'nuclide-commons-atom/text-edit';
 import type {BusySignalService} from '../../atom-ide-busy-signal/lib/types';
 import type {
-  RangeCodeFormatProvider,
   FileCodeFormatProvider,
-  OnTypeCodeFormatProvider,
   OnSaveCodeFormatProvider,
+  OnTypeCodeFormatProvider,
+  RangeCodeFormatProvider,
 } from './types';
 
+import {getFormatOnSave, getFormatOnType} from './config';
 import {Range} from 'atom';
-import {Observable, Subject} from 'rxjs';
+import {getLogger} from 'log4js';
+import ProviderRegistry from 'nuclide-commons-atom/ProviderRegistry';
+import {applyTextEditsToBuffer} from 'nuclide-commons-atom/text-edit';
+import {observeEditorDestroy} from 'nuclide-commons-atom/text-editor';
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import {completingSwitchMap, microtask} from 'nuclide-commons/observable';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
-import ProviderRegistry from 'nuclide-commons-atom/ProviderRegistry';
-import {observeEditorDestroy} from 'nuclide-commons-atom/text-editor';
-import {applyTextEditsToBuffer} from 'nuclide-commons-atom/text-edit';
-import {getFormatOnSave, getFormatOnType} from './config';
-import {getLogger} from 'log4js';
+import {Observable, Subject} from 'rxjs';
 
 // Save events are critical, so don't allow providers to block them.
 const SAVE_TIMEOUT = 2500;
@@ -153,7 +154,7 @@ export default class CodeFormatManager {
     );
   }
 
-  _handleEvent(event: FormatEvent): Observable<void> {
+  _handleEvent(event: FormatEvent): Observable<mixed> {
     const {editor} = event;
     switch (event.type) {
       case 'command':
@@ -285,7 +286,7 @@ export default class CodeFormatManager {
   _formatCodeOnTypeInTextEditor(
     editor: atom$TextEditor,
     aggregatedEvent: atom$AggregatedTextEditEvent,
-  ): Observable<void> {
+  ): Observable<Array<TextEdit>> {
     return Observable.defer(() => {
       // Don't try to format changes with multiple cursors.
       if (aggregatedEvent.changes.length !== 1) {
@@ -306,6 +307,7 @@ export default class CodeFormatManager {
       }
 
       const contents = editor.getText();
+      const cursorPosition = editor.getCursorBufferPosition().copy();
 
       // The bracket-matching package basically overwrites
       //
@@ -323,11 +325,11 @@ export default class CodeFormatManager {
         .switchMap(() =>
           provider.formatAtPosition(
             editor,
-            editor.getCursorBufferPosition().translate([0, -1]),
+            editor.getCursorBufferPosition(),
             character,
           ),
         )
-        .map(edits => {
+        .do(edits => {
           if (edits.length === 0) {
             return;
           }
@@ -338,6 +340,10 @@ export default class CodeFormatManager {
           // your actual code by undoing again.
           if (!applyTextEditsToBuffer(editor.getBuffer(), edits)) {
             throw new Error('Could not apply edits to text buffer.');
+          }
+
+          if (provider.keepCursorPosition) {
+            editor.setCursorBufferPosition(cursorPosition);
           }
         });
     });

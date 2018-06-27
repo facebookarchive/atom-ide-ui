@@ -41,6 +41,7 @@ import FeatureConfig from 'nuclide-commons-atom/feature-config';
 import {wordAtPosition} from 'nuclide-commons-atom/range';
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import ProviderRegistry from 'nuclide-commons-atom/ProviderRegistry';
+import performanceNow from 'nuclide-commons/performanceNow';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {goToLocation} from 'nuclide-commons-atom/go-to-location';
 
@@ -88,9 +89,15 @@ class Activation {
         const result = await provider.getDefinition(editor, position);
         if (result != null) {
           if (result.queryRange == null) {
-            const match = wordAtPosition(editor, position, {
-              includeNonWordCharacters: false,
-            });
+            const match = wordAtPosition(
+              editor,
+              position,
+              provider.wordRegExp != null
+                ? provider.wordRegExp
+                : {
+                    includeNonWordCharacters: false,
+                  },
+            );
             result.queryRange = [
               match != null ? match.range : new Range(position, position),
             ];
@@ -112,14 +119,12 @@ class Activation {
     position: atom$Point,
   ): Promise<?DefinitionQueryResult> {
     return this._definitionCache.get(editor, position, () => {
-      if (Math.random() < TRACK_TIMING_SAMPLE_RATIO) {
-        return analytics.trackTiming(
-          'get-definition',
-          () => this._getDefinition(editor, position),
-          {path: editor.getPath()},
-        );
-      }
-      return this._getDefinition(editor, position);
+      return analytics.trackTimingSampled(
+        'get-definition',
+        () => this._getDefinition(editor, position),
+        TRACK_TIMING_SAMPLE_RATIO,
+        {path: editor.getPath()},
+      );
     });
   }
 
@@ -127,7 +132,9 @@ class Activation {
     editor: atom$TextEditor,
     position: atom$Point,
   ): Promise<?HyperclickSuggestion> {
+    const startTime = performanceNow();
     const result = await this._getDefinitionCached(editor, position);
+    const duration = performanceNow() - startTime;
     if (result == null) {
       return null;
     }
@@ -149,6 +156,7 @@ class Activation {
           line: definition.position.row,
           column: definition.position.column,
           from: editor.getPath(),
+          duration,
         });
       };
     }
@@ -196,7 +204,11 @@ class Activation {
       return;
     }
 
-    const result = await this._getDefinitionCached(editor, position);
+    // Datatips are debounced, so this request should always come in after the getDefinition request.
+    // Thus we should always be able to rely on the value being in the cache.
+    // If it's not in the cache, this implies that a newer getDefinition request came in,
+    // in which case the result of this function will be ignored anyway.
+    const result = await this._definitionCache.getCached(editor, position);
     if (result == null) {
       return null;
     }

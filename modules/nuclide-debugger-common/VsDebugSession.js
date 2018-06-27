@@ -66,6 +66,7 @@ export default class VsDebugSession extends V8Protocol {
   _logger: log4js$Logger;
   _spawner: IVsAdapterSpawner;
   _adapterAnalyticsExtras: AdapterAnalyticsExtras;
+  _adapterErrorOutput: string;
 
   _onDidInitialize: Subject<DebugProtocol.InitializedEvent>;
   _onDidStop: Subject<DebugProtocol.StoppedEvent>;
@@ -102,6 +103,7 @@ export default class VsDebugSession extends V8Protocol {
       // $FlowFixMe flow doesn't consider uuid callable, but it is
       debuggerSessionId: uuid(),
     };
+    this._adapterErrorOutput = '';
 
     this._onDidInitialize = new Subject();
     this._onDidStop = new Subject();
@@ -193,11 +195,12 @@ export default class VsDebugSession extends V8Protocol {
       // Babel Bug: `super` isn't working with `async`
       return super.send(command, args).then(
         (response: DebugProtocol.Response) => {
-          this._logger.info('Received response:', response);
+          const sanitizedResponse = this._sanitizeResponse(response);
+          this._logger.info('Received response:', sanitizedResponse);
           track('vs-debug-session:transaction', {
             ...this._adapterAnalyticsExtras,
             request: {command, arguments: args},
-            response,
+            response: sanitizedResponse,
           });
           return response;
         },
@@ -230,6 +233,53 @@ export default class VsDebugSession extends V8Protocol {
       operation,
       this._adapterAnalyticsExtras,
     );
+  }
+
+  _sanitizeResponse(
+    response: DebugProtocol.base$Response,
+  ): DebugProtocol.base$Response {
+    try {
+      if (response.command === 'variables') {
+        const varResponse = ((response: any): DebugProtocol.VariablesResponse);
+        const sanResponse = {
+          ...varResponse,
+          body: {
+            ...varResponse.body,
+            variables: varResponse.body.variables.map(v => ({
+              ...v,
+              value: '<elided>',
+            })),
+          },
+        };
+        // $FlowFixMe flow isn't recognizing that ...varResponse is filling in needed members
+        return sanResponse;
+      }
+      if (response.command === 'evaluate') {
+        const evalResponse = ((response: any): DebugProtocol.EvaluateResponse);
+        const sanResponse = {
+          ...evalResponse,
+          body: {
+            ...evalResponse.body,
+            result: '<elided>',
+          },
+        };
+        // $FlowFixMe flow isn't recognizing that ...evalResponse is filling in needed members
+        return sanResponse;
+      }
+      return response;
+    } catch (e) {
+      // Don't let a malformed response prevent the response from bubbling up
+      // to the debugger
+      return {
+        type: 'response',
+        seq: response.seq,
+        request_seq: response.request_seq,
+        success: false,
+        command: response.command,
+        error: 'Error sanitizing response.',
+        message: e.message,
+      };
+    }
   }
 
   onEvent(event: DebugProtocol.Event | AdapterExitedEvent): void {
@@ -548,6 +598,7 @@ export default class VsDebugSession extends V8Protocol {
             this._onDidOutput.next(event);
             this._onDidEvent.next(event);
             this._logger.error(`adapter stderr: ${message.data}`);
+            this._adapterErrorOutput = this._adapterErrorOutput + message.data;
           } else {
             invariant(message.kind === 'exit');
             this.onServerExit(message.exitCode || 0);
@@ -615,6 +666,12 @@ export default class VsDebugSession extends V8Protocol {
   }
 
   dispose(): void {
+    if (this._adapterErrorOutput) {
+      track('vs-debug-session:transaction', {
+        ...this._adapterAnalyticsExtras,
+        response: this._adapterErrorOutput,
+      });
+    }
     this.disconnect();
   }
 }

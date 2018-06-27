@@ -17,8 +17,10 @@
   },
   "dependencies": {
     "classnames": "2.2.5",
+    "decoders": "1.6.1",
     "dompurify": "1.0.3",
     "fuzzaldrin-plus": "0.4.1",
+    "idb-keyval": "2.3.0",
     "idx": "1.2.0",
     "immutable": "4.0.0-rc.9",
     "log4js": "1.1.1",
@@ -29,9 +31,9 @@
     "nuclide-debugger-common": "0.7.1-dev",
     "nuclide-prebuilt-libs": "0.5.1",
     "nullthrows": "1.0.0",
-    "react": "16.3.2",
-    "react-dom": "16.3.2",
-    "react-virtualized": "9.13.0",
+    "react": "16.4.1",
+    "react-dom": "16.4.1",
+    "react-virtualized": "9.18.5",
     "redux": "3.6.0",
     "reselect": "3.0.1",
     "rxjs": "5.5.5",
@@ -40,7 +42,7 @@
     "strip-ansi": "3.0.1",
     "uuid": "3.0.1",
     "vscode-debugprotocol": "1.24.0",
-    "xterm": "3.1.0"
+    "xterm": "3.4.1"
   },
   "devDependencies": {
     "temp": "0.8.3"

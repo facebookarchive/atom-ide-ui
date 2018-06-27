@@ -45,6 +45,7 @@ import {PinnedDatatip} from './PinnedDatatip';
 
 const DEFAULT_DATATIP_DEBOUNCE_DELAY = 1000;
 const DEFAULT_DATATIP_INTERACTED_DEBOUNCE_DELAY = 1000;
+const TRACK_SAMPLE_RATE = 10;
 
 type PinClickHandler = (editor: atom$TextEditor, datatip: Datatip) => void;
 
@@ -111,22 +112,20 @@ async function getDatatipResults<TProvider: AnyDatatipProvider>(
   const promises = filteredDatatipProviders.map(
     async (provider: TProvider): Promise<?DatatipResult> => {
       const name = getProviderName(provider);
-      const timingTracker = new analytics.TimingTracker(name + '.datatip', {});
       try {
-        const datatip: ?Datatip = await invoke(provider);
-        if (!datatip) {
-          return null;
-        }
-
-        timingTracker.onSuccess();
-
-        const result: DatatipResult = {
-          datatip,
-          provider,
-        };
-        return result;
+        return await analytics.trackTimingSampled(
+          name + '.datatip',
+          async (): Promise<?DatatipResult> => {
+            const datatip: ?Datatip = await invoke(provider);
+            if (!datatip) {
+              return null;
+            }
+            return {datatip, provider};
+          },
+          TRACK_SAMPLE_RATE,
+          {path: editor.getPath()},
+        );
       } catch (e) {
-        timingTracker.onError(e);
         getLogger('datatip').error(
           `Error getting datatip from provider ${name}`,
           e,
@@ -773,12 +772,12 @@ class DatatipManagerForEditor {
 export class DatatipManager {
   _datatipProviders: ProviderRegistry<DatatipProvider>;
   _modifierDatatipProviders: ProviderRegistry<ModifierDatatipProvider>;
-  _editorManagers: Map<atom$TextEditor, DatatipManagerForEditor>;
+  _editorManagers: WeakMap<atom$TextEditor, DatatipManagerForEditor>;
   _subscriptions: UniversalDisposable;
 
   constructor() {
     this._subscriptions = new UniversalDisposable();
-    this._editorManagers = new Map();
+    this._editorManagers = new WeakMap();
     this._datatipProviders = new ProviderRegistry();
     this._modifierDatatipProviders = new ProviderRegistry();
 
@@ -790,12 +789,7 @@ export class DatatipManager {
           this._modifierDatatipProviders,
         );
         this._editorManagers.set(editor, manager);
-        const disposable = new UniversalDisposable(() => {
-          manager.dispose();
-          this._editorManagers.delete(editor);
-        });
-        this._subscriptions.add(disposable);
-        editor.onDidDestroy(() => disposable.dispose());
+        this._subscriptions.addUntilDestroyed(editor, manager);
       }),
     );
   }
@@ -825,9 +819,5 @@ export class DatatipManager {
 
   dispose(): void {
     this._subscriptions.dispose();
-    this._editorManagers.forEach(manager => {
-      manager.dispose();
-    });
-    this._editorManagers = new Map();
   }
 }

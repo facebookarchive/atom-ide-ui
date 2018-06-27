@@ -7,10 +7,9 @@
   "homepage": "https://nuclide.io/",
   "repository": "https://github.com/facebook/nuclide/tree/master/modules/nuclide-commons-ui",
   "scripts": {
-    "prepublish": "../scripts/prepublish.sh",
-    "test": "atom --dev --test spec"
+    "test": "true",
+    "prepublish": "../scripts/prepublish.sh"
   },
-  "atomTestRunner": "../scripts/atom-test-runner.js",
   "dependencies": {
     "anser": "1.4.6",
     "classnames": "2.2.5",
@@ -24,8 +23,8 @@
     "nuclide-commons": "0.7.1-dev",
     "nuclide-commons-atom": "0.7.1-dev",
     "nullthrows": "1.0.0",
-    "react": "16.3.2",
-    "react-dom": "16.3.2",
+    "react": "16.4.1",
+    "react-dom": "16.4.1",
     "rxjs": "5.5.5",
     "semver": "5.3.0",
     "shallowequal": "0.2.2",

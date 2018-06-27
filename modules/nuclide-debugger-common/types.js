@@ -10,6 +10,7 @@
  * @format
  */
 
+import type {SuggestedProjectPath} from 'atom-ide-debugger-java/types';
 import type {ISession} from 'atom-ide-ui/pkg/atom-ide-debugger/lib/types';
 import type UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import type {TaskEvent, ProcessMessage} from 'nuclide-commons/process';
@@ -56,7 +57,7 @@ export type VsAdapterType =
   | 'native_gdb';
 
 export type NuclideDebuggerProvider = {
-  name: string,
+  type: VsAdapterType,
   getLaunchAttachProvider(
     connection: NuclideUri,
   ): ?DebuggerLaunchAttachProvider,
@@ -68,32 +69,20 @@ export type ControlButtonSpecification = {
   onClick: () => mixed,
 };
 
-// Indicates which of various optional features that this debugger supports.
-export type DebuggerCapabilities = {
-  +threads: boolean,
-};
-
-// Describes how to configure various properties that individual debuggers
-// are allowed to override.
-export type DebuggerProperties = {
-  +customControlButtons: Array<ControlButtonSpecification>,
-  +threadsComponentTitle: string,
-};
-
 export type IProcessConfig = {|
   +targetUri: NuclideUri,
   +debugMode: DebuggerConfigAction,
   +adapterType: VsAdapterType,
-  +adapterExecutable: ?VSAdapterExecutableInfo,
-  // TODO(most): deprecate
-  +capabilities: DebuggerCapabilities,
-  // TODO(most): deprecate
-  +properties: DebuggerProperties,
+  +adapterExecutable?: ?VSAdapterExecutableInfo,
   +config: Object,
   +clientPreprocessor?: ?MessageProcessor,
   +adapterPreprocessor?: ?MessageProcessor,
   +customDisposable?: UniversalDisposable,
-  +onInitializeCallback?: (session: ISession) => void,
+  +onInitializeCallback?: (session: ISession) => Promise<void>,
+  +processName?: string,
+  +customControlButtons?: Array<ControlButtonSpecification>,
+  +threadsComponentTitle?: string,
+  +showThreads?: boolean,
 |};
 
 export interface IVsAdapterSpawner {
@@ -105,7 +94,11 @@ export interface IVsAdapterSpawner {
 
 export type MessageProcessor = (message: Object) => void;
 
-export type AutoGenPropertyPrimitiveType = 'string' | 'number' | 'boolean';
+export type AutoGenPropertyPrimitiveType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'path';
 
 export type AutoGenPropertyType =
   | AutoGenPropertyPrimitiveType
@@ -115,6 +108,7 @@ export type AutoGenPropertyType =
   | 'json'
   | 'deviceAndPackage'
   | 'deviceAndProcess'
+  | 'selectSources'
   | 'process';
 
 export type AutoGenProperty = {
@@ -140,6 +134,7 @@ type AutoGenLaunchOrAttachConfigBase = {
   scriptExtension?: string,
   scriptPropertyName?: ?string,
   header?: React.Node,
+  getProcessName: (values: Object) => string,
 };
 
 export type AutoGenLaunchConfig = AutoGenLaunchOrAttachConfigBase & {
@@ -172,6 +167,10 @@ export type LaunchAttachProviderIsEnabled = (
 export interface DebuggerConfigurationProvider {
   resolveConfiguration(configuration: IProcessConfig): Promise<IProcessConfig>;
   adapterType: VsAdapterType;
+}
+
+export interface DebuggerPathResolverProvider {
+  resolvePath(project: string, filePath: string): Promise<string>;
 }
 
 //
@@ -300,10 +299,8 @@ export type DeviceArchitecture = 'x86' | 'x86_64' | 'arm' | 'arm64' | '';
 
 export type Device = {|
   name: string,
-  port: number,
   displayName: string,
   architecture: DeviceArchitecture,
-  rawArchitecture: string,
   ignoresSelection?: boolean,
 |};
 
@@ -331,3 +328,15 @@ export type AppInfoRow = {
   value: string,
   isError?: boolean,
 };
+
+export interface DebuggerSourcePathsService {
+  addKnownJavaSubdirectoryPaths(
+    remote: boolean,
+    translatedPath: string,
+    searchPaths: Array<string>,
+  ): void;
+
+  observeSuggestedAndroidProjectPaths(
+    callback: (Array<SuggestedProjectPath>) => void,
+  ): IDisposable;
+}

@@ -27,7 +27,7 @@ import {Checkbox} from 'nuclide-commons-ui/Checkbox';
 import RadioGroup from 'nuclide-commons-ui/RadioGroup';
 import {AtomInput} from 'nuclide-commons-ui/AtomInput';
 import nuclideUri from 'nuclide-commons/nuclideUri';
-import {capitalize, shellParse} from 'nuclide-commons/string';
+import {capitalize, shellParseWithGlobs} from 'nuclide-commons/string';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {getDebuggerService} from 'nuclide-commons-atom/debugger';
 import {
@@ -37,6 +37,7 @@ import {
 import {DeviceAndPackage} from './DeviceAndPackage';
 import {DeviceAndProcess} from './DeviceAndProcess';
 import SelectableFilterableProcessTable from './SelectableFilterableProcessTable';
+import {SourceSelector} from './SourceSelector';
 
 type StringPair = [string, string];
 
@@ -45,6 +46,7 @@ type Props = {|
   +configIsValidChanged: (valid: boolean) => void,
   +config: AutoGenLaunchOrAttachConfig,
   +debuggerTypeName: string,
+  +pathResolver: (project: NuclideUri, filePath: string) => Promise<string>,
 |};
 
 type DeviceAndPackageType = {|
@@ -64,6 +66,7 @@ type State = {
   processTableValues: Map<string, number>,
   deviceAndPackageValues: Map<string, DeviceAndPackageType>,
   deviceAndProcessValues: Map<string, DeviceAndProcessType>,
+  selectSourcesValues: Map<string, ?NuclideUri>,
 };
 
 // extension must be a string starting with a '.' like '.js' or '.py'
@@ -98,6 +101,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       processTableValues: new Map(),
       deviceAndPackageValues: new Map(),
       deviceAndProcessValues: new Map(),
+      selectSourcesValues: new Map(),
     };
   }
 
@@ -107,6 +111,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
   ): boolean {
     return (
       type === 'string' ||
+      type === 'path' ||
       (type === 'array' && itemType === 'string') ||
       type === 'object' ||
       type === 'number' ||
@@ -245,13 +250,13 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
     );
   }
 
-  componentWillReceiveProps(nextProps: Props) {
+  UNSAFE_componentWillReceiveProps(nextProps: Props) {
     if (nextProps.debuggerTypeName !== this.props.debuggerTypeName) {
       this._deserializeDebuggerConfig(nextProps);
     }
   }
 
-  componentWillMount(): void {
+  UNSAFE_componentWillMount(): void {
     this._deserializeDebuggerConfig(this.props);
   }
 
@@ -273,7 +278,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
 
   _valueExists(property: AutoGenProperty): boolean {
     const {name, type} = property;
-    if (type === 'string') {
+    if (type === 'string' || type === 'path') {
       const value = this.state.atomInputValues.get(name);
       return value != null && value !== '';
     } else if (type === 'number') {
@@ -302,6 +307,9 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
         deviceAndProcessValue.device != null &&
         deviceAndProcessValue.selectedProcess != null
       );
+    } else if (type === 'selectSources') {
+      const selectSourcesValue = this.state.selectSourcesValues.get(name);
+      return selectSourcesValue != null;
     }
     return false;
   }
@@ -435,6 +443,31 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
           }}
         />
       );
+    } else if (type === 'selectSources') {
+      return (
+        <div>
+          {nameLabel}
+          <SourceSelector
+            deserialize={() => {
+              let selectSourcesValuesArray: Array<StringPair> = [];
+              deserializeDebuggerConfig(
+                ...this._getSerializationArgs(this.props),
+                (transientSettings, savedSettings) => {
+                  selectSourcesValuesArray =
+                    (savedSettings.selectSourcesValues: Array<StringPair>) ||
+                    [];
+                },
+              );
+              const selectSourcesValues = new Map(selectSourcesValuesArray);
+              return selectSourcesValues.get(name) || null;
+            }}
+            onSelect={selectedSource => {
+              this.state.selectSourcesValues.set(name, selectedSource);
+              this.props.configIsValidChanged(this._debugButtonShouldEnable());
+            }}
+          />
+        </div>
+      );
     }
     return (
       <div>
@@ -469,39 +502,56 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       processTableValues,
       deviceAndPackageValues,
       deviceAndProcessValues,
+      selectSourcesValues,
     } = this.state;
-    const {launch, vsAdapterType, threads} = config;
+    const {launch, vsAdapterType, threads, getProcessName} = config;
 
     const stringValues = new Map();
     const stringArrayValues = new Map();
     const objectValues = new Map();
     const numberValues = new Map();
     const jsonValues = new Map();
-    this._getConfigurationProperties()
-      .filter(
-        property => property.visible && atomInputValues.has(property.name),
-      )
-      .forEach(property => {
-        const {name, type} = property;
-        const itemType = idx(property, _ => _.itemType);
-        const value = atomInputValues.get(name) || '';
-        if (type === 'string') {
-          stringValues.set(name, value);
-        } else if (type === 'array' && itemType === 'string') {
-          stringArrayValues.set(name, shellParse(value));
-        } else if (type === 'object') {
-          const objectValue = {};
-          shellParse(value).forEach(variable => {
-            const [lhs, rhs] = variable.split('=');
-            objectValue[lhs] = rhs;
-          });
-          objectValues.set(name, objectValue);
-        } else if (type === 'number') {
-          numberValues.set(name, Number(value));
-        } else if (type === 'json') {
-          jsonValues.set(name, JSON.parse(value));
-        }
-      });
+    await Promise.all(
+      Array.from(
+        this._getConfigurationProperties()
+          .filter(
+            property => property.visible && atomInputValues.has(property.name),
+          )
+          .map(async property => {
+            const {name, type} = property;
+            const itemType = idx(property, _ => _.itemType);
+            const value = atomInputValues.get(name) || '';
+            if (type === 'path') {
+              try {
+                const resolvedPath =
+                  this.props.pathResolver == null
+                    ? value
+                    : await this.props.pathResolver(targetUri, value);
+                stringValues.set(name, resolvedPath);
+              } catch (_) {
+                stringValues.set(name, value);
+              }
+            } else if (type === 'string') {
+              stringValues.set(name, value);
+            } else if (type === 'array' && itemType === 'string') {
+              stringArrayValues.set(name, shellParseWithGlobs(value));
+            } else if (type === 'object') {
+              const objectValue = {};
+              shellParseWithGlobs(value).forEach(variable => {
+                const [lhs, rhs] = variable.split('=');
+                objectValue[lhs] = rhs;
+              });
+              objectValues.set(name, objectValue);
+            } else if (type === 'number') {
+              numberValues.set(name, Number(value));
+            } else if (type === 'json') {
+              jsonValues.set(name, JSON.parse(value));
+            }
+
+            return value;
+          }),
+      ),
+    );
 
     const packageValues = new Map();
     this._getConfigurationProperties()
@@ -542,6 +592,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       jsonValues,
       deviceAndPackageValues,
       deviceAndProcessValues,
+      selectSourcesValues,
     ].forEach(map => {
       map.forEach((value, key) => {
         values[key] = value;
@@ -558,18 +609,17 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       });
 
     const debuggerService = await getDebuggerService();
+
     debuggerService.startVspDebugging({
       targetUri,
       debugMode: launch ? 'launch' : 'attach',
       adapterType: vsAdapterType,
-      adapterExecutable: null,
       config: values,
-      capabilities: {threads},
-      properties: {
-        customControlButtons: [],
-        threadsComponentTitle: 'Threads',
-      },
+      showThreads: threads,
+      customControlButtons: [],
+      threadsComponentTitle: 'Threads',
       customDisposable: new UniversalDisposable(),
+      processName: getProcessName(values),
     });
 
     serializeDebuggerConfig(...this._getSerializationArgs(this.props), {
@@ -578,6 +628,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       enumValues: Array.from(enumValues),
       packageValues: Array.from(packageValues),
       processValues: Array.from(processValues),
+      selectSourcesValues: Array.from(selectSourcesValues),
     });
   };
 }

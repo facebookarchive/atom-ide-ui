@@ -69,14 +69,14 @@ export function getNativeAutoGenConfig(
 ): AutoGenConfig {
   const program = {
     name: 'program',
-    type: 'string',
+    type: 'path',
     description: 'Input the program/executable you want to launch',
     required: true,
     visible: true,
   };
   const cwd = {
     name: 'cwd',
-    type: 'string',
+    type: 'path',
     description: 'Working directory for the launched executable',
     required: true,
     visible: true,
@@ -85,7 +85,7 @@ export function getNativeAutoGenConfig(
     name: 'args',
     type: 'array',
     itemType: 'string',
-    description: 'Arguments to the executable',
+    description: '(Optional) Arguments to the executable',
     required: false,
     defaultValue: '',
     visible: true,
@@ -94,15 +94,8 @@ export function getNativeAutoGenConfig(
     name: 'env',
     type: 'array',
     itemType: 'string',
-    description: 'Environment variables (e.g., SHELL=/bin/bash PATH=/bin)',
-    required: false,
-    defaultValue: '',
-    visible: true,
-  };
-  const sourcePath = {
-    name: 'sourcePath',
-    type: 'string',
-    description: 'Optional base path for sources',
+    description:
+      '(Optional) Environment variables (e.g. SHELL=/bin/bash PATH=/bin)',
     required: false,
     defaultValue: '',
     visible: true,
@@ -116,11 +109,19 @@ export function getNativeAutoGenConfig(
     launch: true,
     vsAdapterType,
     threads: true,
-    properties: [program, cwd, args, env, sourcePath],
+    properties: [program, cwd, args, env],
     scriptPropertyName: 'program',
     scriptExtension: '.c',
     cwdPropertyName: 'working directory',
     header: <p>Debug native programs {debugTypeMessage}.</p>,
+    getProcessName(values) {
+      let processName = values.program;
+      const lastSlash = processName.lastIndexOf('/');
+      if (lastSlash >= 0) {
+        processName = processName.substring(lastSlash + 1, processName.length);
+      }
+      return processName;
+    },
   };
 
   const pid = {
@@ -134,8 +135,11 @@ export function getNativeAutoGenConfig(
     launch: false,
     vsAdapterType,
     threads: true,
-    properties: [pid, sourcePath],
+    properties: [pid],
     header: <p>Attach to a running native process {debugTypeMessage}</p>,
+    getProcessName(values) {
+      return 'Pid: ' + values.pid + ' (' + debugTypeMessage + ')';
+    },
   };
   return {
     launch: autoGenLaunchConfig,

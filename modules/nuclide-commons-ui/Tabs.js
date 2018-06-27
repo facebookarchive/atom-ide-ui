@@ -30,12 +30,14 @@ type Props = {
   onActiveTabChange: (tab: Tab) => void,
   onClose?: () => void,
   triggeringEvent: string,
+  growable?: boolean,
 };
 
 export default class Tabs extends React.Component<Props> {
   static defaultProps = {
     closeable: false,
     triggeringEvent: 'onClick',
+    growable: false,
   };
 
   _handleTabChange = (selectedTabName: string) => {
@@ -62,8 +64,10 @@ export default class Tabs extends React.Component<Props> {
           className={classnames({
             tab: true,
             active: this.props.activeTabName === tab.name,
+            growable: this.props.growable,
           })}
           key={tab.name}
+          title={tab.name}
           {...handler}>
           <div className="title">
             {icon}

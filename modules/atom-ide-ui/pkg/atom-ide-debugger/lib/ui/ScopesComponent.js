@@ -82,6 +82,7 @@ export default class ScopesComponent extends React.Component<Props, State> {
         ),
       )
         .debounceTime(100)
+        .startWith(null)
         .switchMap(() => this._getScopes())
         .subscribe(scopes => {
           this.setState({scopes});
@@ -171,6 +172,9 @@ export default class ScopesComponent extends React.Component<Props, State> {
     if (expanded === this.state.expandedScopes.has(scope.name)) {
       return;
     }
+    // TODO: (wbinnssmith) T30771435 this setState depends on current state
+    // and should use an updater function rather than an object
+    // eslint-disable-next-line react/no-access-state-in-setstate
     const expandedScopes = new Set(this.state.expandedScopes);
     if (expanded) {
       expandedScopes.add(scope.name);
@@ -182,6 +186,7 @@ export default class ScopesComponent extends React.Component<Props, State> {
 
   render(): React.Node {
     const {scopes} = this.state;
+    const {service} = this.props;
     if (scopes.isError) {
       return <span>Error fetching scopes: {scopes.error.toString()}</span>;
     } else if (scopes.isPending) {
@@ -192,8 +197,19 @@ export default class ScopesComponent extends React.Component<Props, State> {
     const scopeSections = scopes.value.map(scope =>
       this._renderScopeSection(scope),
     );
+    const processName =
+      (service.viewModel.focusedProcess == null ||
+      service.viewModel.focusedProcess.configuration.processName == null
+        ? 'Unknown Process'
+        : service.viewModel.focusedProcess.configuration.processName) +
+      (service.viewModel.focusedStackFrame == null
+        ? ' (Unknown Frame)'
+        : ' (' + service.viewModel.focusedStackFrame.name + ')');
     return (
-      <div className="debugger-expression-value-list">{scopeSections}</div>
+      <div>
+        <span>{processName}</span>
+        <div className="debugger-expression-value-list">{scopeSections}</div>
+      </div>
     );
   }
 }
@@ -241,7 +257,7 @@ class ScopeComponent extends React.Component<ScopeProps> {
   _renderVariable(expression: IVariable): ?React.Element<any> {
     return (
       <div
-        className="debugger-expression-value-row debugger-scope"
+        className="debugger-expression-value-row debugger-scope native-key-bindings"
         key={expression.getId()}>
         <div className="debugger-expression-value-content">
           <LazyNestedValueComponent

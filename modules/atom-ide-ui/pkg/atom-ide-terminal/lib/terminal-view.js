@@ -10,9 +10,12 @@
  * @format
  */
 
+/* eslint-env browser */
+
 import invariant from 'assert';
 import {Emitter} from 'atom';
 import {shell, clipboard} from 'electron';
+import observePaneItemVisibility from 'nuclide-commons-atom/observePaneItemVisibility';
 import {
   observeAddedHostnames,
   observeRemovedHostnames,
@@ -20,21 +23,34 @@ import {
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import {Observable} from 'rxjs';
 import url from 'url';
-import {Terminal} from 'xterm';
-import * as Fit from 'xterm/lib/addons/fit/fit';
 
 import {getPtyServiceByNuclideUri} from './AtomServiceContainer';
 import featureConfig from 'nuclide-commons-atom/feature-config';
 import {ResizeObservable} from 'nuclide-commons-ui/observable-dom';
 import performanceNow from 'nuclide-commons/performanceNow';
+import {createTerminal} from './createTerminal';
 import {infoFromUri, uriFromInfo} from './nuclide-terminal-uri';
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {track} from 'nuclide-commons/analytics';
 import {goToLocation} from 'nuclide-commons-atom/go-to-location';
 
+import {
+  ADD_ESCAPE_COMMAND,
+  COLOR_CONFIGS,
+  CURSOR_BLINK_CONFIG,
+  CURSOR_STYLE_CONFIG,
+  DOCUMENTATION_MESSAGE_CONFIG,
+  FONT_FAMILY_CONFIG,
+  FONT_SCALE_CONFIG,
+  LINE_HEIGHT_CONFIG,
+  PRESERVED_COMMANDS_CONFIG,
+  SCROLLBACK_CONFIG,
+  getFontSize,
+} from './config';
 import {removePrefixSink, patternCounterSink} from './sink';
 
+import type {Terminal} from './createTerminal';
 import type {TerminalInstance} from './types';
 import type {IconName} from 'nuclide-commons-ui/Icon';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
@@ -43,35 +59,6 @@ import type {InstantiatedTerminalInfo} from './nuclide-terminal-uri';
 
 import type {Sink} from './sink';
 
-export const COLOR_CONFIGS = Object.freeze({
-  // dark
-  black: 'atom-ide-terminal.black',
-  red: 'atom-ide-terminal.red',
-  green: 'atom-ide-terminal.green',
-  blue: 'atom-ide-terminal.blue',
-  yellow: 'atom-ide-terminal.yellow',
-  cyan: 'atom-ide-terminal.cyan',
-  magenta: 'atom-ide-terminal.magenta',
-  white: 'atom-ide-terminal.white',
-  // bright
-  brightBlack: 'atom-ide-terminal.brightBlack',
-  brightRed: 'atom-ide-terminal.brightRed',
-  brightGreen: 'atom-ide-terminal.brightGreen',
-  brightBlue: 'atom-ide-terminal.brightBlue',
-  brightYellow: 'atom-ide-terminal.brightYellow',
-  brightCyan: 'atom-ide-terminal.brightCyan',
-  brightMagenta: 'atom-ide-terminal.brightMagenta',
-  brightWhite: 'atom-ide-terminal.brightWhite',
-});
-const PRESERVED_COMMANDS_CONFIG = 'atom-ide-terminal.preservedCommands';
-const SCROLLBACK_CONFIG = 'atom-ide-terminal.scrollback';
-const CURSOR_STYLE_CONFIG = 'atom-ide-terminal.cursorStyle';
-const CURSOR_BLINK_CONFIG = 'atom-ide-terminal.cursorBlink';
-const FONT_FAMILY_CONFIG = 'atom-ide-terminal.fontFamily';
-const FONT_SCALE_CONFIG = 'atom-ide-terminal.fontScale';
-const LINE_HEIGHT_CONFIG = 'atom-ide-terminal.lineHeight';
-const DOCUMENTATION_MESSAGE_CONFIG = 'atom-ide-terminal.documentationMessage';
-const ADD_ESCAPE_COMMAND = 'atom-ide-terminal:add-escape-prefix';
 const TMUX_CONTROLCONTROL_PREFIX = '\x1BP1000p';
 export const URI_PREFIX = 'atom://nuclide-terminal-view';
 
@@ -93,7 +80,7 @@ export class TerminalView implements PtyClient, TerminalInstance {
   _emitter: Emitter;
   _preservedCommands: Set<string>;
   _div: HTMLDivElement;
-  _terminal: Object;
+  _terminal: Terminal;
   _pty: ?Pty;
   _processOutput: Sink;
   _startTime: number;
@@ -107,13 +94,6 @@ export class TerminalView implements PtyClient, TerminalInstance {
   _initialInput: string;
 
   constructor(paneUri: string) {
-    if (Terminal.fit == null) {
-      // The 'fit' add-on resizes the terminal based on the container size
-      // and the font size such that the terminal fills the container.
-      // Load the addon on-demand the first time we create a terminal.
-      Terminal.applyAddon(Fit);
-    }
-
     this._paneUri = paneUri;
     const info = infoFromUri(paneUri);
     this._terminalInfo = info;
@@ -167,26 +147,13 @@ export class TerminalView implements PtyClient, TerminalInstance {
     div.classList.add('terminal-pane');
     subscriptions.add(() => div.remove());
 
-    const terminal = (this._terminal = new Terminal({
-      cols: 512,
-      rows: 512,
-      cursorBlink: featureConfig.get(CURSOR_BLINK_CONFIG),
-      cursorStyle: featureConfig.get(CURSOR_STYLE_CONFIG),
-      scrollback: featureConfig.get(SCROLLBACK_CONFIG),
-    }));
-    (div: any).terminal = terminal;
-    terminal.open(this._div);
-    terminal.setHypertextLinkHandler(openLink);
+    const terminal = (this._terminal = createTerminal());
     terminal.attachCustomKeyEventHandler(
       this._checkIfKeyBoundOrDivertToXTerm.bind(this),
     );
-    this._subscriptions.add(() => terminal.destroy());
+    this._subscriptions.add(() => terminal.dispose());
+    terminal.webLinksInit(openLink);
     registerLinkHandlers(terminal, this._cwd);
-
-    if (featureConfig.get(DOCUMENTATION_MESSAGE_CONFIG)) {
-      const docsUrl = 'https://nuclide.io/docs/features/terminal';
-      terminal.writeln(`For more info check out the docs: ${docsUrl}`);
-    }
 
     this._subscriptions.add(
       atom.commands.add(div, 'core:copy', () => {
@@ -201,33 +168,6 @@ export class TerminalView implements PtyClient, TerminalInstance {
         this._addEscapePrefix.bind(this),
       ),
       atom.commands.add(div, 'atom-ide-terminal:clear', this._clear.bind(this)),
-      featureConfig
-        .observeAsStream(CURSOR_STYLE_CONFIG)
-        .skip(1)
-        .subscribe(cursorStyle =>
-          terminal.setOption('cursorStyle', cursorStyle),
-        ),
-      featureConfig
-        .observeAsStream(CURSOR_BLINK_CONFIG)
-        .skip(1)
-        .subscribe(cursorBlink =>
-          terminal.setOption('cursorBlink', cursorBlink),
-        ),
-      featureConfig
-        .observeAsStream(SCROLLBACK_CONFIG)
-        .skip(1)
-        .subscribe(scrollback => terminal.setOption('scrollback', scrollback)),
-      Observable.merge(
-        observableFromSubscribeFunction(cb =>
-          atom.config.onDidChange('editor.fontSize', cb),
-        ),
-        featureConfig.observeAsStream(FONT_SCALE_CONFIG).skip(1),
-        featureConfig.observeAsStream(FONT_FAMILY_CONFIG).skip(1),
-        featureConfig.observeAsStream(LINE_HEIGHT_CONFIG).skip(1),
-        Observable.fromEvent(this._terminal, 'focus'),
-        Observable.fromEvent(window, 'resize'),
-        new ResizeObservable(this._div),
-      ).subscribe(this._syncFontAndFit),
     );
 
     if (process.platform === 'win32') {
@@ -263,9 +203,61 @@ export class TerminalView implements PtyClient, TerminalInstance {
     (this._div: any).focus = () => terminal.focus();
     (this._div: any).blur = () => terminal.blur();
 
-    this._spawn(cwd)
-      .then(pty => this._onPtyFulfill(pty))
-      .catch(error => this._onPtyFail(error));
+    // Terminal.open only works after its div has been attached to the DOM,
+    // which happens in getElement, not in this constructor. Therefore delay
+    // open and spawn until the div is visible, which means it is in the DOM.
+    this._subscriptions.add(
+      observePaneItemVisibility(this)
+        .filter(Boolean)
+        .first()
+        .subscribe(() => {
+          terminal.open(this._div);
+          (div: any).terminal = terminal;
+          if (featureConfig.get(DOCUMENTATION_MESSAGE_CONFIG)) {
+            const docsUrl = 'https://nuclide.io/docs/features/terminal';
+            terminal.writeln(`For more info check out the docs: ${docsUrl}`);
+          }
+          terminal.focus();
+          this._subscriptions.add(this._subscribeFitEvents());
+          this._spawn(cwd)
+            .then(pty => this._onPtyFulfill(pty))
+            .catch(error => this._onPtyFail(error));
+        }),
+    );
+  }
+
+  _subscribeFitEvents(): UniversalDisposable {
+    return new UniversalDisposable(
+      featureConfig
+        .observeAsStream(CURSOR_STYLE_CONFIG)
+        .skip(1)
+        .subscribe(cursorStyle =>
+          this._setTerminalOption('cursorStyle', cursorStyle),
+        ),
+      featureConfig
+        .observeAsStream(CURSOR_BLINK_CONFIG)
+        .skip(1)
+        .subscribe(cursorBlink =>
+          this._setTerminalOption('cursorBlink', cursorBlink),
+        ),
+      featureConfig
+        .observeAsStream(SCROLLBACK_CONFIG)
+        .skip(1)
+        .subscribe(scrollback =>
+          this._setTerminalOption('scrollback', scrollback),
+        ),
+      Observable.merge(
+        observableFromSubscribeFunction(cb =>
+          atom.config.onDidChange('editor.fontSize', cb),
+        ),
+        featureConfig.observeAsStream(FONT_SCALE_CONFIG).skip(1),
+        featureConfig.observeAsStream(FONT_FAMILY_CONFIG).skip(1),
+        featureConfig.observeAsStream(LINE_HEIGHT_CONFIG).skip(1),
+        Observable.fromEvent(this._terminal, 'focus'),
+        Observable.fromEvent(window, 'resize'),
+        new ResizeObservable(this._div),
+      ).subscribe(this._syncFontAndFit),
+    );
   }
 
   _spawn(cwd: ?NuclideUri): Promise<Pty> {
@@ -385,20 +377,23 @@ export class TerminalView implements PtyClient, TerminalInstance {
   // Since changing the font settings may resize the contents, we have to
   // trigger a re-fit when updating font settings.
   _syncFontAndFit = (): void => {
-    const scaledFont =
-      parseFloat(featureConfig.get(FONT_SCALE_CONFIG)) *
-      parseFloat(atom.config.get('editor.fontSize'));
-    this._terminal.setOption('fontSize', scaledFont);
-    this._terminal.setOption(
+    this._setTerminalOption('fontSize', getFontSize());
+    this._setTerminalOption(
       'lineHeight',
       featureConfig.get(LINE_HEIGHT_CONFIG),
     );
-    this._terminal.setOption(
+    this._setTerminalOption(
       'fontFamily',
       featureConfig.get(FONT_FAMILY_CONFIG),
     );
     this._fitAndResize();
   };
+
+  _setTerminalOption(optionName: string, value: mixed): void {
+    if (this._terminal.getOption(optionName) !== value) {
+      this._terminal.setOption(optionName, value);
+    }
+  }
 
   _fitAndResize(): void {
     // Force character measure before 'fit' runs.
@@ -414,9 +409,8 @@ export class TerminalView implements PtyClient, TerminalInstance {
   }
 
   _syncAtomTheme(): void {
-    const terminal = this._terminal;
     const div = this._div;
-    terminal.setOption('theme', getTerminalTheme(div));
+    this._setTerminalOption('theme', getTerminalTheme(div));
   }
 
   _clear(): void {
@@ -802,10 +796,8 @@ function getTerminalColors(): {[$Keys<typeof COLOR_CONFIGS>]: string} {
 
 function getTerminalTheme(div: HTMLDivElement): any {
   const style = window.getComputedStyle(div);
-  const foreground = convertRgbToHash(style.getPropertyValue('color'));
-  const background = convertRgbToHash(
-    style.getPropertyValue('background-color'),
-  );
+  const foreground = style.getPropertyValue('color');
+  const background = style.getPropertyValue('background-color');
   // return type: https://git.io/vxooH
   return {
     foreground,
@@ -813,22 +805,4 @@ function getTerminalTheme(div: HTMLDivElement): any {
     cursor: foreground,
     ...getTerminalColors(),
   };
-}
-
-// Terminal only allows colors of the form '#rrggbb' or '#rgb' and falls back
-// to black otherwise. https://git.io/vNE8a  :-(
-const rgbRegex = / *rgb *\( *([0-9]+) *, *([0-9]+) *, *([0-9]+) *\) */;
-function convertRgbToHash(rgb: string): string {
-  const matches = rgb.match(rgbRegex);
-  if (matches == null) {
-    return rgb;
-  }
-  return (
-    '#' +
-    matches
-      .slice(1, 4)
-      .map(Number)
-      .map(n => (n < 0x10 ? '0' : '') + n.toString(16))
-      .join('')
-  );
 }

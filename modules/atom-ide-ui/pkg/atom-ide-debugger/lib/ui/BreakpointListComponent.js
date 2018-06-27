@@ -26,7 +26,7 @@ import {AnalyticsEvents} from '../constants';
 import {openSourceLocation} from '../utils';
 import {Section} from 'nuclide-commons-ui/Section';
 import featureConfig from 'nuclide-commons-atom/feature-config';
-import {observeProjectPaths} from 'nuclide-commons-atom/projects';
+import {observeProjectPathsAll} from 'nuclide-commons-atom/projects';
 
 type Props = {|
   service: IDebugService,
@@ -49,20 +49,7 @@ export default class BreakpointListComponent extends React.Component<
   constructor(props: Props) {
     super(props);
     this.state = this._computeState();
-    this._disposables = new UniversalDisposable(
-      observeProjectPaths((projectPath, added) => {
-        const newProjects = this.state.activeProjects;
-        if (added) {
-          newProjects.push(projectPath);
-        } else {
-          const index = newProjects.indexOf(projectPath);
-          if (index >= 0) {
-            newProjects.splice(index, 1);
-          }
-        }
-        this.setState({activeProjects: newProjects});
-      }),
-    );
+    this._disposables = new UniversalDisposable();
   }
 
   _computeState(): State {
@@ -101,6 +88,9 @@ export default class BreakpointListComponent extends React.Component<
       model.onDidChangeBreakpoints(() => {
         this.setState(this._computeState());
       }),
+      observeProjectPathsAll(projectPaths =>
+        this.setState({activeProjects: projectPaths}),
+      ),
     );
   }
 
@@ -271,7 +261,9 @@ export default class BreakpointListComponent extends React.Component<
         );
       });
     const separator =
-      breakpoints.length !== 0 && !this.state.exceptionBreakpointsCollapsed ? (
+      breakpoints.length !== 0 &&
+      !this.state.exceptionBreakpointsCollapsed &&
+      exceptionBreakpoints.length !== 0 ? (
         <hr className="nuclide-ui-hr debugger-breakpoint-separator" />
       ) : null;
     return (

@@ -13,10 +13,9 @@
 export type {
   AtomNotificationType,
   ControlButtonSpecification,
-  DebuggerCapabilities,
   DebuggerConfigAction,
   DebuggerConfigurationProvider,
-  DebuggerProperties,
+  DebuggerSourcePathsService,
   Device,
   DevicePanelServiceApi,
   IProcessConfig,
@@ -37,9 +36,7 @@ export {
 
 export {default as VsDebugSession} from './VsDebugSession';
 
-export {default as VspProcessInfo} from './VspProcessInfo';
-
-export {VsAdapterTypes} from './constants';
+export {VsAdapterTypes, VsAdapterNames} from './constants';
 
 export {
   deserializeDebuggerConfig,
