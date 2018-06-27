@@ -40,6 +40,7 @@ SOFTWARE.
 */
 
 import type {ConsoleMessage} from 'atom-ide-ui';
+import type {GatekeeperService} from 'nuclide-commons-atom/types';
 import type {TerminalInfo} from '../../../atom-ide-terminal/lib/types';
 import type {
   DebuggerModeType,
@@ -130,6 +131,8 @@ const CHANGE_EXPRESSION_CONTEXT = 'CHANGE_EXPRESSION_CONTEXT';
 
 // Berakpoint events may arrive sooner than breakpoint responses.
 const MAX_BREAKPOINT_EVENT_DELAY_MS = 5 * 1000;
+
+let _gkService: ?GatekeeperService;
 
 class ViewModel implements IViewModel {
   _focusedProcess: ?IProcess;
@@ -255,10 +258,6 @@ export default class DebugService implements IDebugService {
         if (uri.startsWith(DEBUG_SOURCES_URI)) {
           if (this._debuggerMode !== DebuggerMode.STOPPED) {
             return this._openSourceView(uri);
-          } else {
-            throw new Error(
-              'Cannot open debug source views - no active debug session',
-            );
           }
         }
       }),
@@ -356,10 +355,11 @@ export default class DebugService implements IDebugService {
     this.focusStackFrame(stackFrameToFocus, null, null);
   }
 
-  _registerMarkers(): IDisposable {
+  _registerMarkers(process: IProcess): IDisposable {
     let selectedFrameMarker: ?atom$Marker = null;
     let threadChangeDatatip: ?IDisposable;
     let lastFocusedThreadId: ?number;
+    let lastFocusedProcess: ?IProcess;
 
     const cleaupMarkers = () => {
       if (selectedFrameMarker != null) {
@@ -423,11 +423,33 @@ export default class DebugService implements IDebugService {
           if (
             lastFocusedThreadId != null &&
             !explicit &&
-            stackFrame.thread.threadId !== lastFocusedThreadId
+            stackFrame.thread.threadId !== lastFocusedThreadId &&
+            process === lastFocusedProcess
           ) {
-            const message = `Active thread changed from ${lastFocusedThreadId} to ${
+            let message = `Active thread changed from ${lastFocusedThreadId} to ${
               stackFrame.thread.threadId
             }`;
+            const newFocusedProcess = stackFrame.thread.process;
+            if (
+              lastFocusedProcess != null &&
+              !explicit &&
+              newFocusedProcess !== lastFocusedProcess
+            ) {
+              if (
+                lastFocusedProcess.configuration.processName != null &&
+                newFocusedProcess.configuration.processName != null
+              ) {
+                message =
+                  'Active process changed from ' +
+                  lastFocusedProcess.configuration.processName +
+                  ' to ' +
+                  newFocusedProcess.configuration.processName +
+                  ' AND ' +
+                  message;
+              } else {
+                message = 'Active process changed AND ' + message;
+              }
+            }
             threadChangeDatatip = datatipService.createPinnedDataTip(
               {
                 component: () => (
@@ -443,6 +465,7 @@ export default class DebugService implements IDebugService {
             );
           }
           lastFocusedThreadId = stackFrame.thread.threadId;
+          lastFocusedProcess = stackFrame.thread.process;
         }),
 
       cleaupMarkers,
@@ -451,7 +474,7 @@ export default class DebugService implements IDebugService {
 
   _registerSessionListeners(process: Process, session: VsDebugSession): void {
     this._sessionEndDisposables = new UniversalDisposable(session);
-    this._sessionEndDisposables.add(this._registerMarkers());
+    this._sessionEndDisposables.add(this._registerMarkers(process));
 
     const sessionId = session.getId();
 
@@ -634,7 +657,7 @@ export default class DebugService implements IDebugService {
             });
           });
         } else {
-          this._onSessionEnd();
+          this._onSessionEnd(session);
           session.disconnect().catch(onUnexpectedError);
         }
       }),
@@ -825,7 +848,7 @@ export default class DebugService implements IDebugService {
     this._sessionEndDisposables.add(
       session.observeAdapterExitedEvents().subscribe(event => {
         // 'Run without debugging' mode VSCode must terminate the extension host. More details: #3905
-        this._onSessionEnd();
+        this._onSessionEnd(session);
       }),
     );
 
@@ -1022,6 +1045,15 @@ export default class DebugService implements IDebugService {
     return this._sendBreakpoints(uri);
   }
 
+  addSourceBreakpoint(uri: string, line: number): Promise<void> {
+    track(AnalyticsEvents.DEBUGGER_BREAKPOINT_SINGLE_ADD);
+    const existing = this._model.getBreakpointAtLine(uri, line);
+    if (existing == null) {
+      return this.addBreakpoints(uri, [{line}]);
+    }
+    return Promise.resolve(undefined);
+  }
+
   toggleSourceBreakpoint(uri: string, line: number): Promise<void> {
     track(AnalyticsEvents.DEBUGGER_BREAKPOINT_TOGGLE);
     const existing = this._model.getBreakpointAtLine(uri, line);
@@ -1185,8 +1217,13 @@ export default class DebugService implements IDebugService {
       atom.notifications.addError(
         `Failed to start debugger process: ${errorMessage}`,
       );
-      this._consoleDisposables.dispose();
-      this._updateModeAndEmit(DebuggerMode.STOPPED);
+      if (
+        this._model.getProcesses() == null ||
+        this._model.getProcesses().length === 0
+      ) {
+        this._consoleDisposables.dispose();
+        this._updateModeAndEmit(DebuggerMode.STOPPED);
+      }
       if (session != null && !session.isDisconnected()) {
         this._onSessionEnd();
         session.disconnect().catch(onUnexpectedError);
@@ -1457,10 +1494,21 @@ export default class DebugService implements IDebugService {
    */
   async startDebugging(config: IProcessConfig): Promise<void> {
     this._timer = startTracking('debugger-atom:startDebugging');
+
     if (this._viewModel.focusedProcess != null) {
       // We currently support only running only one debug session at a time,
       // so stop the current debug session.
-      this.stopProcess();
+
+      if (_gkService != null) {
+        const passes = await _gkService.passesGK(
+          'nuclide_multitarget_debugging',
+        );
+        if (!passes) {
+          this.stopProcess();
+        }
+      } else {
+        this.stopProcess();
+      }
     }
 
     this._updateModeAndEmit(DebuggerMode.STARTING);
@@ -1471,22 +1519,52 @@ export default class DebugService implements IDebugService {
     await this._doCreateProcess(config, uuid.v4());
   }
 
-  _onSessionEnd = (): void => {
-    const session = this._getCurrentSession();
+  consumeGatekeeperService(service: GatekeeperService): IDisposable {
+    _gkService = service;
+    return new UniversalDisposable(() => (_gkService = null));
+  }
+
+  _onSessionEnd = (givenSession: ?VsDebugSession): void => {
+    const session =
+      givenSession == null ? this._getCurrentSession() : givenSession;
     if (session == null) {
       return;
     }
     track(AnalyticsEvents.DEBUGGER_STOP);
     this._model.removeProcess(session.getId());
-    this._sessionEndDisposables.dispose();
-    this._consoleDisposables.dispose();
+    if (
+      this._model.getProcesses() == null ||
+      this._model.getProcesses().length === 0
+    ) {
+      this._sessionEndDisposables.dispose();
+      this._consoleDisposables.dispose();
+      this.focusStackFrame(null, null, null);
+      this._updateModeAndEmit(DebuggerMode.STOPPED);
+    } else {
+      if (
+        this._viewModel.focusedProcess != null &&
+        this._viewModel.focusedProcess.getId() === session.getId()
+      ) {
+        const processToFocus = this._model.getProcesses()[
+          this._model.getProcesses().length - 1
+        ];
+        const threadToFocus =
+          processToFocus.getAllThreads().length > 0
+            ? processToFocus.getAllThreads()[0]
+            : null;
+        const frameToFocus =
+          threadToFocus != null && threadToFocus.getCallStack.length > 0
+            ? threadToFocus.getCallStack()[0]
+            : null;
+
+        this.focusStackFrame(frameToFocus, threadToFocus, processToFocus);
+      }
+    }
+
     if (this._timer != null) {
       this._timer.onSuccess();
       this._timer = null;
     }
-
-    this.focusStackFrame(null, null, null);
-    this._updateModeAndEmit(DebuggerMode.STOPPED);
 
     // set breakpoints back to unverified since the session ended.
     const data: {

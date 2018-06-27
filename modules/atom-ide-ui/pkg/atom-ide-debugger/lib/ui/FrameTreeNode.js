@@ -14,6 +14,7 @@ import type {IStackFrame, IDebugService} from '../types';
 
 import * as React from 'react';
 import {TreeItem} from 'nuclide-commons-ui/Tree';
+import classnames from 'classnames';
 
 type Props = {
   frame: IStackFrame, // The frame that this node represents.
@@ -32,17 +33,28 @@ export default class FrameTreeNode extends React.Component<Props> {
   };
 
   render(): React.Node {
-    const {frame, service} = this.props;
+    const {frame, service, text} = this.props;
     const activeFrame = service.viewModel.focusedStackFrame;
     const className = (activeFrame == null
     ? false
-    : frame.frameId === activeFrame.frameId)
-      ? 'debugger-tree-frame-selected'
-      : '';
+    : frame === activeFrame)
+      ? classnames('debugger-tree-frame-selected', 'debugger-tree-frame')
+      : 'debugger-tree-frame';
 
     const treeItem = (
-      <TreeItem className={className} onSelect={this.handleSelect}>
-        {this.props.text}
+      <TreeItem
+        className={className}
+        onSelect={this.handleSelect}
+        title={
+          `Frame ID: ${frame.frameId}, Name: ${frame.name}` +
+          (frame.thread.stopped &&
+          frame.thread.getCallStack()[0] === frame &&
+          frame.source != null &&
+          frame.source.name != null
+            ? `, Stopped at: ${frame.source.name}: ${frame.range.end.row}`
+            : '')
+        }>
+        {text}
       </TreeItem>
     );
 

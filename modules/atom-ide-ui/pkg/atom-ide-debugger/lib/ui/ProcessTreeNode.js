@@ -12,6 +12,7 @@
 
 import type {IProcess, IDebugService} from '../types';
 
+import {TreeItem} from 'nuclide-commons-ui/Tree';
 import * as React from 'react';
 import DebuggerProcessTreeNode from './DebuggerProcessTreeNode';
 
@@ -26,14 +27,31 @@ export default function ProcessTreeNode(props: Props): React.Node {
   const {process, service, title, childItems} = props;
   const focusedProcess = service.viewModel.focusedProcess;
 
-  return (
+  const isFocused = process === focusedProcess;
+
+  const tooltipTitle =
+    service.viewModel.focusedProcess == null ||
+    service.viewModel.focusedProcess.configuration.adapterExecutable == null
+      ? 'Unknown Command'
+      : service.viewModel.focusedProcess.configuration.adapterExecutable
+          .command +
+        service.viewModel.focusedProcess.configuration.adapterExecutable.args.join(
+          ' ',
+        );
+
+  const formattedTitle = (
+    <span
+      className={isFocused ? 'debugger-tree-process-thread-selected' : ''}
+      title={tooltipTitle}>
+      {title}
+    </span>
+  );
+
+  return childItems == null || childItems.length === 0 ? (
+    <TreeItem>{formattedTitle}</TreeItem>
+  ) : (
     <DebuggerProcessTreeNode
-      isFocused={
-        focusedProcess == null
-          ? false
-          : process.configuration === focusedProcess.configuration
-      }
-      title={title}
+      formattedTitle={formattedTitle}
       childItems={childItems}
     />
   );

@@ -12,6 +12,7 @@
 
 import type {IThread, IDebugService} from '../types';
 
+import {TreeItem} from 'nuclide-commons-ui/Tree';
 import * as React from 'react';
 import DebuggerProcessTreeNode from './DebuggerProcessTreeNode';
 
@@ -22,17 +23,39 @@ type Props = {
   title: string,
 };
 
-export default function ThreadTreeNode(props: Props): React.Node {
-  const {thread, service, title, childItems} = props;
-  const focusedThread = service.viewModel.focusedThread;
-  const isFocused =
-    focusedThread == null ? false : thread.threadId === focusedThread.threadId;
+export default class ThreadTreeNode extends React.Component<Props> {
+  constructor(props: Props) {
+    super(props);
+    this.handleSelect = this.handleSelect.bind(this);
+  }
 
-  return (
-    <DebuggerProcessTreeNode
-      isFocused={isFocused}
-      title={title}
-      childItems={childItems}
-    />
-  );
+  handleSelect = () => {
+    this.props.service.focusStackFrame(null, this.props.thread, null, true);
+  };
+
+  render(): React.Node {
+    const {thread, service, title, childItems} = this.props;
+    const focusedThread = service.viewModel.focusedThread;
+    const isFocused =
+      focusedThread == null
+        ? false
+        : thread.threadId === focusedThread.threadId;
+
+    const formattedTitle = (
+      <span
+        className={isFocused ? 'debugger-tree-process-thread-selected' : ''}
+        title={'Thread ID: ' + thread.threadId + ', Name: ' + thread.name}>
+        {title}
+      </span>
+    );
+
+    return childItems == null || childItems.length === 0 ? (
+      <TreeItem onSelect={this.handleSelect}>{formattedTitle}</TreeItem>
+    ) : (
+      <DebuggerProcessTreeNode
+        formattedTitle={formattedTitle}
+        childItems={childItems}
+      />
+    );
+  }
 }

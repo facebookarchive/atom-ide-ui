@@ -301,7 +301,6 @@ export type Device = {|
   name: string,
   displayName: string,
   architecture: DeviceArchitecture,
-  rawArchitecture: string,
   ignoresSelection?: boolean,
 |};
 
@@ -340,9 +339,4 @@ export interface DebuggerSourcePathsService {
   observeSuggestedAndroidProjectPaths(
     callback: (Array<SuggestedProjectPath>) => void,
   ): IDisposable;
-
-  addKnownNativeSubdirectoryPaths(
-    buckRoot: string,
-    searchPaths: Array<string>,
-  ): void;
 }
