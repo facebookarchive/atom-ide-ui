@@ -2,11 +2,13 @@
 
 ## Next Release
 
+- Experimental: Added "rename" functionality.
+
 ### Terminal
 
 - Updated xterm dependency to [3.4.1](https://github.com/xtermjs/xterm.js/releases/tag/3.4.1)
 - Terminals now open in the bottom by default.
-- Added a 'new user experience' for the terminal icon in the toolbar (if available.)
+- Fixed a performance issue with Atom 1.28.
 
 ### Datatips
 
