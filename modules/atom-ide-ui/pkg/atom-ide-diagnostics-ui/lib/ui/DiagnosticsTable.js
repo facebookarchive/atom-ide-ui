@@ -11,7 +11,6 @@
  */
 
 import type {
-  DescriptionsState,
   DiagnosticMessage,
   DiagnosticMessageKind,
   DiagnosticMessageType,
@@ -80,7 +79,6 @@ const MAX_RESULTS_COUNT = 1000;
 
 type Props = {
   diagnostics: Array<DiagnosticMessage>,
-  descriptions: DescriptionsState,
   selectedMessage: ?DiagnosticMessage,
   gotoMessageLocation: (
     message: DiagnosticMessage,
@@ -110,15 +108,13 @@ export default class DiagnosticsTable extends React.PureComponent<
     // Memoize `_getRows()`
     (this: any)._getRows = memoizeUntilChanged(
       this._getRows,
-      (diagnostics, showTraces, descriptions) => ({
+      (diagnostics, showTraces) => ({
         diagnostics,
         showTraces,
-        descriptions,
       }),
       (a, b) =>
         a.showTraces === b.showTraces &&
-        arrayEqual(a.diagnostics, b.diagnostics) &&
-        a.descriptions === b.descriptions,
+        arrayEqual(a.diagnostics, b.diagnostics),
     );
 
     this.state = {
@@ -235,11 +231,10 @@ export default class DiagnosticsTable extends React.PureComponent<
   // False positive for this lint rule?
   // eslint-disable-next-line react/no-unused-prop-types
   _renderDescription = (props: {data: DescriptionField}) => {
-    const {showTraces, diagnostic, text, isPlainText, description} = props.data;
+    const {showTraces, diagnostic, text, isPlainText} = props.data;
     return showTraces
       ? DiagnosticsMessageNoHeader({
           message: diagnostic,
-          description,
           goToLocation: (file: string, line: number) =>
             goToLocation(file, {line}),
           fixer: () => {},
@@ -271,10 +266,10 @@ export default class DiagnosticsTable extends React.PureComponent<
   }
 
   render(): React.Node {
-    const {diagnostics, selectedMessage, showTraces, descriptions} = this.props;
+    const {diagnostics, selectedMessage, showTraces} = this.props;
     const columns = this._getColumns();
     const {sortedColumn, sortDescending} = this._getSortOptions(columns);
-    const diagnosticRows = this._getRows(diagnostics, showTraces, descriptions);
+    const diagnosticRows = this._getRows(diagnostics, showTraces);
     let sortedRows = this._sortRows(
       diagnosticRows,
       sortedColumn,
@@ -364,15 +359,13 @@ export default class DiagnosticsTable extends React.PureComponent<
   _getRows(
     diagnostics: Array<DiagnosticMessage>,
     showTraces: boolean,
-    descriptions: DescriptionsState,
   ): Array<Row<DisplayDiagnostic>> {
     const diagnosticsToRows = showTraces
       ? DIAGNOSTICS_TO_ROWS_TRACES_MAP
       : DIAGNOSTICS_TO_ROWS_NO_TRACES_MAP;
     return diagnostics.map(diagnostic => {
       let row = diagnosticsToRows.get(diagnostic);
-      const description = descriptions.get(diagnostic);
-      if (row == null || description !== row.data.description.description) {
+      if (row == null) {
         const {dir, location} = getLocation(diagnostic);
         row = {
           data: {
@@ -384,7 +377,6 @@ export default class DiagnosticsTable extends React.PureComponent<
             description: {
               showTraces,
               diagnostic,
-              description,
               ...getMessageContent(diagnostic, showTraces),
             },
             dir,
