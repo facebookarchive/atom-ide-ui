@@ -65,7 +65,7 @@ export default (async function getDiagnosticDatatip(
     }
   }
   diagnosticUpdater.fetchCodeActions(editor, messagesAtPosition);
-  diagnosticUpdater.fetchDescriptions(messagesAtPosition, true);
+  diagnosticUpdater.fetchDescriptions(messagesAtPosition);
   invariant(range != null);
   return {
     component: makeDatatipComponent(messagesAtPosition, diagnosticUpdater),

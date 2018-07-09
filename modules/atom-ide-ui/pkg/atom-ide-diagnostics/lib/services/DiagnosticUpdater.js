@@ -123,10 +123,7 @@ export default class DiagnosticUpdater {
     this._store.dispatch(Actions.fetchCodeActions(editor, messages));
   };
 
-  fetchDescriptions = (
-    messages: Array<DiagnosticMessage>,
-    keepDescriptions: boolean,
-  ): void => {
-    this._store.dispatch(Actions.fetchDescriptions(messages, keepDescriptions));
+  fetchDescriptions = (messages: Array<DiagnosticMessage>): void => {
+    this._store.dispatch(Actions.fetchDescriptions(messages));
   };
 }

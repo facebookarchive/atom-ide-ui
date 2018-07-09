@@ -78,13 +78,10 @@ export function setCodeActions(
   };
 }
 
-export function fetchDescriptions(
-  messages: Array<DiagnosticMessage>,
-  keepDescriptions: boolean,
-): Action {
+export function fetchDescriptions(messages: Array<DiagnosticMessage>): Action {
   return {
     type: FETCH_DESCRIPTIONS,
-    payload: {messages, keepDescriptions},
+    payload: {messages},
   };
 }
 

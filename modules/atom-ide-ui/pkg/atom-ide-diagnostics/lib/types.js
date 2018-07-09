@@ -275,7 +275,7 @@ export type Action =
   // Description
   | {
       type: 'FETCH_DESCRIPTIONS',
-      payload: {messages: Array<DiagnosticMessage>, keepDescriptions: boolean},
+      payload: {messages: Array<DiagnosticMessage>},
     }
   | {
       type: 'SET_DESCRIPTIONS',
