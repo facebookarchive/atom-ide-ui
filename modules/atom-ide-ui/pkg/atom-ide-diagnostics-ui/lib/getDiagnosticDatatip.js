@@ -26,11 +26,11 @@ import {DiagnosticsPopup} from './ui/DiagnosticsPopup';
 
 const gotoLine = (file: string, line: number) => goToLocation(file, {line});
 
-function makeDatatipComponent(
+export function makeDatatipComponent(
   messages: Array<DiagnosticMessage>,
   diagnosticUpdater: DiagnosticUpdater,
+  props?: $Shape<React.ElementProps<typeof DiagnosticsPopup>>,
 ): React.ComponentType<mixed> {
-  const fixer = message => diagnosticUpdater.applyFix(message);
   return bindObservableAsProps(
     Observable.combineLatest(
       observableFromSubscribeFunction(cb =>
@@ -42,10 +42,9 @@ function makeDatatipComponent(
     ).map(([codeActionsForMessage, descriptions]) => {
       return {
         messages,
-        fixer,
-        goToLocation: gotoLine,
         codeActionsForMessage,
         descriptions,
+        ...props,
       };
     }),
     DiagnosticsPopup,
@@ -68,7 +67,10 @@ export default (async function getDiagnosticDatatip(
   diagnosticUpdater.fetchDescriptions(messagesAtPosition);
   invariant(range != null);
   return {
-    component: makeDatatipComponent(messagesAtPosition, diagnosticUpdater),
+    component: makeDatatipComponent(messagesAtPosition, diagnosticUpdater, {
+      fixer: message => diagnosticUpdater.applyFix(message),
+      goToLocation: gotoLine,
+    }),
     pinnable: false,
     range,
   };

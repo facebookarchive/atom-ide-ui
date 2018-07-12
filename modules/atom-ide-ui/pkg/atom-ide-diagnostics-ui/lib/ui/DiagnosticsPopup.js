@@ -31,6 +31,7 @@ type DiagnosticsPopupProps = {
   fixer: (message: DiagnosticMessage) => void,
   codeActionsForMessage?: CodeActionsState,
   descriptions?: DescriptionsState,
+  style: ?Object,
 };
 
 function renderMessage(
