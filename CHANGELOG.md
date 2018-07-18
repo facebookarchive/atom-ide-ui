@@ -6,14 +6,16 @@
 
 ### Terminal
 
-- Updated xterm dependency to [3.4.1](https://github.com/xtermjs/xterm.js/releases/tag/3.4.1)
+- Updated xterm dependency to [3.5.1](https://github.com/xtermjs/xterm.js/releases/tag/3.5.1)
 - Terminals now open in the bottom by default.
 - Fixed a performance issue with Atom 1.28.
+- Fixed terminals in Windows + Atom 1.28.
 
 ### Datatips
 
 - Disable text selection when dragging datatips (#264)
 - Preserve newlines in markdown datatips.
+- Made invisible element below the datatip overlay click-through. (#279)
 
 ### Console
 
@@ -24,6 +26,14 @@
 
 - Fixed debugger attach/launch dialogs in some themes.
 - Fixed inability to copy values from scopes pane.
+
+### Diagnostics
+
+- Fixed lingering gutter popups and popups outside the editor.
+
+### Hyperclick
+
+- Fix "enter" events leaking through to the editor. (#276)
 
 ## v0.12.0
 
