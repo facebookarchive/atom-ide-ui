@@ -84,6 +84,5 @@
     "flow-bin": "0.75.0",
     "nyc": "11.2.1",
     "prettier": "1.13.6"
-  },
-  "private": true
+  }
 }

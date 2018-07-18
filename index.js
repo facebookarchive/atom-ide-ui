@@ -1,3 +1,41 @@
+"use strict";
+
+var _fs = _interopRequireDefault(require("fs"));
+
+var _path = _interopRequireDefault(require("path"));
+
+function _UniversalDisposable() {
+  const data = _interopRequireDefault(require("./modules/nuclide-commons/UniversalDisposable"));
+
+  _UniversalDisposable = function () {
+    return data;
+  };
+
+  return data;
+}
+
+function _FeatureLoader() {
+  const data = _interopRequireDefault(require("./modules/nuclide-commons-atom/FeatureLoader"));
+
+  _FeatureLoader = function () {
+    return data;
+  };
+
+  return data;
+}
+
+function _displayNuclideWarning() {
+  const data = _interopRequireDefault(require("./display-nuclide-warning"));
+
+  _displayNuclideWarning = function () {
+    return data;
+  };
+
+  return data;
+}
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 /**
  * Copyright (c) 2017-present, Facebook, Inc.
  * All rights reserved.
@@ -6,75 +44,67 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * 
  * @format
  */
 
 /* eslint-disable nuclide-internal/no-commonjs */
-
-import fs from 'fs';
 // eslint-disable-next-line nuclide-internal/prefer-nuclide-uri
-import path from 'path';
-import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
-import FeatureLoader from 'nuclide-commons-atom/FeatureLoader';
-import displayNuclideWarning from './display-nuclide-warning';
+const featureDir = _path.default.join(__dirname, 'modules/atom-ide-ui/pkg');
 
-const featureDir = path.join(__dirname, 'modules/atom-ide-ui/pkg');
-const features = fs
-  .readdirSync(featureDir)
-  .map(item => {
-    const dirname = path.join(featureDir, item);
-    try {
-      const pkgJson = fs.readFileSync(
-        path.join(dirname, 'package.json'),
-        'utf8',
-      );
-      return {
-        path: dirname,
-        pkg: JSON.parse(pkgJson),
-      };
-    } catch (err) {
-      if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
-        throw err;
-      }
+const features = _fs.default.readdirSync(featureDir).map(item => {
+  const dirname = _path.default.join(featureDir, item);
+
+  try {
+    const pkgJson = _fs.default.readFileSync(_path.default.join(dirname, 'package.json'), 'utf8');
+
+    return {
+      path: dirname,
+      pkg: JSON.parse(pkgJson)
+    };
+  } catch (err) {
+    if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
+      throw err;
     }
-  })
-  .filter(Boolean);
-
+  }
+}).filter(Boolean);
 /**
  * Use a unified package loader to load all the feature packages.
  * See the following post for more context:
  * https://nuclide.io/blog/2016/01/13/Nuclide-v0.111.0-The-Unified-Package/
  */
-let disposables: ?UniversalDisposable;
-const featureLoader = new FeatureLoader({
+
+
+let disposables;
+const featureLoader = new (_FeatureLoader().default)({
   path: __dirname,
   config: {},
-  features,
+  features
 });
 featureLoader.load();
-
 module.exports = {
   config: featureLoader.getConfig(),
+
   activate() {
-    disposables = new UniversalDisposable(
-      require('nuclide-commons-ui'),
-      atom.packages.onDidActivatePackage(pkg => {
-        if (pkg.name === 'nuclide') {
-          displayNuclideWarning();
-        }
-      }),
-    );
+    disposables = new (_UniversalDisposable().default)(require("./modules/nuclide-commons-ui"), atom.packages.onDidActivatePackage(pkg => {
+      if (pkg.name === 'nuclide') {
+        (0, _displayNuclideWarning().default)();
+      }
+    }));
     featureLoader.activate();
   },
+
   deactivate() {
     featureLoader.deactivate();
+
     if (disposables != null) {
       disposables.dispose();
       disposables = null;
     }
   },
+
   serialize() {
     featureLoader.serialize();
-  },
+  }
+
 };
