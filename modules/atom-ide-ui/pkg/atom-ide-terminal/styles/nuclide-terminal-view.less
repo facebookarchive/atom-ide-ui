@@ -18,36 +18,9 @@
 }
 
 html .terminal {
-  background-color: transparent;
   color: @text-color;
   font-family: Menlo, courier-new, courier, monospace;
   padding: @component-padding / 2;
-
-  // Background
-  .xterm-viewport {
-    background-color: transparent;
-    // Elevates .xterm-viewport above .xterm-screen so that scrollbars are
-    // clickable.
-    z-index: 1;
-  }
-
-  // Bump z-index's for other layers appropriately, !important to override
-  // xterm's CSS.
-  .xterm-text-layer {
-    z-index: 2 !important;
-  }
-
-  .xterm-selection-layer {
-    z-index: 3 !important;
-  }
-
-  .xterm-link-layer {
-    z-index: 4 !important;
-  }
-
-  .xterm-cursor-layer {
-    z-index: 5 !important;
-  }
 }
 
 // Set terminal-pane z-index to 0 so terminal is in its own stacking context

@@ -20,10 +20,8 @@ describe('applyTextEdits', () => {
   let editor: atom$TextEditor = (null: any);
 
   beforeEach(async () => {
-    await (async () => {
-      editor = await atom.workspace.open(fakeFile);
-      editor.setText('foo\nbar\nbaz\n');
-    })();
+    editor = await atom.workspace.open(fakeFile);
+    editor.setText('foo\nbar\nbaz\n');
   });
 
   it('should apply a patch', () => {
@@ -107,5 +105,39 @@ describe('applyTextEdits', () => {
     ];
     expect(applyTextEdits(fakeFile, ...edits)).toBeTruthy();
     expect(editor.getText()).toEqual('FFFoOOO\nbar\nbaz\n');
+  });
+
+  it('should correctly apply an insert edit followed by a remove edit with the same start position', () => {
+    const edits = [
+      {
+        oldRange: new Range([0, 0], [0, 0]),
+        oldText: '',
+        newText: 'Hello World',
+      },
+      {
+        oldRange: new Range([0, 0], [3, 3]),
+        oldText: 'foo\nbar\nbaz\n',
+        newText: '',
+      },
+    ];
+    expect(applyTextEdits(fakeFile, ...edits)).toBeTruthy();
+    expect(editor.getText()).toEqual('Hello World');
+  });
+
+  it('should correctly apply a remove edit followed by an insert edit with the same start position', () => {
+    const edits = [
+      {
+        oldRange: new Range([0, 0], [3, 3]),
+        oldText: 'foo\nbar\nbaz\n',
+        newText: '',
+      },
+      {
+        oldRange: new Range([0, 0], [0, 0]),
+        oldText: '',
+        newText: 'Hello World',
+      },
+    ];
+    expect(applyTextEdits(fakeFile, ...edits)).toBeTruthy();
+    expect(editor.getText()).toEqual('Hello World');
   });
 });

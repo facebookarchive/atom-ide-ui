@@ -10,12 +10,11 @@
  * @format
  */
 
-import type {AndroidJavaProcess} from 'nuclide-adb/lib/types';
+import type {AdbDevice, AndroidJavaProcess} from 'nuclide-adb/lib/types';
 import type {Column, Row} from 'nuclide-commons-ui/Table';
 import type {Expected} from 'nuclide-commons/expected';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {Subscription} from 'rxjs';
-import type {Device} from './types';
 
 import idx from 'idx';
 import {getAdbServiceByNuclideUri} from 'nuclide-adb';
@@ -32,12 +31,12 @@ type ColumnName = 'pid' | 'user' | 'name';
 
 type Props = {|
   +targetUri: NuclideUri,
-  +onSelect: (device: ?Device, javaProcess: ?AndroidJavaProcess) => void,
+  +onSelect: (device: ?AdbDevice, javaProcess: ?AndroidJavaProcess) => void,
   +deserialize: () => ?string,
 |};
 
 type State = {
-  selectedDevice: ?Device,
+  selectedDevice: ?AdbDevice,
   javaProcesses: Expected<Array<AndroidJavaProcess>>,
   selectedProcess: ?AndroidJavaProcess,
   selectedProcessName: ?string,
@@ -85,9 +84,13 @@ export class DeviceAndProcess extends React.Component<Props, State> {
     });
   }
 
-  _handleDeviceChange = (device: ?Device): void => {
+  _handleDeviceChange = (device: ?AdbDevice): void => {
     const oldDevice = this.state.selectedDevice;
-    if (oldDevice != null && device != null && oldDevice.name === device.name) {
+    if (
+      oldDevice != null &&
+      device != null &&
+      oldDevice.serial === device.serial
+    ) {
       // Same device selected.
       return;
     }
@@ -99,8 +102,7 @@ export class DeviceAndProcess extends React.Component<Props, State> {
 
     this.setState({
       selectedDevice: device,
-      javaProcesses:
-        device == null ? Expect.value([]) : Expect.pendingValue([]),
+      javaProcesses: device == null ? Expect.value([]) : Expect.pending(),
       selectedProcess: null,
       selectedProcessName: this.props.deserialize(),
     });
@@ -110,7 +112,7 @@ export class DeviceAndProcess extends React.Component<Props, State> {
       const adbService = getAdbServiceByNuclideUri(this.props.targetUri);
       this._javaProcessSubscription = Observable.interval(2000)
         .startWith(0)
-        .switchMap(() => adbService.getJavaProcesses(device.name).refCount())
+        .switchMap(() => adbService.getJavaProcesses(device.serial).refCount())
         .distinctUntilChanged((a, b) =>
           arrayEqual(a, b, (x, y) => {
             return x.user === y.user && x.pid === y.pid && x.name === y.name;
@@ -127,18 +129,14 @@ export class DeviceAndProcess extends React.Component<Props, State> {
       this.state.selectedProcess == null
         ? null
         : this.state.selectedProcess.pid;
-    let selectedProcess =
-      javaProcesses.isPending || javaProcesses.isError
-        ? null
-        : javaProcesses.value.find(process => process.pid === selectedPid);
+    let selectedProcess = javaProcesses
+      .getOrDefault([])
+      .find(process => process.pid === selectedPid);
 
     if (this.state.selectedProcessName != null) {
-      selectedProcess =
-        javaProcesses.isPending || javaProcesses.isError
-          ? null
-          : javaProcesses.value.find(
-              process => process.name === this.state.selectedProcessName,
-            );
+      selectedProcess = javaProcesses
+        .getOrDefault([])
+        .find(process => process.name === this.state.selectedProcessName);
     }
 
     this.setState({
@@ -227,21 +225,30 @@ export class DeviceAndProcess extends React.Component<Props, State> {
       </div>
     );
 
-    const processListRows =
-      !this.state.javaProcesses.isPending && !this.state.javaProcesses.isError
-        ? this._sortRows(
-            this.state.javaProcesses.value.map(processRow => {
-              const data = {
-                pid: processRow.pid,
-                user: processRow.user,
-                name: processRow.name,
-              };
-              return {data};
-            }),
-            this.state.sortedColumn,
-            this.state.sortDescending,
-          )
-        : [];
+    let shouldHighlightRow = _ => false;
+    try {
+      // $FlowFB
+      shouldHighlightRow = require('./fb-isFBProcessName').isFBProcessName;
+    } catch (e) {}
+
+    const processListRows = this._sortRows(
+      this.state.javaProcesses.getOrDefault([]).map(processRow => {
+        const data = {
+          pid: processRow.pid,
+          user: processRow.user,
+          name: processRow.name,
+        };
+        const highlightRow = shouldHighlightRow(processRow.name);
+        return {
+          data,
+          className: highlightRow
+            ? 'device-and-process-table-highlight-row'
+            : undefined,
+        };
+      }),
+      this.state.sortedColumn,
+      this.state.sortDescending,
+    );
 
     const selectedRows =
       this.state.selectedProcess == null
@@ -264,12 +271,11 @@ export class DeviceAndProcess extends React.Component<Props, State> {
         />
         <label>Debuggable Java processes: </label>
         <Table
-          tabIndex="12"
           collapsable={false}
           columns={this._getColumns()}
           emptyComponent={emptyComponent}
           fixedHeader={true}
-          maxBodyHeight="99999px"
+          maxBodyHeight="30em"
           rows={processListRows}
           sortable={true}
           onSort={this._handleSort}

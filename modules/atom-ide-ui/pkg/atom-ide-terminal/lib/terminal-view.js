@@ -21,6 +21,7 @@ import {
   observeRemovedHostnames,
 } from 'nuclide-commons-atom/projects';
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
+import {fastDebounce} from 'nuclide-commons/observable';
 import {Observable} from 'rxjs';
 import url from 'url';
 
@@ -29,6 +30,7 @@ import featureConfig from 'nuclide-commons-atom/feature-config';
 import {ResizeObservable} from 'nuclide-commons-ui/observable-dom';
 import performanceNow from 'nuclide-commons/performanceNow';
 import {createTerminal} from './createTerminal';
+import measurePerformance from './measure-performance';
 import {infoFromUri, uriFromInfo} from './nuclide-terminal-uri';
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
@@ -44,9 +46,11 @@ import {
   FONT_FAMILY_CONFIG,
   FONT_SCALE_CONFIG,
   LINE_HEIGHT_CONFIG,
+  OPTION_IS_META_CONFIG,
   PRESERVED_COMMANDS_CONFIG,
   SCROLLBACK_CONFIG,
   getFontSize,
+  RENDERER_TYPE_CONFIG,
 } from './config';
 import {removePrefixSink, patternCounterSink} from './sink';
 
@@ -178,11 +182,11 @@ export class TerminalView implements PtyClient, TerminalInstance {
           // commands are not working correctly with terminal selection.
           if (terminal.hasSelection()) {
             // $FlowFixMe: add types for clipboard
-            clipboard.writeText(terminal.selectionManager.selectionText);
+            clipboard.writeText(terminal.getSelection());
           } else {
             document.execCommand('paste');
           }
-          terminal.selectionManager.clearSelection();
+          terminal.clearSelection();
           terminal.focus();
           e.stopPropagation();
         }),
@@ -229,6 +233,12 @@ export class TerminalView implements PtyClient, TerminalInstance {
   _subscribeFitEvents(): UniversalDisposable {
     return new UniversalDisposable(
       featureConfig
+        .observeAsStream(OPTION_IS_META_CONFIG)
+        .skip(1)
+        .subscribe(optionIsMeta => {
+          this._setTerminalOption('macOptionIsMeta', optionIsMeta);
+        }),
+      featureConfig
         .observeAsStream(CURSOR_STYLE_CONFIG)
         .skip(1)
         .subscribe(cursorStyle =>
@@ -246,17 +256,26 @@ export class TerminalView implements PtyClient, TerminalInstance {
         .subscribe(scrollback =>
           this._setTerminalOption('scrollback', scrollback),
         ),
-      Observable.merge(
-        observableFromSubscribeFunction(cb =>
-          atom.config.onDidChange('editor.fontSize', cb),
+      Observable.combineLatest(
+        observePaneItemVisibility(this),
+        Observable.merge(
+          observableFromSubscribeFunction(cb =>
+            atom.config.onDidChange('editor.fontSize', cb),
+          ),
+          featureConfig.observeAsStream(FONT_SCALE_CONFIG).skip(1),
+          featureConfig.observeAsStream(FONT_FAMILY_CONFIG).skip(1),
+          featureConfig.observeAsStream(LINE_HEIGHT_CONFIG).skip(1),
+          Observable.fromEvent(this._terminal, 'focus'),
+          // Debounce resize observables to reduce lag.
+          Observable.merge(
+            Observable.fromEvent(window, 'resize'),
+            new ResizeObservable(this._div),
+          ).let(fastDebounce(100)),
         ),
-        featureConfig.observeAsStream(FONT_SCALE_CONFIG).skip(1),
-        featureConfig.observeAsStream(FONT_FAMILY_CONFIG).skip(1),
-        featureConfig.observeAsStream(LINE_HEIGHT_CONFIG).skip(1),
-        Observable.fromEvent(this._terminal, 'focus'),
-        Observable.fromEvent(window, 'resize'),
-        new ResizeObservable(this._div),
-      ).subscribe(this._syncFontAndFit),
+      )
+        // Don't emit syncs if the pane is not visible.
+        .filter(([visible]) => visible)
+        .subscribe(this._syncFontAndFit),
     );
   }
 
@@ -327,6 +346,16 @@ export class TerminalView implements PtyClient, TerminalInstance {
       ),
     );
     this._syncFontAndFit();
+    const performanceDisposable = measurePerformance(this._terminal);
+    // Stop observing performance if the renderer type is no longer auto.
+    this._subscriptions.add(
+      featureConfig
+        .observeAsStream(RENDERER_TYPE_CONFIG)
+        .filter(value => value !== 'auto')
+        .take(1)
+        .subscribe(() => performanceDisposable.dispose()),
+    );
+    this._subscriptions.add(performanceDisposable);
   }
 
   _focused(): void {
@@ -405,7 +434,8 @@ export class TerminalView implements PtyClient, TerminalInstance {
     this._syncAtomTheme();
     // documented workaround for https://github.com/xtermjs/xterm.js/issues/291
     // see https://github.com/Microsoft/vscode/commit/134cbec22f81d5558909040491286d72b547bee6
-    this._terminal.emit('scroll', this._terminal.buffer.ydisp);
+    // $FlowIgnore: using unofficial _core interface defined in https://github.com/Microsoft/vscode/blob/master/src/typings/vscode-xterm.d.ts#L682-L706
+    this._terminal.emit('scroll', this._terminal._core.buffer.ydisp);
   }
 
   _syncAtomTheme(): void {
@@ -705,7 +735,7 @@ function registerLinkHandlers(terminal: Terminal, cwd: ?NuclideUri): void {
   ];
 
   for (const {regex, matchIndex, urlPattern} of bindings) {
-    terminal.linkifier.registerLinkMatcher(
+    terminal.registerLinkMatcher(
       regex,
       (event, match) => {
         const replacedUrl = urlPattern.replace('%s', match);

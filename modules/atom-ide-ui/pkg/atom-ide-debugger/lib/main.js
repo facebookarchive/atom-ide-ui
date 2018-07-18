@@ -62,7 +62,7 @@ import DebuggerPaneContainerViewModel from './ui/DebuggerPaneContainerViewModel'
 import os from 'os';
 import nullthrows from 'nullthrows';
 import ReactMountRootElement from 'nuclide-commons-ui/ReactMountRootElement';
-import {makeToolbarButtonSpec} from 'nuclide-commons-ui/ToolbarUtils';
+import {sortMenuGroups} from 'nuclide-commons/menuUtils';
 
 const DATATIP_PACKAGE_NAME = 'debugger-datatip';
 
@@ -175,8 +175,14 @@ class Activation {
         },
       }),
       atom.commands.add('atom-workspace', {
-        'debugger:show-launch-dialog': () => {
-          this._showLaunchAttachDialog({dialogMode: 'launch'});
+        'debugger:show-launch-dialog': event => {
+          const selectedTabName: any = event?.detail?.selectedTabName;
+          const config: any = event?.detail?.config;
+          this._showLaunchAttachDialog({
+            dialogMode: 'launch',
+            selectedTabName,
+            config,
+          });
         },
       }),
       atom.commands.add('atom-workspace', {
@@ -210,6 +216,7 @@ class Activation {
         ),
       }),
       atom.commands.add('atom-workspace', {
+        // eslint-disable-next-line nuclide-internal/atom-apis
         'debugger:edit-breakpoint': this._configureBreakpoint.bind(this),
       }),
       atom.commands.add('.debugger-thread-list-item', {
@@ -234,6 +241,7 @@ class Activation {
         'debugger:remove-breakpoint': this._deleteBreakpoint.bind(this),
       }),
       atom.commands.add('atom-workspace', {
+        // eslint-disable-next-line nuclide-internal/atom-apis
         'debugger:add-to-watch': this._addToWatch.bind(this),
       }),
       atom.commands.add('atom-workspace', {
@@ -371,6 +379,8 @@ class Activation {
       }),
       this._registerCommandsContextMenuAndOpener(),
     );
+
+    sortMenuGroups(['Debugger']);
   }
 
   _supportsConditionalBreakpoints(): boolean {
@@ -892,15 +902,13 @@ class Activation {
 
   consumeToolBar(getToolBar: toolbar$GetToolbar): IDisposable {
     const toolBar = getToolBar('debugger');
-    toolBar.addButton(
-      makeToolbarButtonSpec({
-        iconset: 'icon-nuclicon',
-        icon: 'debugger',
-        callback: 'debugger:show-attach-dialog',
-        tooltip: 'Attach Debugger',
-        priority: 500,
-      }),
-    ).element;
+    toolBar.addButton({
+      iconset: 'icon-nuclicon',
+      icon: 'debugger',
+      callback: 'debugger:show-attach-dialog',
+      tooltip: 'Attach Debugger',
+      priority: 500,
+    }).element;
     const disposable = new UniversalDisposable(() => {
       toolBar.removeItems();
     });
