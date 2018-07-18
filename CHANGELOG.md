@@ -1,6 +1,6 @@
 # Changelog
 
-## Next Release
+## v0.13.0
 
 - Experimental: Added "rename" functionality.
 
