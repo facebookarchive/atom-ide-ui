@@ -10,14 +10,13 @@
  * @format
  */
 
-import type {AndroidJavaProcess} from 'nuclide-adb/lib/types';
+import type {AndroidJavaProcess, AdbDevice} from 'nuclide-adb/lib/types';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {
   AutoGenProperty,
   AutoGenLaunchOrAttachConfig,
   AutoGenPropertyType,
   AutoGenPropertyPrimitiveType,
-  Device,
 } from './types';
 import * as React from 'react';
 
@@ -50,12 +49,12 @@ type Props = {|
 |};
 
 type DeviceAndPackageType = {|
-  +device: ?Device,
+  +device: ?AdbDevice,
   +selectedPackage: string,
 |};
 
 type DeviceAndProcessType = {|
-  +device: ?Device,
+  +device: ?AdbDevice,
   +selectedProcess: ?AndroidJavaProcess,
 |};
 
@@ -130,13 +129,17 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
     booleanValues: Map<string, boolean>,
     enumValues: Map<string, string>,
   ): void {
+    const ignorePreviousParams =
+      config.ignorePreviousParams !== undefined
+        ? config.ignorePreviousParams
+        : false;
     config.properties.filter(property => property.visible).map(property => {
       const {name, type} = property;
       const itemType = idx(property, _ => _.itemType);
       if (this._atomInputType(type, itemType)) {
         const existingValue = atomInputValues.get(name);
         if (
-          existingValue == null &&
+          (ignorePreviousParams || existingValue == null) &&
           typeof property.defaultValue !== 'undefined'
         ) {
           // String(propertyDescription.default) deals with both strings and numbers and arrays
@@ -153,7 +156,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       } else if (type === 'boolean') {
         const existingValue = booleanValues.get(name);
         if (
-          existingValue == null &&
+          (ignorePreviousParams || existingValue == null) &&
           typeof property.defaultValue !== 'undefined' &&
           property.defaultValue != null &&
           typeof property.defaultValue === 'boolean'
@@ -165,7 +168,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       } else if (type === 'enum' && property.enums != null) {
         const existingValue = enumValues.get(name);
         if (
-          existingValue == null &&
+          (ignorePreviousParams || existingValue == null) &&
           typeof property.defaultValue !== 'undefined' &&
           property.defaultValue != null &&
           typeof property.defaultValue === 'string'
@@ -278,7 +281,11 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
 
   _valueExists(property: AutoGenProperty): boolean {
     const {name, type} = property;
-    if (type === 'string' || type === 'path') {
+    if (
+      type === 'string' ||
+      type === 'path' ||
+      (type === 'array' && property.itemType === 'string')
+    ) {
       const value = this.state.atomInputValues.get(name);
       return value != null && value !== '';
     } else if (type === 'number') {

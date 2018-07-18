@@ -78,6 +78,13 @@ export type {
 } from './pkg/atom-ide-find-references/lib/types';
 
 export type {
+  AvailableRefactoring,
+  RefactorResponse,
+  RefactorProvider,
+  RefactorRequest,
+} from './pkg/atom-ide-refactor/lib/types';
+
+export type {
   Outline,
   OutlineProvider,
   OutlineTree,

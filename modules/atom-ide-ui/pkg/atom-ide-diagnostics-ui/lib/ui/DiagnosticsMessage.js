@@ -93,7 +93,7 @@ export const DiagnosticsMessage = (props: DiagnosticsMessageProps) => {
 
 export const DiagnosticsMessageNoHeader = (props: DiagnosticsMessageProps) => {
   return (
-    <div>
+    <div className="diagnostics-full-description-message">
       <DiagnosticsMessageText message={props.message} />
       <DiagnosticsMessageDescription description={props.description} />
       {traceElements(props)}

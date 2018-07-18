@@ -14,13 +14,16 @@
 ; large dirs that are not imported
 <PROJECT_ROOT>/docs/.*
 ; TODO: remove when fixed
+<PROJECT_ROOT>.*/__atom_tests__/.*
 <PROJECT_ROOT>.*/__tests__/.*
+.*/jest.config.*.js
 
 [libs]
 flow-libs/
 
 [options]
 emoji=true
+esproposal.optional_chaining=enable
 experimental.const_params=true
 module.use_strict=true
 module.system.node.resolve_dirname=node_modules
@@ -28,8 +31,7 @@ module.system.node.resolve_dirname=node_modules
 suppress_comment=.*\\$FlowFixMe.*
 suppress_comment=.*\\$FlowIssue.*
 suppress_comment=.*\\$FlowIgnore.*
-; uncommenting the next line will silence flow errors about missing 'fb' modules
-; suppress_comment=.*\\$FlowFB.*
+suppress_comment=.*\\$FlowFB.*
 
 [lints]
 untyped-type-import=error
@@ -46,4 +48,4 @@ untyped-import
 untyped-type-import
 
 [version]
-0.74.0
+0.75.0

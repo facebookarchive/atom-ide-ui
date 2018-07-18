@@ -1278,7 +1278,7 @@ declare class atom$Workspace {
   ): Promise<atom$TextEditor>,
   isTextEditor(item: ?mixed): boolean,
   /* Optional method because this was added post-1.0. */
-  buildTextEditor: ((params: atom$TextEditorParams) => atom$TextEditor),
+  buildTextEditor: ((params: ?atom$TextEditorParams) => atom$TextEditor),
   /* Optional method because this was added in 1.9.0 */
   handleGrammarUsed?: (grammar: atom$Grammar) => void,
   reopenItem(): Promise<?atom$TextEditor>,
@@ -1583,6 +1583,10 @@ declare class atom$GrammarRegistry {
   selectGrammar(filePath: string, fileContents: string): atom$Grammar,
   autoAssignLanguageMode(buffer: atom$TextBuffer): void,
   assignLanguageMode(buffer: atom$TextBuffer, languageId: string): void,
+
+  // Extended
+  getGrammarScore(grammar: atom$Grammar, filePath: string, contents?: string): number,
+  forEachGrammar(callback: (grammar: atom$Grammar) => mixed): void,
 
   // Private API
   clear(): IDisposable,
@@ -2043,7 +2047,6 @@ declare class atom$Repository {
   getType: () => string,
   getPath: () => string,
   getWorkingDirectory: () => string,
-  getProjectDirectory: () => string,
   isProjectAtRoot: () => boolean,
   relativize: (aPath: string) => string,
   getOriginURL: (aPath: ?string) => ?string,

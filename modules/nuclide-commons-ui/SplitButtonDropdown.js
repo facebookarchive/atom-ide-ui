@@ -11,6 +11,7 @@
  */
 
 import type {Option} from './Dropdown';
+import type {ButtonType} from './Button';
 
 import invariant from 'assert';
 import * as React from 'react';
@@ -26,6 +27,7 @@ type ButtonSize = 'EXTRA_SMALL' | 'SMALL' | 'LARGE';
 
 type Props = {
   buttonComponent?: React.ComponentType<any>,
+  buttonType?: ?ButtonType,
   changeDisabled?: boolean,
   className?: string,
   confirmDisabled?: boolean,
@@ -34,6 +36,7 @@ type Props = {
   options: Array<Option>,
   size?: ?ButtonSize,
   value: any,
+  selectionComparator?: (dropdownValue: any, optionValue: any) => boolean,
 };
 
 export class SplitButtonDropdown extends React.Component<Props> {
@@ -48,6 +51,7 @@ export class SplitButtonDropdown extends React.Component<Props> {
       options,
       size,
       value,
+      selectionComparator,
     } = this.props;
     const selectedOption = this._findSelectedOption(options) || options[0];
     invariant(selectedOption.type !== 'separator');
@@ -62,6 +66,7 @@ export class SplitButtonDropdown extends React.Component<Props> {
       <ButtonGroup
         className={classnames(className, 'nuclide-ui-split-button-dropdown')}>
         <ButtonComponent
+          buttonType={this.props.buttonType}
           size={size == null ? undefined : size}
           disabled={confirmDisabled === true}
           icon={selectedOption.icon || undefined}
@@ -70,11 +75,13 @@ export class SplitButtonDropdown extends React.Component<Props> {
           selectedOption.selectedLabel || selectedOption.label || ''}
         </ButtonComponent>
         <Dropdown
+          buttonType={this.props.buttonType}
           size={this._getDropdownSize(size)}
           disabled={changeDisabled === true}
           options={dropdownOptions}
           value={value}
           onChange={onChange}
+          selectionComparator={selectionComparator}
         />
       </ButtonGroup>
     );
@@ -95,13 +102,17 @@ export class SplitButtonDropdown extends React.Component<Props> {
 
   _findSelectedOption(options: Array<Option>): ?Option {
     let result = null;
+    const selectionComparator =
+      this.props.selectionComparator == null
+        ? (a, b) => a === b
+        : this.props.selectionComparator;
     for (const option of options) {
       if (option.type === 'separator') {
         continue;
       } else if (option.type === 'submenu') {
         const submenu = ((option.submenu: any): Array<Option>);
         result = this._findSelectedOption(submenu);
-      } else if (option.value === this.props.value) {
+      } else if (selectionComparator(option.value, this.props.value)) {
         result = option;
       }
 

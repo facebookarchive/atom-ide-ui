@@ -15,7 +15,6 @@ import type {ISession} from 'atom-ide-ui/pkg/atom-ide-debugger/lib/types';
 import type UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import type {TaskEvent, ProcessMessage} from 'nuclide-commons/process';
 import type {Expected} from 'nuclide-commons/expected';
-import type {Device as DeviceIdType} from './types';
 import type DebuggerLaunchAttachProvider from './DebuggerLaunchAttachProvider';
 import type {Observable, ConnectableObservable} from 'rxjs';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
@@ -134,6 +133,9 @@ type AutoGenLaunchOrAttachConfigBase = {
   scriptExtension?: string,
   scriptPropertyName?: ?string,
   header?: React.Node,
+  // If you want to overwrite the previously saved parameters,
+  // set this flag to true and pass in the new values as the defaultValue in the config.
+  ignorePreviousParams?: ?boolean,
   getProcessName: (values: Object) => string,
 };
 
@@ -178,10 +180,10 @@ export interface DebuggerPathResolverProvider {
 //
 
 //
-// DeviceTask interface
+// Task interface
 //
 
-export interface IDeviceTask {
+export interface Task {
   getName(): string;
   getTaskEvents(): Observable<?TaskEvent>;
   start(): void;
@@ -196,14 +198,13 @@ export type DevicePanelServiceApi = {
   registerListProvider: (provider: DeviceListProvider) => IDisposable,
   registerInfoProvider: (provider: DeviceInfoProvider) => IDisposable,
   registerProcessesProvider: (provider: DeviceProcessesProvider) => IDisposable,
-  registerTaskProvider: (provider: DeviceTaskProvider) => IDisposable,
+  registerDeviceTaskProvider: (provider: DeviceTaskProvider) => IDisposable,
   registerProcessTaskProvider: (
     provider: DeviceProcessTaskProvider,
   ) => IDisposable,
   registerDeviceTypeTaskProvider: (
     provider: DeviceTypeTaskProvider,
   ) => IDisposable,
-  registerDeviceActionProvider: (provider: DeviceActionProvider) => IDisposable,
   registerAppInfoProvider: (provider: DeviceAppInfoProvider) => IDisposable,
   registerDeviceTypeComponentProvider: (
     provider: DeviceTypeComponentProvider,
@@ -211,15 +212,12 @@ export type DevicePanelServiceApi = {
 };
 
 export interface DeviceListProvider {
-  observe(host: NuclideUri): Observable<Expected<Device[]>>;
+  observe(host: NuclideUri): Observable<Expected<Array<Device>>>;
   getType(): string;
 }
 
 export interface DeviceInfoProvider {
-  fetch(
-    host: NuclideUri,
-    device: DeviceIdType,
-  ): Observable<Map<string, string>>;
+  fetch(host: NuclideUri, device: Device): Observable<Map<string, string>>;
   getType(): string;
   getTitle(): string;
   getPriority(): number;
@@ -227,52 +225,49 @@ export interface DeviceInfoProvider {
 }
 
 export interface DeviceProcessesProvider {
-  observe(host: NuclideUri, device: DeviceIdType): Observable<Process[]>;
+  observe(host: NuclideUri, device: Device): Observable<Process[]>;
   getType(): string;
 }
 
+export type DeviceTask = {
+  getEvents: () => Observable<TaskEvent>,
+  getName: () => string,
+};
+
 export interface DeviceTaskProvider {
-  getTask(host: NuclideUri, device: DeviceIdType): Observable<TaskEvent>;
-  getName(): string;
+  getDeviceTasks(
+    host: NuclideUri,
+    device: Device,
+  ): Observable<Array<DeviceTask>>;
   getType(): string;
-  isSupported(host: NuclideUri): Observable<boolean>;
 }
 
 export interface DeviceTypeTaskProvider {
-  getTask(host: NuclideUri): Observable<TaskEvent>;
+  getDeviceTypeTask(host: NuclideUri): Observable<TaskEvent>;
   getName(): string;
   getType(): string;
 }
 
 export interface DeviceProcessTaskProvider {
-  run(host: NuclideUri, device: DeviceIdType, proc: Process): Promise<void>;
+  run(host: NuclideUri, device: Device, proc: Process): Promise<void>;
   getTaskType(): ProcessTaskType;
   getType(): string;
   getSupportedPIDs(
     host: NuclideUri,
-    device: DeviceIdType,
+    device: Device,
     procs: Process[],
   ): Observable<Set<number>>;
   getName(): string;
 }
 
 export interface DeviceAppInfoProvider {
-  observe(host: NuclideUri, device: DeviceIdType): Observable<string>;
+  observe(host: NuclideUri, device: Device): Observable<string>;
   getName(): string;
   getType(): string;
   getProcessName(): string;
   getAppName(): string;
   canUpdate(): boolean;
   update(value: string): Promise<void>;
-}
-
-export type DeviceAction = {
-  name: string,
-  callback: (device: Device) => void,
-};
-
-export interface DeviceActionProvider {
-  getActionsForDevice(device: Device): Array<DeviceAction>;
 }
 
 export type ComponentPosition = 'host_selector' | 'above_table' | 'below_table';
@@ -295,12 +290,11 @@ export interface DeviceTypeComponentProvider {
 // Basic objects
 //
 
-export type DeviceArchitecture = 'x86' | 'x86_64' | 'arm' | 'arm64' | '';
-
 export type Device = {|
-  name: string,
+  // Must be unique within platform, not shown to user
+  identifier: string,
+  // Used to display in all UI
   displayName: string,
-  architecture: DeviceArchitecture,
   ignoresSelection?: boolean,
 |};
 

@@ -10,49 +10,133 @@
  * @format
  */
 
-import type {IProcess, IDebugService} from '../types';
+import type {IProcess, IDebugService, IThread} from '../types';
 
-import {TreeItem} from 'nuclide-commons-ui/Tree';
+import {TreeItem, NestedTreeItem} from 'nuclide-commons-ui/Tree';
+import {observableFromSubscribeFunction} from 'nuclide-commons/event';
+import {fastDebounce} from 'nuclide-commons/observable';
+import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import * as React from 'react';
-import DebuggerProcessTreeNode from './DebuggerProcessTreeNode';
+import {Observable} from 'rxjs';
+import ThreadTreeNode from './ThreadTreeNode';
 
 type Props = {
   process: IProcess,
   service: IDebugService,
-  childItems: Array<React.Element<any>>,
   title: string,
 };
 
-export default function ProcessTreeNode(props: Props): React.Node {
-  const {process, service, title, childItems} = props;
-  const focusedProcess = service.viewModel.focusedProcess;
+type State = {
+  isCollapsed: boolean,
+  childItems: Array<IThread>,
+  isFocused: boolean,
+};
 
-  const isFocused = process === focusedProcess;
+export default class ProcessTreeNode extends React.Component<Props, State> {
+  _disposables: UniversalDisposable;
 
-  const tooltipTitle =
-    service.viewModel.focusedProcess == null ||
-    service.viewModel.focusedProcess.configuration.adapterExecutable == null
-      ? 'Unknown Command'
-      : service.viewModel.focusedProcess.configuration.adapterExecutable
-          .command +
-        service.viewModel.focusedProcess.configuration.adapterExecutable.args.join(
-          ' ',
-        );
+  constructor(props: Props) {
+    super(props);
+    this.state = this._getState();
+    this._disposables = new UniversalDisposable();
+    this.handleSelect = this.handleSelect.bind(this);
+  }
 
-  const formattedTitle = (
-    <span
-      className={isFocused ? 'debugger-tree-process-thread-selected' : ''}
-      title={tooltipTitle}>
-      {title}
-    </span>
-  );
+  componentDidMount(): void {
+    const {service} = this.props;
+    const model = service.getModel();
+    const {viewModel} = service;
+    this._disposables.add(
+      Observable.merge(
+        observableFromSubscribeFunction(model.onDidChangeCallStack.bind(model)),
+        observableFromSubscribeFunction(
+          viewModel.onDidFocusStackFrame.bind(viewModel),
+        ),
+        observableFromSubscribeFunction(service.onDidChangeMode.bind(service)),
+      )
+        .let(fastDebounce(15))
+        .subscribe(this._handleThreadsChanged),
+    );
+  }
 
-  return childItems == null || childItems.length === 0 ? (
-    <TreeItem>{formattedTitle}</TreeItem>
-  ) : (
-    <DebuggerProcessTreeNode
-      formattedTitle={formattedTitle}
-      childItems={childItems}
-    />
-  );
+  componentWillUnmount() {
+    this._disposables.dispose();
+  }
+
+  _handleThreadsChanged = (): void => {
+    this.setState(prevState =>
+      this._getState(!(this._computeIsFocused() || !prevState.isCollapsed)),
+    );
+  };
+
+  _computeIsFocused(): boolean {
+    const {service, process} = this.props;
+    const focusedProcess = service.viewModel.focusedProcess;
+    return process === focusedProcess;
+  }
+
+  _getState(shouldBeCollapsed: ?boolean) {
+    const {process} = this.props;
+    const isFocused = this._computeIsFocused();
+    const isCollapsed =
+      shouldBeCollapsed != null ? shouldBeCollapsed : !isFocused;
+    return {
+      isFocused,
+      childItems: process.getAllThreads(),
+      isCollapsed,
+    };
+  }
+
+  handleSelect = () => {
+    this.setState(prevState => this._getState(!prevState.isCollapsed));
+  };
+
+  render() {
+    const {service, title, process} = this.props;
+    const {childItems, isFocused} = this.state;
+
+    const tooltipTitle =
+      service.viewModel.focusedProcess == null ||
+      service.viewModel.focusedProcess.configuration.adapterExecutable == null
+        ? 'Unknown Command'
+        : service.viewModel.focusedProcess.configuration.adapterExecutable
+            .command +
+          service.viewModel.focusedProcess.configuration.adapterExecutable.args.join(
+            ' ',
+          );
+
+    const handleTitleClick = event => {
+      service.focusStackFrame(null, null, process, true);
+      event.stopPropagation();
+    };
+
+    const formattedTitle = (
+      <span
+        onClick={handleTitleClick}
+        className={isFocused ? 'debugger-tree-process-thread-selected' : ''}
+        title={tooltipTitle}>
+        {title}
+      </span>
+    );
+
+    return childItems == null || childItems.length === 0 ? (
+      <TreeItem>{formattedTitle}</TreeItem>
+    ) : (
+      <NestedTreeItem
+        title={formattedTitle}
+        collapsed={this.state.isCollapsed}
+        onSelect={this.handleSelect}>
+        {childItems.map((thread, threadIndex) => {
+          return (
+            <ThreadTreeNode
+              key={threadIndex}
+              childItems={thread.getCallStack()}
+              thread={thread}
+              service={service}
+            />
+          );
+        })}
+      </NestedTreeItem>
+    );
+  }
 }

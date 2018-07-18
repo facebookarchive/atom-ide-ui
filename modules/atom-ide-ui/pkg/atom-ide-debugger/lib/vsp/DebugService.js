@@ -117,13 +117,14 @@ import {
 import logger from '../logger';
 import stripAnsi from 'strip-ansi';
 import url from 'url';
-import idx from 'idx';
 import os from 'os';
+import idx from 'idx';
 
 const CONSOLE_VIEW_URI = 'atom://nuclide/console';
 
 const CUSTOM_DEBUG_EVENT = 'CUSTOM_DEBUG_EVENT';
 const CHANGE_DEBUG_MODE = 'CHANGE_DEBUG_MODE';
+const START_DEBUG_SESSION = 'START_DEBUG_SESSION';
 
 const CHANGE_FOCUSED_PROCESS = 'CHANGE_FOCUSED_PROCESS';
 const CHANGE_FOCUSED_STACKFRAME = 'CHANGE_FOCUSED_STACKFRAME';
@@ -383,7 +384,7 @@ export default class DebugService implements IDebugService {
           const {stackFrame, explicit} = event;
 
           if (stackFrame == null || !stackFrame.source.available) {
-            if (explicit) {
+            if (explicit && this._debuggerMode === DebuggerMode.PAUSED) {
               atom.notifications.addWarning(
                 'No source available for the selected stack frame',
               );
@@ -884,6 +885,12 @@ export default class DebugService implements IDebugService {
     }
   }
 
+  onDidStartDebugSession(
+    callback: (config: IProcessConfig) => mixed,
+  ): IDisposable {
+    return this._emitter.on(START_DEBUG_SESSION, callback);
+  }
+
   onDidCustomEvent(
     callback: (event: DebugProtocol.DebugEvent) => mixed,
   ): IDisposable {
@@ -1260,6 +1267,7 @@ export default class DebugService implements IDebugService {
         );
 
         process = this._model.addProcess(config, newSession);
+        this._emitter.emit(START_DEBUG_SESSION, config);
         this.focusStackFrame(null, null, process);
         this._registerSessionListeners(process, newSession);
         atom.commands.dispatch(
@@ -1500,12 +1508,19 @@ export default class DebugService implements IDebugService {
       // so stop the current debug session.
 
       if (_gkService != null) {
-        const passes = await _gkService.passesGK(
+        const passesMultiGK = await _gkService.passesGK(
           'nuclide_multitarget_debugging',
         );
-        if (!passes) {
+        if (!passesMultiGK) {
           this.stopProcess();
         }
+        _gkService
+          .passesGK('nuclide_processtree_debugging')
+          .then(passesProcessTree => {
+            if (passesProcessTree) {
+              track(AnalyticsEvents.DEBUGGER_TREE_OPENED);
+            }
+          });
       } else {
         this.stopProcess();
       }
@@ -1517,6 +1532,16 @@ export default class DebugService implements IDebugService {
     atom.workspace.open(CONSOLE_VIEW_URI, {searchAllPanes: true});
     this._consoleDisposables = this._registerConsoleExecutor();
     await this._doCreateProcess(config, uuid.v4());
+    if (this._model.getProcesses().length > 1) {
+      const debuggerTypes = [];
+      this._model.getProcesses().forEach(process => {
+        debuggerTypes.push(process.configuration.adapterType);
+      });
+      track(AnalyticsEvents.DEBUGGER_MULTITARGET, {
+        processesCount: this._model.getProcesses().length,
+        debuggerTypes,
+      });
+    }
   }
 
   consumeGatekeeperService(service: GatekeeperService): IDisposable {
@@ -1531,7 +1556,7 @@ export default class DebugService implements IDebugService {
       return;
     }
     track(AnalyticsEvents.DEBUGGER_STOP);
-    this._model.removeProcess(session.getId());
+    const removedProcesses = this._model.removeProcess(session.getId());
     if (
       this._model.getProcesses() == null ||
       this._model.getProcesses().length === 0
@@ -1559,6 +1584,26 @@ export default class DebugService implements IDebugService {
 
         this.focusStackFrame(frameToFocus, threadToFocus, processToFocus);
       }
+    }
+
+    const createConsole = getConsoleService();
+    if (createConsole != null) {
+      const name = 'Nuclide Debugger';
+      const consoleApi = createConsole({
+        id: name,
+        name,
+      });
+
+      removedProcesses.forEach(p =>
+        consoleApi.append({
+          text:
+            'Process exited' +
+            (p.configuration.processName == null
+              ? ''
+              : ' (' + p.configuration.processName + ')'),
+          level: 'log',
+        }),
+      );
     }
 
     if (this._timer != null) {

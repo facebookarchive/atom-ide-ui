@@ -309,7 +309,12 @@ module.exports = {
 
     // dependencies (https://github.com/zertosh/eslint-plugin-dependencies)
     'dependencies/case-sensitive': 1,
-    'dependencies/no-cycles': [0, {skip: ['/spec/', '/sample-[^/]+/']}],
+    'dependencies/no-cycles': [1, {skip: [
+      '/VendorLib/',
+      '/sample-[^/]+/',
+      '/scripts/',
+      '/spec/',
+    ]}],
     'dependencies/no-unresolved': 0,
     'dependencies/require-json-ext': 1,
 
@@ -363,6 +368,7 @@ module.exports = {
     'nuclide-internal/modules-dependencies': 1,
     'nuclide-internal/no-cross-atom-imports': [1, {whitelist: ['nuclide-ui']}],
     'nuclide-internal/no-unnecessary-disposable-wrapping': 1,
+    'nuclide-internal/no-unobserved-gk': 1,
     'nuclide-internal/no-unresolved': 1,
     'nuclide-internal/prefer-nuclide-uri': 1,
     'nuclide-internal/react-virtualized-import': 1,
@@ -552,6 +558,17 @@ module.exports = {
     'unicorn/no-unsafe-regex': 0,
     'unicorn/prefer-add-event-listener': 0,
   },
+
+  overrides: [
+    {
+      files: '**/__{atom_,}tests__/**/*',
+      rules: {
+        'nuclide-internal/prefer-nuclide-uri': 0,
+        'nuclide-internal/modules-dependencies': 0,
+        'nuclide-internal/atom-apis': 0,
+      },
+    },
+  ],
 
   plugins: [
     'dependencies',
