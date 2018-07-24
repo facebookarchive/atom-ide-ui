@@ -96,7 +96,7 @@ export type DiagnosticMessage = {|
   filePath: NuclideUri,
   text?: string,
   html?: string,
-  description?: string | (() => Promise<string> | string),
+  +description?: string | (() => Promise<string> | string),
   range?: atom$Range,
   trace?: Array<DiagnosticTrace>,
   fix?: DiagnosticFix,
