@@ -28,7 +28,7 @@ type Props = {
 
 type State = {
   isCollapsed: boolean,
-  childItems: Array<IThread>,
+  threads: Array<IThread>,
   isFocused: boolean,
 };
 
@@ -48,7 +48,6 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
     const {viewModel} = service;
     this._disposables.add(
       Observable.merge(
-        observableFromSubscribeFunction(model.onDidChangeCallStack.bind(model)),
         observableFromSubscribeFunction(
           viewModel.onDidFocusStackFrame.bind(viewModel),
         ),
@@ -56,6 +55,9 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
       )
         .let(fastDebounce(15))
         .subscribe(this._handleThreadsChanged),
+      observableFromSubscribeFunction(model.onDidChangeCallStack.bind(model))
+        .let(fastDebounce(15))
+        .subscribe(this._handleCallStackChanged),
     );
   }
 
@@ -67,6 +69,13 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
     this.setState(prevState =>
       this._getState(!(this._computeIsFocused() || !prevState.isCollapsed)),
     );
+  };
+
+  _handleCallStackChanged = (): void => {
+    const {process} = this.props;
+    this.setState({
+      threads: process.getAllThreads(),
+    });
   };
 
   _computeIsFocused(): boolean {
@@ -82,7 +91,7 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
       shouldBeCollapsed != null ? shouldBeCollapsed : !isFocused;
     return {
       isFocused,
-      childItems: process.getAllThreads(),
+      threads: process.getAllThreads(),
       isCollapsed,
     };
   }
@@ -93,7 +102,7 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
 
   render() {
     const {service, title, process} = this.props;
-    const {childItems, isFocused} = this.state;
+    const {threads, isFocused, isCollapsed} = this.state;
 
     const tooltipTitle =
       service.viewModel.focusedProcess == null ||
@@ -119,18 +128,17 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
       </span>
     );
 
-    return childItems == null || childItems.length === 0 ? (
+    return threads.length === 0 ? (
       <TreeItem>{formattedTitle}</TreeItem>
     ) : (
       <NestedTreeItem
         title={formattedTitle}
-        collapsed={this.state.isCollapsed}
+        collapsed={isCollapsed}
         onSelect={this.handleSelect}>
-        {childItems.map((thread, threadIndex) => {
+        {threads.map((thread, threadIndex) => {
           return (
             <ThreadTreeNode
               key={threadIndex}
-              childItems={thread.getCallStack()}
               thread={thread}
               service={service}
             />

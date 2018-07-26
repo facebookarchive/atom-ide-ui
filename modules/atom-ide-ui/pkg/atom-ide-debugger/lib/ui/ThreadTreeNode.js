@@ -10,31 +10,26 @@
  * @format
  */
 
+/* globals Element */
+
 import type {IThread, IStackFrame, IDebugService} from '../types';
 import type {Expected} from 'nuclide-commons/expected';
 
+import {AtomInput} from 'nuclide-commons-ui/AtomInput';
+import {Button, ButtonSizes} from 'nuclide-commons-ui/Button';
 import {LoadingSpinner} from 'nuclide-commons-ui/LoadingSpinner';
+import {scrollIntoViewIfNeeded} from 'nuclide-commons-ui/scrollIntoView';
 import {Table} from 'nuclide-commons-ui/Table';
 import {NestedTreeItem, TreeItem} from 'nuclide-commons-ui/Tree';
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
+import {fastDebounce} from 'nuclide-commons/observable';
 import * as React from 'react';
 import {Observable, Subject} from 'rxjs';
 import {DebuggerMode} from '../constants';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {Expect} from 'nuclide-commons/expected';
 import classnames from 'classnames';
-
-const LOADING = (
-  <div
-    className={classnames(
-      'debugger-expression-value-row',
-      'debugger-tree-no-frames',
-    )}>
-    <span className="debugger-expression-value-content">
-      <LoadingSpinner size="SMALL" />
-    </span>
-  </div>
-);
+import ReactDOM from 'react-dom';
 
 type Props = {
   thread: IThread,
@@ -43,52 +38,42 @@ type Props = {
 
 type State = {
   isCollapsed: boolean,
-  childItems: Expected<Array<IStackFrame>>,
+  stackFrames: Expected<Array<IStackFrame>>,
+  callStackLevels: number,
+  additionalCallStackLevels: number,
 };
 
 export default class ThreadTreeNode extends React.Component<Props, State> {
   _disposables: UniversalDisposable;
-  _selectTrigger: Subject<void>;
+  // Subject that emits every time this node transitions from collapsed
+  // to expanded.
+  _expandedSubject: Subject<void>;
+  _nestedTreeItem: ?NestedTreeItem;
 
   constructor(props: Props) {
     super(props);
-    this._selectTrigger = new Subject();
-    this.state = this._getInitialState();
+    this._expandedSubject = new Subject();
+    this.state = {
+      isCollapsed: true,
+      stackFrames: Expect.pending(),
+      callStackLevels: 20,
+      additionalCallStackLevels: 20,
+    };
     this._disposables = new UniversalDisposable();
   }
 
-  _computeIsFocused(): boolean {
+  _threadIsFocused(): boolean {
     const {service, thread} = this.props;
     const focusedThread = service.viewModel.focusedThread;
     return focusedThread != null && thread.threadId === focusedThread.threadId;
   }
 
-  _getInitialState() {
-    return {
-      isCollapsed: true,
-      childItems: Expect.pending(),
-    };
-  }
-
-  _getFrames(fetch: boolean = false): Observable<Expected<Array<IStackFrame>>> {
-    const {thread} = this.props;
-    const getValue = () => Observable.of(Expect.value(thread.getCallStack()));
-    if (
-      fetch ||
-      (!this.state.childItems.isPending &&
-        !this.state.childItems.isError &&
-        this.state.childItems.value.length === 0)
-    ) {
-      return Observable.of(Expect.pending()).concat(
-        Observable.fromPromise(
-          (async () => {
-            await thread.fetchCallStack();
-            return Expect.value(thread.getCallStack());
-          })(),
-        ),
-      );
-    }
-    return getValue();
+  _getFrames(levels: ?number): Observable<Expected<Array<IStackFrame>>> {
+    // TODO: support frame paging - fetch ~20 frames here and offer
+    // a way in the UI for the user to ask for more
+    return levels != null
+      ? this.props.thread.getFullCallStack(levels)
+      : this.props.thread.getFullCallStack();
   }
 
   componentWillUnmount(): void {
@@ -99,6 +84,15 @@ export default class ThreadTreeNode extends React.Component<Props, State> {
     const {service} = this.props;
     const model = service.getModel();
     const {viewModel} = service;
+    const changedCallStack = observableFromSubscribeFunction(
+      model.onDidChangeCallStack.bind(model),
+    );
+    // The React element may have subscribed to the event (call stack
+    // changed) after the event occurred.
+    const additionalFocusedCheck = this._threadIsFocused()
+      ? changedCallStack.startWith(null)
+      : changedCallStack;
+
     this._disposables.add(
       Observable.merge(
         observableFromSubscribeFunction(
@@ -107,59 +101,75 @@ export default class ThreadTreeNode extends React.Component<Props, State> {
         observableFromSubscribeFunction(service.onDidChangeMode.bind(service)),
       ).subscribe(() => {
         const {isCollapsed} = this.state;
-
-        const newIsCollapsed = isCollapsed && !this._computeIsFocused();
-        this.setState({
-          isCollapsed: newIsCollapsed,
-        });
+        const newIsCollapsed = isCollapsed && !this._threadIsFocused();
+        this._setCollapsed(newIsCollapsed);
       }),
-      this._selectTrigger
+      this._expandedSubject
         .asObservable()
-        .switchMap(() => this._getFrames(true))
+        .let(fastDebounce(100))
+        .switchMap(() => {
+          return this._getFrames(this.state.callStackLevels);
+        })
         .subscribe(frames => {
           this.setState({
-            childItems: frames,
+            stackFrames: frames,
           });
         }),
-      observableFromSubscribeFunction(model.onDidChangeCallStack.bind(model))
-        .debounceTime(100)
-        .startWith(null)
-        .switchMap(() =>
-          this._getFrames().switchMap(frames => {
-            if (
-              !this.state.isCollapsed &&
-              !frames.isPending &&
-              !frames.isError &&
-              frames.value.length === 0
-            ) {
-              return this._getFrames(true);
-            }
-            return Observable.of(frames);
-          }),
-        )
-        .subscribe(frames => {
-          const {isCollapsed} = this.state;
+      additionalFocusedCheck
+        .let(fastDebounce(100))
+        .switchMap(() => {
+          // If this node was already collapsed, it stays collapsed
+          // unless this thread just became the focused thread, in
+          // which case it auto-expands. If this node was already
+          // expanded by the user, it stays expanded.
+          const newIsCollapsed =
+            this.state.isCollapsed && !this._threadIsFocused();
 
+          // If the node is collapsed, we only need to fetch the first call
+          // frame to display the stop location (if any). Otherwise, we need
+          // to fetch the call stack.
+          return this._getFrames(
+            newIsCollapsed ? 1 : this.state.callStackLevels,
+          ).switchMap(frames =>
+            Observable.of({
+              frames,
+              newIsCollapsed,
+            }),
+          );
+        })
+        .subscribe(result => {
+          const {frames, newIsCollapsed} = result;
           this.setState({
-            childItems: frames,
-            isCollapsed: isCollapsed && !this._computeIsFocused(),
+            stackFrames: frames,
+            isCollapsed: newIsCollapsed,
           });
         }),
+      observableFromSubscribeFunction(
+        service.onDidChangeActiveThread.bind(service),
+      ).subscribe(() => {
+        if (this._threadIsFocused() && this._nestedTreeItem != null) {
+          const el = ReactDOM.findDOMNode(this._nestedTreeItem);
+          if (el instanceof Element) {
+            scrollIntoViewIfNeeded(el, false);
+          }
+        }
+      }),
     );
   }
 
-  handleSelect = () => {
-    if (!this.state.isCollapsed) {
-      this.setState({
-        isCollapsed: true,
-      });
-    } else {
-      this.setState({
-        isCollapsed: false,
-        childItems: Expect.pending(),
-      });
-      this._selectTrigger.next();
+  _setCollapsed(isCollapsed: boolean): void {
+    this.setState({
+      isCollapsed,
+    });
+
+    if (!isCollapsed) {
+      this._expandedSubject.next();
     }
+  }
+
+  handleSelectThread = () => {
+    const newCollapsed = !this.state.isCollapsed;
+    this._setCollapsed(newCollapsed);
   };
 
   _handleStackFrameClick = (
@@ -181,7 +191,8 @@ export default class ThreadTreeNode extends React.Component<Props, State> {
             frame.source != null && frame.source.name != null
               ? `${frame.source.name}`
               : '',
-          line: `${frame.range.end.row}`,
+          // VSP line numbers start at 0.
+          line: `${frame.range.end.row + 1}`,
           frame,
           isSelected,
         },
@@ -229,8 +240,8 @@ export default class ThreadTreeNode extends React.Component<Props, State> {
 
   render(): React.Node {
     const {thread, service} = this.props;
-    const {childItems} = this.state;
-    const isFocused = this._computeIsFocused();
+    const {stackFrames, isCollapsed} = this.state;
+    const isFocused = this._threadIsFocused();
     const handleTitleClick = event => {
       if (thread.stopped) {
         service.focusStackFrame(null, thread, null, true);
@@ -250,9 +261,10 @@ export default class ThreadTreeNode extends React.Component<Props, State> {
     );
 
     if (
-      !childItems.isPending &&
-      !childItems.isError &&
-      childItems.value.length === 0
+      thread.stoppedDetails == null ||
+      (!stackFrames.isPending &&
+        !stackFrames.isError &&
+        stackFrames.value.length === 0)
     ) {
       return (
         <TreeItem className="debugger-tree-no-frames">
@@ -261,23 +273,84 @@ export default class ThreadTreeNode extends React.Component<Props, State> {
       );
     }
 
-    const callFramesElements = childItems.isPending ? (
-      LOADING
-    ) : childItems.isError ? (
-      <span className="debugger-tree-no-frames">
-        Error fetching stack frames {childItems.error.toString()}
-      </span>
-    ) : (
-      this._generateTable(childItems.value)
+    const LOADING = (
+      <div
+        className={classnames(
+          'debugger-expression-value-row',
+          'debugger-tree-no-frames',
+        )}>
+        <span className="debugger-expression-value-content">
+          <LoadingSpinner size="SMALL" />
+        </span>
+      </div>
     );
 
+    const ERROR = (
+      <span className="debugger-tree-no-frames">
+        Error fetching stack frames{' '}
+        {stackFrames.isError ? stackFrames.error.toString() : null}
+      </span>
+    );
+
+    const callFramesElements = stackFrames.isPending
+      ? LOADING
+      : stackFrames.isError
+        ? ERROR
+        : this._generateTable(stackFrames.value);
+
     return (
-      <NestedTreeItem
-        title={formattedTitle}
-        collapsed={this.state.isCollapsed}
-        onSelect={this.handleSelect}>
-        {callFramesElements}
-      </NestedTreeItem>
+      <div className="debugger-tree-frame">
+        <NestedTreeItem
+          title={formattedTitle}
+          collapsed={this.state.isCollapsed}
+          onSelect={this.handleSelectThread}
+          ref={elem => (this._nestedTreeItem = elem)}>
+          {callFramesElements}
+        </NestedTreeItem>
+        {isCollapsed ? null : this._renderLoadMoreStackFrames()}
+      </div>
+    );
+  }
+
+  _renderLoadMoreStackFrames(): ?React.Element<any> {
+    const {thread} = this.props;
+    const {
+      stackFrames,
+      callStackLevels,
+      additionalCallStackLevels,
+    } = this.state;
+
+    if (!thread.additionalFramesAvailable(callStackLevels + 1)) {
+      return null;
+    }
+
+    return (
+      <div style={{display: 'flex'}}>
+        <Button
+          size={ButtonSizes.EXTRA_SMALL}
+          disabled={stackFrames.isPending || stackFrames.isError}
+          onClick={() => {
+            this.setState({
+              stackFrames: Expect.pending(),
+              callStackLevels: callStackLevels + additionalCallStackLevels,
+            });
+            this._expandedSubject.next();
+          }}>
+          More Stack Frames
+        </Button>
+        <AtomInput
+          style={{'flex-grow': '1'}}
+          placeholderText="Number of stack frames"
+          initialValue={String(this.state.additionalCallStackLevels)}
+          size="xs"
+          onDidChange={value => {
+            if (!isNaN(parseInt(value, 10))) {
+              this.setState({additionalCallStackLevels: parseInt(value, 10)});
+            }
+          }}
+        />
+        <AtomInput />
+      </div>
     );
   }
 }

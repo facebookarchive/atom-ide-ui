@@ -96,7 +96,7 @@ export type DiagnosticMessage = {|
   filePath: NuclideUri,
   text?: string,
   html?: string,
-  description?: string | (() => Promise<string> | string),
+  +description?: string | (() => Promise<string> | string),
   range?: atom$Range,
   trace?: Array<DiagnosticTrace>,
   fix?: DiagnosticFix,
@@ -105,6 +105,7 @@ export type DiagnosticMessage = {|
   // Indicates that the message should still be displayed, but there should be some UI indicating
   // that it is out of date. TODO(matthewwithanm) implement this UI.
   stale?: boolean,
+  code?: number,
 |};
 
 export type DiagnosticMessages = {

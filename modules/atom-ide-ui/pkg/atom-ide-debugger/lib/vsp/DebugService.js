@@ -125,6 +125,7 @@ const CONSOLE_VIEW_URI = 'atom://nuclide/console';
 const CUSTOM_DEBUG_EVENT = 'CUSTOM_DEBUG_EVENT';
 const CHANGE_DEBUG_MODE = 'CHANGE_DEBUG_MODE';
 const START_DEBUG_SESSION = 'START_DEBUG_SESSION';
+const ACTIVE_THREAD_CHANGED = 'ACTIVE_THREAD_CHANGED';
 
 const CHANGE_FOCUSED_PROCESS = 'CHANGE_FOCUSED_PROCESS';
 const CHANGE_FOCUSED_STACKFRAME = 'CHANGE_FOCUSED_STACKFRAME';
@@ -334,8 +335,10 @@ export default class DebugService implements IDebugService {
     this._onSessionEnd();
   }
 
-  _tryToAutoFocusStackFrame(thread: IThread): void {
-    const callStack = thread.getCallStack();
+  async _tryToAutoFocusStackFrame(thread: IThread): Promise<void> {
+    // The call stack has already been refreshed by the logic handling
+    // the thread stop event for this thread.
+    const callStack = thread.getCachedCallStack();
     if (
       callStack.length === 0 ||
       (this._viewModel.focusedStackFrame &&
@@ -464,6 +467,7 @@ export default class DebugService implements IDebugService {
               },
               editor,
             );
+            this._emitter.emit(ACTIVE_THREAD_CHANGED);
           }
           lastFocusedThreadId = stackFrame.thread.threadId;
           lastFocusedProcess = stackFrame.thread.process;
@@ -617,10 +621,20 @@ export default class DebugService implements IDebugService {
             return Observable.empty();
           }
 
-          // UX: That'll fetch the top stack frame first (to allow the UI to focus on it),
-          // then the rest of the call stack.
+          const thisThreadIsFocused =
+            this._viewModel.focusedStackFrame != null &&
+            this._viewModel.focusedStackFrame.thread.getId() === thread.getId();
+
+          // Fetches the first call frame in this stack to allow the UI to
+          // update the thread list. Additional frames will be fetched by the UI
+          // on demand, only if they are needed.
+          // If this thread is the currently focused thread, fetch the entire
+          // stack because the UI will certainly need it, and we need it here to
+          // try and auto-focus a frame.
           return (
-            Observable.fromPromise(this._model.fetchCallStack(thread))
+            Observable.fromPromise(
+              this._model.refreshCallStack(thread, thisThreadIsFocused),
+            )
               .ignoreElements()
               .concat(Observable.of(thread))
               // Avoid focusing a continued thread.
@@ -885,6 +899,10 @@ export default class DebugService implements IDebugService {
     }
   }
 
+  onDidChangeActiveThread(callback: () => mixed): IDisposable {
+    return this._emitter.on(ACTIVE_THREAD_CHANGED, callback);
+  }
+
   onDidStartDebugSession(
     callback: (config: IProcessConfig) => mixed,
   ): IDisposable {
@@ -993,12 +1011,23 @@ export default class DebugService implements IDebugService {
 
     if (focusThread == null && stackFrame != null) {
       focusThread = stackFrame.thread;
+    } else if (focusThread == null && focusProcess != null) {
+      // A focused process has been specified, but not a thread.
+      // If the current focused thread is in this process, leave it alone.
+      // Otherwise, use the first stopped thread in the process if there is one.
+      const currentFocusedThread = this._viewModel.focusedThread;
+      focusThread = focusProcess
+        .getAllThreads()
+        .filter(t => t === currentFocusedThread)[0];
+      if (focusThread == null) {
+        focusThread = focusProcess.getAllThreads().filter(t => t.stopped)[0];
+      }
     } else if (focusThread != null && focusProcess != null) {
       focusThread = focusProcess.getThread(focusThread.threadId);
     }
 
     if (stackFrame == null && thread != null) {
-      focusStackFrame = thread.getCallStack()[0];
+      focusStackFrame = thread.getCallStackTopFrame();
     }
 
     this._viewModel.setFocus(
@@ -1578,11 +1607,14 @@ export default class DebugService implements IDebugService {
             ? processToFocus.getAllThreads()[0]
             : null;
         const frameToFocus =
-          threadToFocus != null && threadToFocus.getCallStack.length > 0
-            ? threadToFocus.getCallStack()[0]
-            : null;
+          threadToFocus != null ? threadToFocus.getCallStackTopFrame() : null;
 
         this.focusStackFrame(frameToFocus, threadToFocus, processToFocus);
+      } else {
+        // The UI needs to refresh the debugger mode for the current
+        // focused process. If an adapter exited before the mode transitioned
+        // to STARTED, the UI can get stuck in the STARTING state otherwise.
+        this._updateModeAndEmit(this._computeDebugMode());
       }
     }
 

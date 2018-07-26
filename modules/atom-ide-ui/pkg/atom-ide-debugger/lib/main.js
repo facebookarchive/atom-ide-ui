@@ -605,8 +605,8 @@ class Activation {
     const target: HTMLElement = event.target;
     let bp = null;
     if (target != null && target.dataset != null) {
-      if (target.dataset.bpid != null) {
-        const bpId = target.dataset.bpid;
+      if (target.dataset.bpId != null) {
+        const bpId = target.dataset.bpId;
         bp = this._service.getModel().getBreakpointById(bpId);
       }
 
@@ -819,14 +819,22 @@ class Activation {
     const {focusedThread} = this._service.viewModel;
     if (focusedThread != null) {
       let callstackText = '';
-      focusedThread.getCallStack().forEach((item, i) => {
-        const path = nuclideUri.basename(item.source.uri);
-        callstackText += `${i}\t${item.name}\t${path}:${item.range.start.row}${
-          os.EOL
-        }`;
-      });
+      const subscription = focusedThread
+        .getFullCallStack()
+        .filter(expectedStack => !expectedStack.isPending)
+        .subscribe(expectedStack => {
+          expectedStack.getOrDefault([]).forEach((item, i) => {
+            const path = nuclideUri.basename(item.source.uri);
+            callstackText += `${i}\t${item.name}\t${path}:${
+              item.range.start.row
+            }${os.EOL}`;
+          });
+          atom.clipboard.write(callstackText.trim());
 
-      atom.clipboard.write(callstackText.trim());
+          this._disposables.remove(subscription);
+          subscription.unsubscribe();
+        });
+      this._disposables.add(subscription);
     }
   }
 

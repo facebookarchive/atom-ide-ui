@@ -8,8 +8,8 @@
  *
  * @flow strict-local
  * @format
+ * @emails oncall+nuclide
  */
-
 import {ConfigCache} from '../ConfigCache';
 import nuclideUri from '../nuclideUri';
 
@@ -69,6 +69,16 @@ describe('ConfigCache', () => {
 
     expect(await cache.getConfigDir(rootFolder)).toBe('/');
     expect(await cache.getConfigDir(nestedFolder2)).toBe('/');
+  });
+
+  it('matches only when both files are in the directory when the search strategy is "aurora"', async () => {
+    const cache = new ConfigCache(
+      [CONFIG_FILE_NAME, CONFIG_FILE_NAME_2],
+      'aurora',
+    );
+    expect(await cache.getConfigDir(nestedFolder)).toBe(nestedFolder);
+    expect(await cache.getConfigDir(nestedFolder2)).toBe(null);
+    expect(await cache.getConfigDir(rootFolder)).toBe(null);
   });
 
   it('matches first path segment when the search strategy is "thrift"', async () => {

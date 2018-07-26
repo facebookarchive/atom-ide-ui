@@ -57,10 +57,18 @@ export default class DebuggerCallstackComponent extends React.Component<
   _getState(): State {
     const {service} = this.props;
     const {focusedStackFrame, focusedThread} = service.viewModel;
+
+    const callstack =
+      service.getDebuggerMode() !== DebuggerMode.RUNNING
+        ? focusedThread == null
+          ? []
+          : focusedThread.getCachedCallStack()
+        : [];
+
     return {
       callStackLevels: this.state == null ? 20 : this.state.callStackLevels,
       mode: service.getDebuggerMode(),
-      callstack: focusedThread == null ? [] : focusedThread.getCallStack(),
+      callstack,
       selectedCallFrameId:
         focusedStackFrame == null ? -1 : focusedStackFrame.frameId,
       isFechingStackFrames: false,
@@ -80,7 +88,15 @@ export default class DebuggerCallstackComponent extends React.Component<
         observableFromSubscribeFunction(service.onDidChangeMode.bind(service)),
       )
         .let(fastDebounce(15))
-        .subscribe(() => this.setState(this._getState())),
+        .subscribe(() => {
+          if (viewModel.focusedThread != null) {
+            nullthrows(viewModel.focusedThread)
+              .refreshCallStack()
+              .then(() => this.setState(this._getState()));
+          } else {
+            this.setState(this._getState());
+          }
+        }),
     );
   }
 
@@ -108,6 +124,11 @@ export default class DebuggerCallstackComponent extends React.Component<
                 frameId: index + 1,
                 address: stackFrame.name,
                 frame: stackFrame,
+                source:
+                  stackFrame.source != null && stackFrame.source.name != null
+                    ? `${stackFrame.source.name}`
+                    : '',
+                line: `${stackFrame.range.end.row + 1}`,
                 isSelected,
               },
             };
@@ -129,7 +150,17 @@ export default class DebuggerCallstackComponent extends React.Component<
       {
         title: 'Address',
         key: 'address',
-        width: 0.95,
+        width: 0.5,
+      },
+      {
+        title: 'Source',
+        key: 'source',
+        width: 0.35,
+      },
+      {
+        title: 'Line',
+        key: 'line',
+        width: 0.1,
       },
     ];
 
@@ -175,7 +206,7 @@ export default class DebuggerCallstackComponent extends React.Component<
           onClick={() => {
             this.setState({isFechingStackFrames: true});
             nullthrows(viewModel.focusedThread)
-              .fetchCallStack(this.state.callStackLevels)
+              .refreshCallStack()
               .then(() => this.setState(this._getState()));
           }}>
           More Stack Frames
