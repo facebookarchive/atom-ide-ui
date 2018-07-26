@@ -1,5 +1,18 @@
 # Changelog
 
+## Next Release
+
+- Fixed spurious "Nuclide" menu (it accidentally contained refactoring commands).
+
+### Diagnostics
+
+- Added support for promise-based descriptions in the hover tooltip (#164).
+  - Big thanks to @lloiser for the PR!
+
+### Debugger
+
+- Improved call stack rendering/performance.
+
 ## v0.13.0
 
 - Experimental: Added "rename" functionality.
