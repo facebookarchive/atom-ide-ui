@@ -19,6 +19,7 @@ import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import * as React from 'react';
 import {Observable} from 'rxjs';
 import ThreadTreeNode from './ThreadTreeNode';
+import {DebuggerMode} from '../constants';
 
 type Props = {
   process: IProcess,
@@ -30,6 +31,7 @@ type State = {
   isCollapsed: boolean,
   threads: Array<IThread>,
   isFocused: boolean,
+  pendingStart: boolean,
 };
 
 export default class ProcessTreeNode extends React.Component<Props, State> {
@@ -39,7 +41,6 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
     super(props);
     this.state = this._getState();
     this._disposables = new UniversalDisposable();
-    this.handleSelect = this.handleSelect.bind(this);
   }
 
   componentDidMount(): void {
@@ -49,15 +50,19 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
     this._disposables.add(
       Observable.merge(
         observableFromSubscribeFunction(
-          viewModel.onDidFocusStackFrame.bind(viewModel),
+          viewModel.onDidChangeDebuggerFocus.bind(viewModel),
         ),
-        observableFromSubscribeFunction(service.onDidChangeMode.bind(service)),
       )
         .let(fastDebounce(15))
-        .subscribe(this._handleThreadsChanged),
+        .subscribe(this._handleFocusChanged),
       observableFromSubscribeFunction(model.onDidChangeCallStack.bind(model))
         .let(fastDebounce(15))
         .subscribe(this._handleCallStackChanged),
+      observableFromSubscribeFunction(
+        service.onDidChangeProcessMode.bind(service),
+      ).subscribe(() =>
+        this.setState(prevState => this._getState(prevState.isCollapsed)),
+      ),
     );
   }
 
@@ -65,7 +70,7 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
     this._disposables.dispose();
   }
 
-  _handleThreadsChanged = (): void => {
+  _handleFocusChanged = (): void => {
     this.setState(prevState =>
       this._getState(!(this._computeIsFocused() || !prevState.isCollapsed)),
     );
@@ -87,12 +92,14 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
   _getState(shouldBeCollapsed: ?boolean) {
     const {process} = this.props;
     const isFocused = this._computeIsFocused();
+    const pendingStart = process.debuggerMode === DebuggerMode.STARTING;
     const isCollapsed =
       shouldBeCollapsed != null ? shouldBeCollapsed : !isFocused;
     return {
       isFocused,
       threads: process.getAllThreads(),
       isCollapsed,
+      pendingStart,
     };
   }
 
@@ -115,8 +122,10 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
           );
 
     const handleTitleClick = event => {
-      service.focusStackFrame(null, null, process, true);
-      event.stopPropagation();
+      if (!this._computeIsFocused()) {
+        service.viewModel.setFocusedProcess(process, true);
+        event.stopPropagation();
+      }
     };
 
     const formattedTitle = (
@@ -125,6 +134,7 @@ export default class ProcessTreeNode extends React.Component<Props, State> {
         className={isFocused ? 'debugger-tree-process-thread-selected' : ''}
         title={tooltipTitle}>
         {title}
+        {this.state.pendingStart ? ' (starting...)' : ''}
       </span>
     );
 

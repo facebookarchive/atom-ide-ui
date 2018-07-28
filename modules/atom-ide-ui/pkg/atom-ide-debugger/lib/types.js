@@ -239,6 +239,7 @@ export interface IProcess extends ITreeElement {
   +configuration: IProcessConfig;
   +session: ISession & ITreeElement;
   +sources: Map<string, ISource>;
+  +debuggerMode: DebuggerModeType;
   getThread(threadId: number): ?IThread;
   getAllThreads(): IThread[];
   getSource(raw: ?DebugProtocol.Source): ISource;
@@ -289,14 +290,17 @@ export interface IViewModel {
    * Returns the focused stack frame or null if there are no stack frames.
    */
   +focusedStackFrame: ?IStackFrame;
-  isMultiProcessView(): boolean;
 
-  onDidFocusProcess(callback: (process: ?IProcess) => mixed): IDisposable;
-  onDidFocusStackFrame(
-    callback: (data: {stackFrame: ?IStackFrame, explicit: boolean}) => mixed,
+  setFocusedProcess(process: ?IProcess, explicit: boolean): void;
+  setFocusedThread(thread: ?IThread, explicit: boolean): void;
+  setFocusedStackFrame(stackFrame: ?IStackFrame, explicit: boolean): void;
+
+  onDidChangeDebuggerFocus(
+    callback: (data: {explicit: boolean}) => mixed,
   ): IDisposable;
+
   onDidChangeExpressionContext(
-    callback: (data: {stackFrame: ?IStackFrame, explicit: boolean}) => mixed,
+    callback: (data: {explicit: boolean}) => mixed,
   ): IDisposable;
 }
 
@@ -318,6 +322,7 @@ export interface IModel extends ITreeElement {
   onDidChangeWatchExpressions(
     callback: (expression: ?IExpression) => mixed,
   ): IDisposable;
+  onDidChangeProcesses(callback: () => mixed): IDisposable;
 
   // TODO: Ericblue this is here for the legacy DebuggerThreadsComponent,
   // which is going away soon.
@@ -340,26 +345,22 @@ export type DebuggerModeType =
 
 export interface IDebugService {
   +viewModel: IViewModel;
-  getDebuggerMode(): DebuggerModeType;
 
+  /**
+   * onDidChangeActiveThread callback is fired when the debugger service changes
+   * which process and/or thread is active without explicit user intervention.
+   * This can happen if a thread hits a breakpoint, throws an exception, etc.
+   */
   onDidChangeActiveThread(callback: () => mixed): IDisposable;
-  onDidChangeMode(callback: (mode: DebuggerModeType) => mixed): IDisposable;
+  onDidChangeProcessMode(
+    callback: (data: {process: IProcess, mode: DebuggerModeType}) => mixed,
+  ): IDisposable;
   onDidStartDebugSession(
     callback: (config: IProcessConfig) => mixed,
   ): IDisposable;
   onDidCustomEvent(
     callback: (event: DebugProtocol.DebugEvent) => mixed,
   ): IDisposable;
-
-  /**
-   * Sets the focused stack frame and evaluates all expressions against the newly focused stack frame,
-   */
-  focusStackFrame(
-    stackFrame: ?IStackFrame,
-    thread: ?IThread,
-    process: ?IProcess,
-    explicit?: boolean,
-  ): void;
 
   /**
    * Adds new breakpoints to the model for the file specified with the uri. Notifies debug adapter of breakpoint changes.
@@ -444,12 +445,12 @@ export interface IDebugService {
   /**
    * Restarts a process or creates a new one if there is no active session.
    */
-  restartProcess(): Promise<any>;
+  restartProcess(process: IProcess): Promise<any>;
 
   /**
    * Stops the process. If the process does not exist then stops all processes.
    */
-  stopProcess(): Promise<void>;
+  stopProcess(process: IProcess): Promise<void>;
 
   /**
    * Gets the current debug model.
