@@ -4,14 +4,30 @@
 
 - Fixed spurious "Nuclide" menu (it accidentally contained refactoring commands).
 
+### Console
+
+- Added filtering by severity.
+
 ### Diagnostics
 
-- Added support for promise-based descriptions in the hover tooltip (#164).
+- Added support for promise-based descriptions in the hover tooltip. (#164)
   - Big thanks to @lloiser for the PR!
+- Fixed issue where gutter diagnostic popups can get stuck.
+- Fixed issue where on-save result markers are re-applied with on-update results. (#70)
+- Diagnostic messages are now selectable/copyable.
 
 ### Debugger
 
 - Improved call stack rendering/performance.
+
+### Outline
+
+- The active outline item is automatically scrolled into view.
+
+### Terminal
+
+- The default terminal location is now the bottom pane.
+- Note that the terminal now remembers its last location, so you can drag it back to the center if you prefer it that way.
 
 ## v0.13.0
 
