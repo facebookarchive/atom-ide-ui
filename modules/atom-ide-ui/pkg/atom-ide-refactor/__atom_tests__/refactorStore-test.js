@@ -10,13 +10,12 @@
  * @format
  * @emails oncall+nuclide
  */
-import type {TextEdit} from 'nuclide-commons-atom/text-edit';
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {
   FreeformRefactorRequest,
   RefactorProvider,
   RefactorRequest,
   RenameRequest,
+  RenameReturn,
   AvailableRefactoring,
   RefactorResponse,
 } from '../lib/types';
@@ -49,7 +48,7 @@ describe('refactorStore', () => {
     Array<AvailableRefactoring>,
   > = (null: any);
   let refactorReturn: Observable<RefactorResponse> = (null: any);
-  let renameReturn: Promise<?Map<NuclideUri, Array<TextEdit>>>;
+  let renameData: Promise<?RenameReturn>;
 
   let lastError: mixed = null;
   function expectNoUncaughtErrors(): void {
@@ -98,15 +97,15 @@ describe('refactorStore', () => {
         editor: TextEditor,
         position: atom$Point,
         newName: string,
-      ): Promise<?Map<NuclideUri, Array<TextEdit>>> {
-        return renameReturn;
+      ): Promise<?RenameReturn> {
+        return renameData;
       },
     };
 
     // TODO spy on the provider and call through
     refactoringsAtPointReturn = Promise.resolve([]);
     refactorReturn = Observable.empty();
-    renameReturn = Promise.resolve();
+    renameData = Promise.resolve();
 
     providers = new ProviderRegistry();
     store = getStore(providers);
@@ -175,7 +174,7 @@ describe('refactorStore', () => {
         });
         const displayRenameRequest = [
           openEditor,
-          provider,
+          [provider],
           TEST_FILE_SELECTED_TEXT,
           TEST_FILE_MOUNT_POINT,
           TEST_FILE_SYMBOL_POINT,
@@ -188,7 +187,7 @@ describe('refactorStore', () => {
           editor: openEditor,
           newName: 'bar',
         };
-        store.dispatch(Actions.execute(provider, rename));
+        store.dispatch(Actions.execute([provider], rename));
         await waitForPhase('execute');
         store.dispatch(Actions.close());
         await waitForClose();
@@ -228,7 +227,7 @@ describe('refactorStore', () => {
         refactorReturn = deferred;
         const displayRenameRequest = [
           openEditor,
-          provider,
+          [provider],
           TEST_FILE_SELECTED_TEXT,
           TEST_FILE_MOUNT_POINT,
           TEST_FILE_SYMBOL_POINT,
@@ -241,7 +240,7 @@ describe('refactorStore', () => {
           editor: openEditor,
           newName: 'bar',
         };
-        store.dispatch(Actions.execute(provider, rename));
+        store.dispatch(Actions.execute([provider], rename));
         await waitForPhase('execute');
         store.dispatch(Actions.close());
         await waitForClose();
@@ -268,7 +267,7 @@ describe('refactorStore', () => {
         refactorReturn = Observable.throw(new Error());
         const displayRenameRequest = [
           openEditor,
-          provider,
+          [provider],
           TEST_FILE_SELECTED_TEXT,
           TEST_FILE_MOUNT_POINT,
           TEST_FILE_SYMBOL_POINT,
@@ -281,7 +280,7 @@ describe('refactorStore', () => {
           editor: openEditor,
           newName: 'bar',
         };
-        store.dispatch(Actions.execute(provider, rename));
+        store.dispatch(Actions.execute([provider], rename));
         await waitForPhase('execute');
         store.dispatch(Actions.close());
         await waitForClose();
@@ -293,7 +292,7 @@ describe('refactorStore', () => {
         refactorReturn = Observable.empty();
         const displayRenameRequest = [
           openEditor,
-          provider,
+          [provider],
           TEST_FILE_SELECTED_TEXT,
           TEST_FILE_MOUNT_POINT,
           TEST_FILE_SYMBOL_POINT,
@@ -306,7 +305,7 @@ describe('refactorStore', () => {
           editor: openEditor,
           newName: 'bar',
         };
-        store.dispatch(Actions.execute(provider, rename));
+        store.dispatch(Actions.execute([provider], rename));
         await waitForPhase('execute');
         store.dispatch(Actions.close());
         await waitForClose();
@@ -331,7 +330,7 @@ describe('refactorStore', () => {
 
         const displayRenameRequest = [
           openEditor,
-          provider,
+          [provider],
           TEST_FILE_SELECTED_TEXT,
           TEST_FILE_MOUNT_POINT,
           TEST_FILE_SYMBOL_POINT,
@@ -344,7 +343,7 @@ describe('refactorStore', () => {
           editor: openEditor,
           newName: 'bar',
         };
-        store.dispatch(Actions.execute(provider, rename));
+        store.dispatch(Actions.execute([provider], rename));
         await waitForPhase('execute');
         store.dispatch(Actions.close());
         await waitForClose();
@@ -355,7 +354,6 @@ describe('refactorStore', () => {
         // TODO test this with multiple files. it will become much more complex. We need to make
         // sure that we can apply the entire refactoring transactionally. this means if something
         // goes wrong we need to roll back the rest.
-
         await nextTick();
         expectNoUncaughtErrors();
       });
@@ -425,7 +423,7 @@ describe('refactorStore', () => {
           range: new Range([0, 0], [0, 0]),
           arguments: new Map([['new_name', 'test']]),
         };
-        store.dispatch(Actions.execute(provider, asyncify));
+        store.dispatch(Actions.execute([provider], asyncify));
         await waitForClose();
         expect(openEditor.getText()).toEqual('test\nbar\nfoo\n');
       });

@@ -16,6 +16,7 @@ import type {
   OutputProvider,
   RecordHeightChangeHandler,
   Source,
+  Severity,
 } from '../types';
 import type {RegExpFilterChange} from 'nuclide-commons-ui/RegExpFilter';
 
@@ -35,7 +36,7 @@ import shallowEqual from 'shallowequal';
 import recordsChanged from '../recordsChanged';
 import StyleSheet from 'nuclide-commons-ui/StyleSheet';
 
-type Props = {
+type Props = {|
   displayableRecords: Array<DisplayableRecord>,
   history: Array<string>,
   clearRecords: () => void,
@@ -57,14 +58,18 @@ type Props = {
   filterText: string,
   resetAllFilters: () => void,
   fontSize: number,
-};
+  selectedSeverities: Set<Severity>,
+  toggleSeverity: (severity: Severity) => void,
+|};
 
 type State = {
   unseenMessages: boolean,
+  scopeName: string,
 };
 
 // Maximum time (ms) for the console to try scrolling to the bottom.
 const MAXIMUM_SCROLLING_TIME = 3000;
+const DEFAULT_SCOPE_NAME = 'text.plain';
 
 let count = 0;
 
@@ -72,6 +77,7 @@ export default class ConsoleView extends React.Component<Props, State> {
   _consoleScrollPaneEl: ?HTMLDivElement;
   _consoleHeaderComponent: ?ConsoleHeader;
   _disposables: UniversalDisposable;
+  _executorScopeDisposables: UniversalDisposable;
   _isScrolledNearBottom: boolean;
   _id: number;
   _inputArea: ?InputArea;
@@ -88,8 +94,10 @@ export default class ConsoleView extends React.Component<Props, State> {
     super(props);
     this.state = {
       unseenMessages: false,
+      scopeName: DEFAULT_SCOPE_NAME,
     };
     this._disposables = new UniversalDisposable();
+    this._executorScopeDisposables = new UniversalDisposable();
     this._isScrolledNearBottom = true;
     this._continuouslyScrollToBottom = false;
     this._id = count++;
@@ -132,6 +140,7 @@ export default class ConsoleView extends React.Component<Props, State> {
 
   componentWillUnmount(): void {
     this._disposables.dispose();
+    this._executorScopeDisposables.dispose();
   }
 
   componentDidUpdate(prevProps: Props): void {
@@ -195,6 +204,21 @@ export default class ConsoleView extends React.Component<Props, State> {
     ) {
       this.setState({unseenMessages: true});
     }
+
+    this._executorScopeDisposables.dispose();
+    this._executorScopeDisposables = new UniversalDisposable();
+    for (const executor of nextProps.executors.values()) {
+      if (executor != null && executor.onDidChangeScopeName != null) {
+        this._executorScopeDisposables.add(
+          executor.onDidChangeScopeName(() => {
+            const scopeName = executor.scopeName();
+            this.setState({
+              scopeName,
+            });
+          }),
+        );
+      }
+    }
   }
 
   shouldComponentUpdate(nextProps: Props, nextState: State): boolean {
@@ -235,6 +259,8 @@ export default class ConsoleView extends React.Component<Props, State> {
           sources={this.props.sources}
           onFilterChange={this.props.updateFilter}
           onSelectedSourcesChange={this.props.selectSources}
+          selectedSeverities={this.props.selectedSeverities}
+          toggleSeverity={this.props.toggleSeverity}
         />
         {/*
           We need an extra wrapper element here in order to have the new messages notification stick
@@ -300,7 +326,7 @@ export default class ConsoleView extends React.Component<Props, State> {
         {this._renderPromptButton()}
         <InputArea
           ref={(component: ?InputArea) => (this._inputArea = component)}
-          scopeName={currentExecutor.scopeName}
+          scopeName={this.state.scopeName}
           onSubmit={this._executePrompt}
           history={this.props.history}
           watchEditor={this.props.watchEditor}

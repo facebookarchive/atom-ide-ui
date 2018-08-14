@@ -10,7 +10,7 @@
  * @format
  */
 
-import type {AndroidJavaProcess, AdbDevice} from 'nuclide-adb/lib/types';
+import type {AndroidJavaProcess} from 'nuclide-adb/lib/types';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {
   AutoGenProperty,
@@ -49,13 +49,13 @@ type Props = {|
 |};
 
 type DeviceAndPackageType = {|
-  +device: ?AdbDevice,
+  +deviceSerial: string,
   +selectedPackage: string,
 |};
 
 type DeviceAndProcessType = {|
-  +device: ?AdbDevice,
-  +selectedProcess: ?AndroidJavaProcess,
+  +deviceSerial: string,
+  +selectedProcess: AndroidJavaProcess,
 |};
 
 type State = {
@@ -302,18 +302,10 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       return value != null;
     } else if (type === 'deviceAndPackage') {
       const deviceAndPackageValue = this.state.deviceAndPackageValues.get(name);
-      return (
-        deviceAndPackageValue != null &&
-        deviceAndPackageValue.device != null &&
-        deviceAndPackageValue.selectedPackage != null
-      );
+      return deviceAndPackageValue != null;
     } else if (type === 'deviceAndProcess') {
       const deviceAndProcessValue = this.state.deviceAndProcessValues.get(name);
-      return (
-        deviceAndProcessValue != null &&
-        deviceAndProcessValue.device != null &&
-        deviceAndProcessValue.selectedProcess != null
-      );
+      return deviceAndProcessValue != null;
     } else if (type === 'selectSources') {
       const selectSourcesValue = this.state.selectSourcesValues.get(name);
       return selectSourcesValue != null;
@@ -416,11 +408,15 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
             const packageValues = new Map(packageValuesArray);
             return packageValues.get(name) || null;
           }}
-          onSelect={(device, javaPackage) => {
-            this.state.deviceAndPackageValues.set(name, {
-              device,
-              selectedPackage: javaPackage,
-            });
+          onSelect={(deviceSerial, javaPackage) => {
+            if (deviceSerial != null) {
+              this.state.deviceAndPackageValues.set(name, {
+                deviceSerial,
+                selectedPackage: javaPackage,
+              });
+            } else {
+              this.state.deviceAndPackageValues.delete(name);
+            }
             this.props.configIsValidChanged(this._debugButtonShouldEnable());
           }}
         />
@@ -441,11 +437,15 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
             const processValues = new Map(processValuesArray);
             return processValues.get(name) || null;
           }}
-          onSelect={(device, javaProcess) => {
-            this.state.deviceAndProcessValues.set(name, {
-              device,
-              selectedProcess: javaProcess,
-            });
+          onSelect={(deviceSerial, javaProcess) => {
+            if (deviceSerial != null && javaProcess != null) {
+              this.state.deviceAndProcessValues.set(name, {
+                deviceSerial,
+                selectedProcess: javaProcess,
+              });
+            } else {
+              this.state.deviceAndProcessValues.delete(name);
+            }
             this.props.configIsValidChanged(this._debugButtonShouldEnable());
           }}
         />
@@ -625,8 +625,8 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       showThreads: threads,
       customControlButtons: [],
       threadsComponentTitle: 'Threads',
-      customDisposable: new UniversalDisposable(),
       processName: getProcessName(values),
+      isRestartable: true,
     });
 
     serializeDebuggerConfig(...this._getSerializationArgs(this.props), {

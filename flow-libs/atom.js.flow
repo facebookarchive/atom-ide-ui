@@ -133,6 +133,12 @@ declare class atom$CompositeDisposable {
   clear(): void,
 }
 
+type atom$ConfigParams = {
+  saveCallback?: Object => void,
+  mainSource?: string,
+  projectHomeSchema?: atom$ConfigSchema,
+};
+
 type atom$ConfigType =
   'boolean' | 'string' | 'integer' | 'number' |
   'array' | 'object' | 'color' | 'any';
@@ -149,6 +155,9 @@ type atom$ConfigSchema = {
 };
 
 declare class atom$Config {
+  defaultSettings: Object,
+  settings: Object,
+
   // Config Subscription
   observe(
     keyPath: string,
@@ -198,6 +207,7 @@ declare class atom$Config {
   getUserConfigPath(): string,
 
   // Undocumented Methods
+  constructor(params?: atom$ConfigParams): atom$Config,
   getRawValue(keyPath: ?string, options: {excludeSources?: string, sources?: string}): mixed,
   getSchema(keyPath: string): atom$ConfigSchema,
   save(): void,
@@ -207,6 +217,9 @@ declare class atom$Config {
     schema: atom$ConfigSchema,
   ): void,
   removeAtKeyPath(keyPath: ?string, value: ?mixed): mixed,
+
+  // Used by nuclide-config to set the initial settings from disk
+  resetUserSettings(newSettings: Object, options?: {source?: string}): void,
 }
 
 declare class atom$Cursor {
@@ -440,6 +453,9 @@ declare class atom$applicationDelegate {
     devMode?: boolean,
     safeMode?: boolean,
   }): void,
+
+  // Used by nuclide-config to replicate atom.config saveCallback
+  setUserSettings(config: atom$Config, configFilePath: string): Promise<mixed>;
 }
 
 type atom$PaneParams = {
@@ -465,7 +481,7 @@ declare class atom$Pane {
   activateItem(item: Object): ?Object,
   activateItemAtIndex(index: number): void,
   moveItemToPane(item: Object, pane: atom$Pane, index: number): void,
-  destroyItem(item: Object, force?: boolean): boolean | Promise<boolean>,
+  destroyItem(item: Object, force?: boolean): Promise<boolean>,
   itemForURI(uri: string): Object,
 
   // Event subscriptions.
@@ -500,6 +516,7 @@ declare class atom$Pane {
   setPendingItem(item: atom$PaneItem): void,
   clearPendingItem(): void,
   getFlexScale(): number,
+  getElement(): HTMLElement,
   getParent(): Object,
   removeItem(item: Object, moved: ?boolean): void,
   setActiveItem(item: Object): Object,
@@ -1235,11 +1252,22 @@ type AddTextEditorEvent = {
   index: number,
 };
 
+type atom$WorkspaceOpenOptions = {
+  activatePane?: ?boolean,
+  activateItem?: ?boolean,
+  initialLine?: ?number,
+  initialColumn?: ?number,
+  pending?: ?boolean,
+  split?: ?string,
+  searchAllPanes?: ?boolean,
+  location?: atom$PaneLocation,
+}
+
 declare class atom$Workspace {
   // Event Subscription
   observePanes(cb: (pane: atom$Pane) => void): IDisposable,
   observeTextEditors(callback: (editor: atom$TextEditor) => mixed): IDisposable,
-  observeActiveTextEditor(callback: (editor: atom$TextEditor) => mixed): IDisposable,
+  observeActiveTextEditor(callback: (editor: ?atom$TextEditor) => mixed): IDisposable,
   onDidAddTextEditor(callback: (event: AddTextEditorEvent) => mixed): IDisposable,
   onDidChangeActivePaneItem(callback: (item: mixed) => mixed): IDisposable,
   onDidDestroyPaneItem(callback: (event: DestroyPaneItemEvent) => mixed): IDisposable,
@@ -1257,14 +1285,7 @@ declare class atom$Workspace {
   // Opening
   open(
     uri?: string,
-    options?: {
-      activatePane?: ?boolean,
-      initialLine?: ?number,
-      initialColumn?: ?number,
-      pending?: ?boolean,
-      split?: ?string,
-      searchAllPanes?: ?boolean,
-    }
+    options?: atom$WorkspaceOpenOptions,
   ): Promise<atom$TextEditor>,
   openURIInPane(
     uri?: string,
@@ -1293,8 +1314,10 @@ declare class atom$Workspace {
   // Pane Items
   getPaneItems(): Array<Object>,
   getActivePaneItem(): ?Object,
+  getActivePaneContainer(): atom$PaneContainer,
   getTextEditors(): Array<atom$TextEditor>,
   getActiveTextEditor(): ?atom$TextEditor,
+  createItemForURI(uri: string, options: atom$WorkspaceOpenOptions): atom$PaneItem,
 
   // Panes
   getPanes(): Array<atom$Pane>,
@@ -1303,6 +1326,7 @@ declare class atom$Workspace {
   activatePreviousPane(): boolean,
   paneForURI(uri: string): atom$Pane,
   paneForItem(item: mixed): ?atom$Pane,
+  paneContainers: {[location: atom$PaneLocation]: atom$AbstractPaneContainer},
 
   // Panels
   panelContainers: {[location: string]: atom$PanelContainer},

@@ -25,11 +25,13 @@ import type {RefactorProvider} from './types';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import invariant from 'assert';
+import {arrayFlatten} from 'nuclide-commons/collection';
 import {Observable} from 'rxjs';
 import {Range, TextBuffer} from 'atom';
 
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import parse from 'diffparser';
+import nullthrows from 'nullthrows';
 import {applyTextEditsToBuffer} from 'nuclide-commons-atom/text-edit';
 import {toUnifiedDiff} from 'nuclide-commons-atom/text-edit-diff';
 import {existingEditorForUri} from 'nuclide-commons-atom/text-editor';
@@ -111,7 +113,7 @@ export function getEpics(
 }
 
 async function getRefactorings(
-  providers: ProviderRegistry<RefactorProvider>,
+  registry: ProviderRegistry<RefactorProvider>,
 ): Promise<RefactorAction> {
   analytics.track('nuclide-refactorizer:get-refactorings');
   const editor = atom.workspace.getActiveTextEditor();
@@ -124,17 +126,18 @@ async function getRefactorings(
   try {
     const selectedRange = editor.getSelectedBufferRange();
 
-    const provider = Array.from(
-      providers.getAllProvidersForEditor(editor),
-    ).find(p => p.refactorings != null);
+    const providers = Array.from(
+      registry.getAllProvidersForEditor(editor),
+    ).filter(p => p.refactorings != null);
 
-    if (provider == null || provider.refactorings == null) {
+    if (providers.length === 0) {
       return Actions.error('get-refactorings', Error('No providers found.'));
     }
 
-    const availableRefactorings = await provider.refactorings(
-      editor,
-      selectedRange,
+    const availableRefactorings = arrayFlatten(
+      await Promise.all(
+        providers.map(p => nullthrows(p.refactorings)(editor, selectedRange)),
+      ),
     );
     availableRefactorings.sort(
       (x, y) => (x.disabled === true ? 1 : 0) - (y.disabled === true ? 1 : 0),
@@ -142,7 +145,7 @@ async function getRefactorings(
     return Actions.gotRefactorings(
       editor,
       selectedRange,
-      provider,
+      providers,
       availableRefactorings,
     );
   } catch (e) {
@@ -151,10 +154,12 @@ async function getRefactorings(
 }
 
 function executeRefactoring(action: ExecuteAction): Observable<RefactorAction> {
-  const {refactoring, provider} = action.payload;
-  if (provider.refactor != null && refactoring.kind === 'freeform') {
-    return provider
-      .refactor(refactoring)
+  const {refactoring, providers} = action.payload;
+  const refactorProviders = providers.filter(p => p.refactor != null);
+  const renameProviders = providers.filter(p => p.rename != null);
+  if (refactoring.kind === 'freeform' && refactorProviders.length > 0) {
+    return Observable.from(refactorProviders)
+      .mergeMap(p => nullthrows(p.refactor)(refactoring))
       .map(response => {
         switch (response.type) {
           case 'progress':
@@ -176,35 +181,48 @@ function executeRefactoring(action: ExecuteAction): Observable<RefactorAction> {
         }
       })
       .catch(e => Observable.of(Actions.error('execute', e)));
-  } else if (provider.rename != null && refactoring.kind === 'rename') {
+  } else if (refactoring.kind === 'rename' && renameProviders.length > 0) {
     const {editor, position, newName} = refactoring;
 
     return Observable.fromPromise(
-      provider.rename(editor, position, newName),
-    ).map(edits => {
-      if (edits == null || edits.size === 0) {
-        return Actions.close();
-      }
-      const currentFilePath = editor.getPath();
-      invariant(currentFilePath != null);
+      Promise.all(
+        renameProviders.map(p =>
+          nullthrows(p.rename)(editor, position, newName),
+        ),
+      ),
+    )
+      .map(allEdits => {
+        const renameResult = allEdits.find(e => e != null);
 
-      // If the map only has 1 key (a single unique NuclideURI) and it matches the
-      //  currently opened file, then all the TextEdits must be local.
-      let response;
-      if (edits.size === 1 && edits.keys().next().value === currentFilePath) {
-        response = {
-          type: 'edit',
-          edits,
-        };
-        return Actions.apply(response);
-      } else {
-        response = {
-          type: 'rename-external-edit',
-          edits,
-        };
-        return Actions.confirm(response);
-      }
-    });
+        if (renameResult != null && renameResult.type === 'error') {
+          return Actions.error('execute', Error(renameResult.message));
+        } else if (renameResult == null || renameResult.data.size === 0) {
+          return Actions.close();
+        }
+
+        const edits = renameResult.data;
+
+        const currentFilePath = editor.getPath();
+        invariant(currentFilePath != null);
+
+        // If the map only has 1 key (a single unique NuclideURI) and it matches the
+        //  currently opened file, then all the TextEdits must be local.
+        let response;
+        if (edits.size === 1 && edits.keys().next().value === currentFilePath) {
+          response = {
+            type: 'edit',
+            edits,
+          };
+          return Actions.apply(response);
+        } else {
+          response = {
+            type: 'rename-external-edit',
+            edits,
+          };
+          return Actions.confirm(response);
+        }
+      })
+      .catch(e => Observable.of(Actions.error('execute', e)));
   } else {
     return Observable.of(
       Actions.error('execute', Error('No appropriate provider found.')),

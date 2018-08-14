@@ -19,7 +19,7 @@ export function createDummyExecutor(id: string): Executor {
   return {
     id,
     name: id,
-    scopeName: 'text.plain',
+    scopeName: () => 'text.plain',
     send: (code: string) => {},
     output: Observable.create(observer => {}),
   };
@@ -33,6 +33,7 @@ const baseAppState = {
   providers: new Map(),
   providerStatuses: new Map(),
   records: Immutable.List(),
+  incompleteRecords: Immutable.List(),
   history: [],
 };
 

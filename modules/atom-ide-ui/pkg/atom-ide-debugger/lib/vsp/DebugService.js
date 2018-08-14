@@ -41,6 +41,7 @@ SOFTWARE.
 
 import type {ConsoleMessage} from 'atom-ide-ui';
 import type {GatekeeperService} from 'nuclide-commons-atom/types';
+import type {RecordToken} from '../../../atom-ide-console/lib/types';
 import type {TerminalInfo} from '../../../atom-ide-terminal/lib/types';
 import type {
   DebuggerModeType,
@@ -68,7 +69,6 @@ import * as React from 'react';
 import invariant from 'assert';
 import {Icon} from 'nuclide-commons-ui/Icon';
 import nuclideUri from 'nuclide-commons/nuclideUri';
-import {splitStream} from 'nuclide-commons/observable';
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import {sleep, serializeAsyncCall} from 'nuclide-commons/promise';
 import {
@@ -798,21 +798,17 @@ export default class DebugService implements IDebugService {
         'telemetry',
         'success',
       ]);
-      const logStream = splitStream(
-        outputEvents
-          .filter(e => !KNOWN_CATEGORIES.has(e.body.category))
-          .map(e => stripAnsi(e.body.output)),
-      );
+      const logStream = outputEvents
+        .filter(e => !KNOWN_CATEGORIES.has(e.body.category))
+        .map(e => stripAnsi(e.body.output));
       const [errorStream, warningsStream, successStream] = [
         'stderr',
         'console',
         'success',
       ].map(category =>
-        splitStream(
-          outputEvents
-            .filter(e => category === e.body.category)
-            .map(e => stripAnsi(e.body.output)),
-        ),
+        outputEvents
+          .filter(e => category === e.body.category)
+          .map(e => stripAnsi(e.body.output)),
       );
       const notificationStream = outputEvents
         .filter(e => e.body.category === 'nuclide_notification')
@@ -820,19 +816,43 @@ export default class DebugService implements IDebugService {
           type: nullthrows(e.body.data).type,
           message: e.body.output,
         }));
+
+      let lastEntryToken: ?RecordToken = null;
+      const shouldUpdateLastEntry = level => {
+        return (
+          lastEntryToken != null &&
+          lastEntryToken.getCurrentLevel() === level &&
+          !lastEntryToken.getCurrentText().endsWith('\n')
+        );
+      };
+      const handleMessage = (line, level) => {
+        const incomplete = !line.endsWith('\n');
+        let newToken;
+        if (!incomplete) {
+          newToken = consoleApi.append({text: line, level, incomplete: false});
+          invariant(newToken == null);
+        } else {
+          newToken =
+            lastEntryToken != null && shouldUpdateLastEntry(level)
+              ? lastEntryToken.appendText(line)
+              : consoleApi.append({text: line, level, incomplete});
+        }
+
+        if (newToken !== lastEntryToken) {
+          if (lastEntryToken != null) {
+            lastEntryToken.setComplete();
+          }
+          lastEntryToken = newToken;
+        }
+      };
       this._sessionEndDisposables.add(
-        errorStream.subscribe(line => {
-          consoleApi.append({text: line, level: 'error'});
-        }),
-        warningsStream.subscribe(line => {
-          consoleApi.append({text: line, level: 'warning'});
-        }),
-        successStream.subscribe(line => {
-          consoleApi.append({text: line, level: 'success'});
-        }),
-        logStream.subscribe(line => {
-          consoleApi.append({text: line, level: 'log'});
-        }),
+        () => {
+          lastEntryToken = null;
+        },
+        errorStream.subscribe(line => handleMessage(line, 'error')),
+        warningsStream.subscribe(line => handleMessage(line, 'warning')),
+        successStream.subscribe(line => handleMessage(line, 'success')),
+        logStream.subscribe(line => handleMessage(line, 'log')),
         notificationStream.subscribe(({type, message}) => {
           atom.notifications.add(type, message);
         }),
@@ -1309,14 +1329,28 @@ export default class DebugService implements IDebugService {
       });
       const {
         adapterType,
-        onInitializeCallback,
-        customDisposable,
+        onDebugStartingCallback,
+        onDebugStartedCallback,
       } = configuration;
 
       track(AnalyticsEvents.DEBUGGER_START, {
         serviceName: configuration.adapterType,
         clientType: 'VSP',
       });
+
+      const sessionTeardownDisposables = new UniversalDisposable();
+
+      const instanceInterface = newSession => {
+        return Object.freeze({
+          customRequest: async (
+            request: string,
+            args: any,
+          ): Promise<DebugProtocol.CustomResponse> => {
+            return newSession.custom(request, args);
+          },
+          observeCustomEvents: newSession.observeCustomEvents.bind(newSession),
+        });
+      };
 
       const createInitializeSession = async (config: IProcessConfig) => {
         const newSession = await this._createVsDebugSession(
@@ -1346,8 +1380,15 @@ export default class DebugService implements IDebugService {
           locale: 'en-us',
         });
 
-        if (onInitializeCallback != null) {
-          await onInitializeCallback(newSession);
+        if (onDebugStartingCallback != null) {
+          // Callbacks are passed IVspInstance which exposes only certain
+          // methods to them, rather than getting the full session.
+          const teardown = onDebugStartingCallback(
+            instanceInterface(newSession),
+          );
+          if (teardown != null) {
+            sessionTeardownDisposables.add(teardown);
+          }
         }
 
         this._model.setExceptionBreakpoints(
@@ -1371,6 +1412,10 @@ export default class DebugService implements IDebugService {
       this._launchOrAttachTarget(session, configuration)
         .then(() => setRunningState())
         .catch(async error => {
+          if (process != null) {
+            this.stopProcess(process);
+          }
+
           if (
             configuration.debugMode === 'attach' &&
             configuration.adapterExecutable != null &&
@@ -1401,21 +1446,25 @@ export default class DebugService implements IDebugService {
           }
         });
 
-      // make sure to add the configuration.customDisposable to dispose on
-      //   session end
-      if (customDisposable != null) {
-        customDisposable.add(
-          this.viewModel.onDidChangeDebuggerFocus(() => {
-            if (
-              !this.getModel()
-                .getProcesses()
-                .includes(process)
-            ) {
-              customDisposable.dispose();
-            }
-          }),
-        );
+      if (onDebugStartedCallback != null && session != null) {
+        const teardown = onDebugStartedCallback(instanceInterface(session));
+        if (teardown != null) {
+          sessionTeardownDisposables.add(teardown);
+        }
       }
+
+      this._sessionEndDisposables.add(() => {
+        this._model.onDidChangeProcesses(() => {
+          if (
+            !this.getModel()
+              .getProcesses()
+              .includes(process)
+          ) {
+            sessionTeardownDisposables.dispose();
+          }
+        });
+      });
+      this._sessionEndDisposables.add(sessionTeardownDisposables);
 
       return process;
     } catch (error) {
@@ -1552,6 +1601,11 @@ export default class DebugService implements IDebugService {
     });
   };
 
+  canRestartProcess(): boolean {
+    const process = this._getCurrentProcess();
+    return process != null && process.configuration.isRestartable === true;
+  }
+
   async restartProcess(process: IProcess): Promise<void> {
     if (process.session.capabilities.supportsRestartRequest) {
       await process.session.custom('restart', null);
@@ -1582,22 +1636,29 @@ export default class DebugService implements IDebugService {
         if (!passesMultiGK && currentProcess != null) {
           this.stopProcess(currentProcess);
         }
-        _gkService
-          .passesGK('nuclide_processtree_debugging')
-          .then(passesProcessTree => {
-            if (passesProcessTree) {
-              track(AnalyticsEvents.DEBUGGER_TREE_OPENED);
-            }
-          });
       } else {
         this.stopProcess(currentProcess);
       }
     }
 
+    if (_gkService != null) {
+      _gkService
+        .passesGK('nuclide_processtree_debugging')
+        .then(passesProcessTree => {
+          if (passesProcessTree) {
+            track(AnalyticsEvents.DEBUGGER_TREE_OPENED);
+          }
+        });
+    }
+
     // Open the console window if it's not already opened.
     // eslint-disable-next-line nuclide-internal/atom-apis
     atom.workspace.open(CONSOLE_VIEW_URI, {searchAllPanes: true});
-    this._consoleDisposables = this._registerConsoleExecutor();
+
+    // If this is the first process, register the console executor.
+    if (this._model.getProcesses().length === 0) {
+      this._consoleDisposables = this._registerConsoleExecutor();
+    }
     await this._doCreateProcess(config, uuid.v4());
 
     if (this._model.getProcesses().length > 1) {
@@ -1883,18 +1944,38 @@ export default class DebugService implements IDebugService {
       );
     };
 
+    const emitter = new Emitter();
+    const SCOPE_CHANGED = 'SCOPE_CHANGED';
+    const viewModel = this._viewModel;
+    const executor = {
+      id: 'debugger',
+      name: 'Debugger',
+      scopeName: () => {
+        if (
+          viewModel.focusedProcess != null &&
+          viewModel.focusedProcess.configuration.config.grammarName != null
+        ) {
+          return viewModel.focusedProcess.configuration.config.grammarName;
+        }
+        return 'text.plain';
+      },
+      onDidChangeScopeName(callback: () => mixed): IDisposable {
+        return emitter.on(SCOPE_CHANGED, callback);
+      },
+      send(expression: string) {
+        evaluateExpression(expression);
+      },
+      output,
+      getProperties: (fetchChildrenForLazyComponent: any),
+    };
+
     disposables.add(
-      registerExecutor({
-        id: 'debugger',
-        name: 'Debugger',
-        scopeName: 'text.plain',
-        send(expression: string) {
-          evaluateExpression(expression);
-        },
-        output,
-        getProperties: (fetchChildrenForLazyComponent: any),
+      emitter,
+      this._viewModel.onDidChangeDebuggerFocus(() => {
+        emitter.emit(SCOPE_CHANGED);
       }),
     );
+    disposables.add(registerExecutor(executor));
     return disposables;
   }
 

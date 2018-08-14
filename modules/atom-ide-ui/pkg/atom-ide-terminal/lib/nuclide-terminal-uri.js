@@ -17,6 +17,7 @@ import crypto from 'crypto';
 import invariant from 'assert';
 import url from 'url';
 import uuid from 'uuid';
+import isEmpty from 'lodash/isEmpty';
 
 // Generate a unique random token that is included in every URI we generate.
 // We use this to check that URIs containing shell commands and similarly
@@ -42,7 +43,7 @@ export type InstantiatedTerminalInfo = {
 };
 
 export const URI_PREFIX = 'atom://nuclide-terminal-view';
-export const TERMINAL_DEFAULT_LOCATION = 'pane';
+export const TERMINAL_DEFAULT_LOCATION = 'bottom';
 export const TERMINAL_DEFAULT_ICON = 'terminal';
 export const TERMINAL_DEFAULT_INFO = {
   remainOnCleanExit: false,
@@ -89,29 +90,23 @@ export function infoFromUri(
 ): InstantiatedTerminalInfo {
   const {query} = url.parse(paneUri, true);
 
-  if (query == null) {
+  if (isEmpty(query)) {
+    // query can be null, '', or {}
     return {...TERMINAL_DEFAULT_INFO, key: uuid.v4()};
   } else {
-    const cwd = query.cwd === '' ? {} : {cwd: query.cwd};
-    const command =
-      query.command !== '' ? {command: JSON.parse(query.command)} : {};
-    const title = query.title === '' ? {} : {title: query.title};
+    invariant(query != null);
+    const cwd = query.cwd ? {cwd: query.cwd} : {};
+    const command = query.command ? {command: JSON.parse(query.command)} : {};
+    const title = query.title ? {title: query.title} : {};
     const remainOnCleanExit = query.remainOnCleanExit === 'true';
     const key = query.key;
-    const defaultLocation =
-      query.defaultLocation != null && query.defaultLocation !== ''
-        ? query.defaultLocation
-        : TERMINAL_DEFAULT_LOCATION;
-    const icon =
-      query.icon != null && query.icon !== ''
-        ? query.icon
-        : TERMINAL_DEFAULT_ICON;
-    const environmentVariables =
-      query.environmentVariables != null && query.environmentVariables !== ''
-        ? new Map(JSON.parse(query.environmentVariables))
-        : new Map();
+    const defaultLocation = query.defaultLocation || TERMINAL_DEFAULT_LOCATION;
+    const icon = query.icon || TERMINAL_DEFAULT_ICON;
+    const environmentVariables = query.environmentVariables
+      ? new Map(JSON.parse(query.environmentVariables))
+      : new Map();
     const preservedCommands = JSON.parse(query.preservedCommands || '[]');
-    const initialInput = query.initialInput != null ? query.initialInput : '';
+    const initialInput = query.initialInput || '';
 
     // Information that can affect the commands executed by the terminal,
     // and that therefore must come from a trusted source.

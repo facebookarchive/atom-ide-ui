@@ -10,7 +10,7 @@
  * @format
  */
 
-import type {RefactorProvider, RenameRequest} from '../types';
+import type {RefactorProvider, RenameRequest, Store} from '../types';
 
 import * as React from 'react';
 import {AtomInput} from 'nuclide-commons-ui/AtomInput';
@@ -18,7 +18,7 @@ import * as Actions from '../refactorActions';
 
 export type Props = {
   selectedText: string,
-  provider: RefactorProvider,
+  providers: RefactorProvider[],
   parentEditor: atom$TextEditor,
   store: Store,
   symbolPosition: atom$Point,
@@ -84,7 +84,7 @@ export default class RenameComponent extends React.Component<Props, State> {
 
     return newName === ''
       ? store.dispatch(Actions.close())
-      : store.dispatch(Actions.execute(this.props.provider, renameRequest));
+      : store.dispatch(Actions.execute(this.props.providers, renameRequest));
   };
 
   _handleCancel = (event: ?Event): void => {

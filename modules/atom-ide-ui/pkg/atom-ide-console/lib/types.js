@@ -23,14 +23,14 @@ export type ConsoleService = (options: SourceInfo) => ConsoleApi;
 export type ConsoleApi = {
   // The primary means of interacting with the console.
   // TODO: Update these to be `(object: any, ...objects: Array<any>): void` to allow for logging objects.
-  log(object: string, _: void): void,
-  error(object: string, _: void): void,
-  warn(object: string, _: void): void,
-  info(object: string, _: void): void,
-  success(object: string, _: void): void,
+  log(object: string, _: void): ?RecordToken,
+  error(object: string, _: void): ?RecordToken,
+  warn(object: string, _: void): ?RecordToken,
+  info(object: string, _: void): ?RecordToken,
+  success(object: string, _: void): ?RecordToken,
 
   // A generic API for sending a message of any level (log, error, etc.).
-  append(message: Message): void,
+  append(message: Message): ?RecordToken,
 
   // Dispose of the console. Invoke this when your package is disabled.
   dispose(): void,
@@ -73,6 +73,8 @@ type Color =
   | 'violet'
   | 'rainbow';
 
+export type Severity = 'info' | 'warning' | 'error';
+
 // A message object, for use with the `console.append()` API.
 export type Message = {
   text: string,
@@ -84,6 +86,7 @@ export type Message = {
   tags?: ?Array<string>,
   kind?: ?MessageKind,
   scopeName?: ?string,
+  incomplete?: boolean,
 };
 
 //
@@ -128,8 +131,10 @@ type MessageFormat = 'ansi';
 // Messages are transformed into these.
 // Make sure shouldAccumulateRecordCount in Reducers.js is up to date with these fields
 export type Record = {
+  messageId?: number,
   text: string,
   level: Level,
+  incomplete: boolean,
   format?: MessageFormat,
   tags?: ?Array<string>,
   repeatCount: number,
@@ -143,6 +148,14 @@ export type Record = {
   executor?: Executor,
 };
 
+export type RecordToken = {|
+  +getCurrentText: () => string,
+  +getCurrentLevel: () => Level,
+  setLevel: (level: Level) => RecordToken,
+  appendText: (text: string) => RecordToken,
+  setComplete: () => void,
+|};
+
 export type AppState = {
   createPasteFunction: ?CreatePasteFunction,
   currentExecutorId: ?string,
@@ -152,6 +165,7 @@ export type AppState = {
   // items after the addition is O(n), so it's important that we schedule and throttle our renders
   // or we'll lose the benefit of an O(1) insertion.
   records: List<Record>,
+  incompleteRecords: List<Record>,
   history: Array<string>,
   providers: Map<string, SourceInfo>,
   providerStatuses: Map<string, OutputProviderStatus>,
@@ -196,21 +210,23 @@ export type RecordProvider = BasicRecordProvider | ControllableRecordProvider;
 // Serialized state specific to each instance of the console view. For example, each instance has
 // its own, distinct filter, so that's here. They don't, however, have distinct records, so they
 // aren't.
-export type ConsolePersistedState = {
+export type ConsolePersistedState = {|
   deserializer: 'nuclide.Console',
   filterText?: string,
   enableRegExpFilter?: boolean,
   unselectedSourceIds?: Array<string>,
-};
+  unselectedSeverities?: Array<Severity>,
+|};
 
 export type Executor = {
   id: string,
   name: string,
   send(message: string): void,
   output: Observable<Message | {result?: EvaluationResult}>,
-  scopeName: string,
+  scopeName: () => string,
   provideSymbols?: (prefix: string) => Array<string>,
   getProperties?: (objectId: string) => Observable<?ExpansionResult>,
+  onDidChangeScopeName?: (callback: () => void) => IDisposable,
 };
 
 export type RegisterExecutorFunction = (executor: Executor) => IDisposable;
@@ -251,6 +267,15 @@ export type Action =
       type: 'RECORD_RECEIVED',
       payload: {
         record: Record,
+      },
+    }
+  | {
+      type: 'RECORD_UPDATED',
+      payload: {
+        messageId: number,
+        appendText: ?string,
+        overrideLevel: ?Level,
+        setComplete: boolean,
       },
     }
   | {
