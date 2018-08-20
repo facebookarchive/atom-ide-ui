@@ -2,18 +2,18 @@ version: 2
 jobs:
   test:
     docker:
-      - image: circleci/node:10-browsers
+      - image: circleci/node:10 # node:10-browsers is needed for Atom.
     steps:
       - checkout
       # Download and install Atom.
-      - run: |
-          curl -s -L "https://atom.io/download/deb" \
-            -H 'Accept: application/octet-stream' \
-            -o "atom-amd64.deb"
-      - run: sudo dpkg --install atom-amd64.deb || true
-      - run: sudo apt-get update
-      - run: sudo apt-get --fix-broken --assume-yes --quiet install
-      # Run actual tests.
+      # (Restore once we actually run tests.)
+      # - run: |
+      #     curl -s -L "https://atom.io/download/deb" \
+      #       -H 'Accept: application/octet-stream' \
+      #       -o "atom-amd64.deb"
+      # - run: sudo dpkg --install atom-amd64.deb || true
+      # - run: sudo apt-get update
+      # - run: sudo apt-get --fix-broken --assume-yes --quiet install
       - restore_cache:
           key: dependencies-{{ checksum "yarn.lock" }}
       - run: yarn --no-progress
