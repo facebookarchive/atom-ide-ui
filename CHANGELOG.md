@@ -26,6 +26,7 @@
 
 ### Terminal
 
+- Updated to xterm 3.6.0.
 - The default terminal location is now the bottom pane.
 - Note that the terminal now remembers its last location, so you can drag it back to the center if you prefer it that way.
 
