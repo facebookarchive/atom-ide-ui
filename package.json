@@ -72,7 +72,6 @@
     "xterm": "3.6.0"
   },
   "devDependencies": {
-    "codecov": "2.3.0",
     "eslint-plugin-dependencies": "2.4.0",
     "eslint-plugin-flowtype": "2.39.1",
     "eslint-plugin-jasmine": "2.9.1",
@@ -82,7 +81,6 @@
     "eslint-plugin-react": "7.9.1",
     "eslint-plugin-unicorn": "4.0.3",
     "flow-bin": "0.77.0",
-    "nyc": "11.2.1",
     "prettier": "1.13.6"
   },
   "private": true

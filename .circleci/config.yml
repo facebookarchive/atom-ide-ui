@@ -3,8 +3,6 @@ jobs:
   test:
     docker:
       - image: circleci/node:10-browsers
-    environment:
-      COVERAGE_DIR: "${CIRCLE_WORKING_DIRECTORY}/.nyc_output"
     steps:
       - checkout
       # Download and install Atom.
