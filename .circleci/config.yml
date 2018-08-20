@@ -1,0 +1,33 @@
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/node:10-browsers
+    environment:
+      COVERAGE_DIR: "${CIRCLE_WORKING_DIRECTORY}/.nyc_output"
+    steps:
+      - checkout
+      # Download and install Atom.
+      - run: |
+          curl -s -L "https://atom.io/download/deb" \
+            -H 'Accept: application/octet-stream' \
+            -o "atom-amd64.deb"
+      - run: sudo dpkg --install atom-amd64.deb || true
+      - run: sudo apt-get update
+      - run: sudo apt-get --fix-broken --assume-yes --quiet install
+      # Run actual tests.
+      - restore_cache:
+          key: dependencies-{{ checksum "yarn.lock" }}
+      - run: yarn --no-progress
+      - save_cache:
+          key: dependencies-{{ checksum "yarn.lock" }}
+          paths: ./node_modules
+      - run: ./node_modules/.bin/eslint --max-warnings=0 .
+      - run: ./node_modules/.bin/flow check --show-all-errors
+      # TODO: Get Jest to work here.
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - test
