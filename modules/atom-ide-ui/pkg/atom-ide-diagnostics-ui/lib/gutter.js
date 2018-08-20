@@ -20,6 +20,7 @@ import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import classnames from 'classnames';
 import {Range} from 'atom';
 import invariant from 'assert';
+import {Button} from 'nuclide-commons-ui/Button';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import * as React from 'react';
 import ReactDOM from 'react-dom';
@@ -29,6 +30,7 @@ import {goToLocation as atomGoToLocation} from 'nuclide-commons-atom/go-to-locat
 import {wordAtPosition} from 'nuclide-commons-atom/range';
 import analytics from 'nuclide-commons/analytics';
 import {Observable, Subject} from 'rxjs';
+import BlockDecoration from 'nuclide-commons-ui/BlockDecoration';
 import * as GroupUtils from './GroupUtils';
 import {hoveringOrAiming} from './aim';
 import {makeDatatipComponent} from './getDiagnosticDatatip.js';
@@ -65,9 +67,9 @@ const GUTTER_CSS_GROUPS = {
 
 const editorToMarkers: WeakMap<TextEditor, Set<atom$Marker>> = new WeakMap();
 const itemToEditor: WeakMap<HTMLElement, TextEditor> = new WeakMap();
-const handleMouseEnterSpawnPopupEvents = new Subject();
+const handleSpawnPopupEvents = new Subject();
 
-const handleMouseEnterSpawnPopupEventsObservable = handleMouseEnterSpawnPopupEvents
+const SpawnPopupEvents = handleSpawnPopupEvents
   .switchMap(({messages, diagnosticUpdater, gutter, item}) => {
     return spawnPopup(messages, diagnosticUpdater, gutter, item)
       .let(
@@ -81,6 +83,9 @@ const handleMouseEnterSpawnPopupEventsObservable = handleMouseEnterSpawnPopupEve
             observableFromSubscribeFunction(cb =>
               atom.workspace.onDidChangeActivePaneItem(cb),
             ).mapTo(false),
+            Observable.fromEvent(item, 'click')
+              .filter(() => messages.some(message => message.kind === 'review'))
+              .mapTo(false),
           );
         }),
       )
@@ -93,6 +98,9 @@ export function applyUpdateToEditor(
   editor: TextEditor,
   update: DiagnosticMessages,
   diagnosticUpdater: DiagnosticUpdater,
+  blockDecorationContainer: HTMLElement,
+  openedMessageIds: Set<string>,
+  setOpenMessageIds: (openedMessageIds: Set<string>) => void,
 ): void {
   let gutter = editor.gutterWithName(GUTTER_ID);
   if (!gutter) {
@@ -197,13 +205,25 @@ export function applyUpdateToEditor(
     }
   }
 
+  // create diagnostics messages with block decoration and maintain their openness
+  createBlockDecorations(
+    editor,
+    rowToMessage,
+    blockDecorationContainer,
+    openedMessageIds,
+    setOpenMessageIds,
+  );
+
   // Find all of the gutter markers for the same row and combine them into one marker/popup.
   for (const [row, messages] of rowToMessage.entries()) {
     // This marker adds some UI to the gutter.
     const {item, dispose} = createGutterItem(
+      editor,
       messages,
       diagnosticUpdater,
       gutter,
+      openedMessageIds,
+      setOpenMessageIds,
     );
     itemToEditor.set(item, editor);
     const gutterMarker = editor.markBufferPosition([row, 0]);
@@ -213,7 +233,10 @@ export function applyUpdateToEditor(
   }
 
   editorToMarkers.set(editor, markers);
-
+  editor.onDidDestroy(() => {
+    // clean up openned message ids
+    removeOpenMessageId(update.messages, openedMessageIds, setOpenMessageIds);
+  });
   // Once the gutter is shown for the first time, it is displayed for the lifetime of the
   // TextEditor.
   if (update.messages.length > 0) {
@@ -222,10 +245,68 @@ export function applyUpdateToEditor(
   }
 }
 
+function createBlockDecorations(
+  editor: TextEditor,
+  rowToMessage: Map<number, Array<DiagnosticMessage>>,
+  blockDecorationContainer: HTMLElement,
+  openedMessageIds: Set<string>,
+  setOpenMessageIds: (openedMessageIds: Set<string>) => void,
+): void {
+  const blockRowToMessages: Map<number, Array<DiagnosticMessage>> = new Map();
+  rowToMessage.forEach((messages, row) => {
+    if (
+      messages.some(
+        message =>
+          message.kind === 'review' &&
+          message.id != null &&
+          openedMessageIds != null &&
+          openedMessageIds.has(message.id),
+      )
+    ) {
+      blockRowToMessages.set(row, messages);
+    }
+  });
+
+  const fragment = (
+    <React.Fragment>
+      {Array.from(blockRowToMessages).map(([row, messages]) => {
+        return (
+          <BlockDecoration
+            range={new Range([row, 0], [row, 0])}
+            editor={editor}
+            key={messages[0].id}>
+            <Button
+              onClick={() =>
+                removeOpenMessageId(
+                  messages,
+                  openedMessageIds,
+                  setOpenMessageIds,
+                )
+              }>
+              Close
+            </Button>
+            {messages.map(message => {
+              if (!message.getBlockComponent) {
+                return null;
+              }
+              const Component = message.getBlockComponent();
+              return <Component key={message.id} />;
+            })}
+          </BlockDecoration>
+        );
+      })}
+    </React.Fragment>
+  );
+  ReactDOM.render(fragment, blockDecorationContainer);
+}
+
 function createGutterItem(
+  editor: TextEditor,
   messages: Array<DiagnosticMessage>,
   diagnosticUpdater: DiagnosticUpdater,
   gutter: atom$Gutter,
+  openedMessageIds: Set<string>,
+  setOpenMessageIds: (openedMessageIds: Set<string>) => void,
 ): {item: HTMLElement, dispose: () => void} {
   // Determine which group to display.
   const messageGroups = new Set();
@@ -242,14 +323,17 @@ function createGutterItem(
   item.appendChild(icon);
 
   const disposable = new UniversalDisposable(
-    handleMouseEnterSpawnPopupEventsObservable.subscribe(),
+    SpawnPopupEvents.subscribe(),
     Observable.fromEvent(item, 'mouseenter').subscribe(() => {
-      handleMouseEnterSpawnPopupEvents.next({
+      handleSpawnPopupEvents.next({
         messages,
         diagnosticUpdater,
         gutter,
         item,
       });
+    }),
+    Observable.fromEvent(item, 'click').subscribe(() => {
+      addOpenMessageId(messages, openedMessageIds, setOpenMessageIds);
     }),
   );
 
@@ -259,6 +343,37 @@ function createGutterItem(
       disposable.dispose();
     },
   };
+}
+
+function addOpenMessageId(
+  messages: Array<DiagnosticMessage>,
+  openedMessageIds: Set<string>,
+  setOpenMessageIds: (openedMessageIds: Set<string>) => void,
+) {
+  const newOpenedMessageIds = new Set([...openedMessageIds]);
+  messages.forEach(message => {
+    if (message.id != null) {
+      newOpenedMessageIds.add(message.id);
+    }
+  });
+  setOpenMessageIds(newOpenedMessageIds);
+}
+
+function removeOpenMessageId(
+  messages: Array<DiagnosticMessage>,
+  openedMessageIds: Set<string>,
+  setOpenMessageIds: (openedMessageIds: Set<string>) => void,
+) {
+  if (openedMessageIds.size === 0) {
+    return;
+  }
+  const newOpenedMessageIds = new Set([...openedMessageIds]);
+  messages.forEach(message => {
+    if (message.id != null) {
+      newOpenedMessageIds.delete(message.id);
+    }
+  });
+  setOpenMessageIds(newOpenedMessageIds);
 }
 
 function spawnPopup(

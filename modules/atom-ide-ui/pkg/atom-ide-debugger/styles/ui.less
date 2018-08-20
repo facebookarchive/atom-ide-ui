@@ -434,6 +434,7 @@
 .debugger-callstack-table-div {
   overflow-y: visible;
   overflow-x: visible;
+  margin-left: 25px;
   margin-bottom: 5px;
   padding: 10px;
 }
@@ -484,10 +485,31 @@
 }
 
 .debugger-thread-filter-box {
-  margin: 5px 15px 15px 29px;
+  padding-right: 5px;
+  flex-grow: 1;
 }
 
 .debugger-thread-no-match-text {
   margin-left: 35px;
   font-style: italic;
+}
+
+.debugger-thread-filter-row {
+  margin: 5px 15px 15px 29px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.debugger-tree-process {
+  font-size: 14px;
+}
+
+.debugger-fetch-frames-link {
+  display: inline-block;
+  color: @text-color-info;
+  margin-left: 20px;
+  margin-bottom: 10px;
+  text-decoration: underline;
 }
