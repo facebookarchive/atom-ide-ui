@@ -7,13 +7,14 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @noflow
+ * @format
  */
 'use strict';
 
+/* eslint nuclide-internal/no-commonjs: 0 */
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
   */
 
 const fs = require('fs');
@@ -21,7 +22,8 @@ const path = require('path');
 const MODULES_PATH = path.join(__dirname, '..', 'modules');
 
 function getModules() {
-  return fs.readdirSync(MODULES_PATH)
+  return fs
+    .readdirSync(MODULES_PATH)
     .map(dirname => {
       const dirpath = path.join(MODULES_PATH, dirname);
       if (

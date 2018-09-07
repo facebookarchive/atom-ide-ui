@@ -8,13 +8,14 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @noflow
+ * @format
  */
 'use strict';
 
+/* eslint nuclide-internal/no-commonjs: 0 */
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
   */
 /* eslint-disable no-console */
 
@@ -43,7 +44,7 @@ function addDependencies(pkgDeps, moduleDeps, assertMatching = true) {
     if (assertMatching) {
       assert(
         currentDep == null || currentDep === moduleDep,
-        `Mismatched dependency ${dep}: ${currentDep} vs ${moduleDep}`
+        `Mismatched dependency ${dep}: ${currentDep} vs ${moduleDep}`,
       );
     }
     pkgDeps[dep] = moduleDep;
@@ -52,9 +53,11 @@ function addDependencies(pkgDeps, moduleDeps, assertMatching = true) {
 
 function sortObject(obj) {
   const newObject = {};
-  Object.keys(obj).sort().forEach(key => {
-    newObject[key] = obj[key];
-  });
+  Object.keys(obj)
+    .sort()
+    .forEach(key => {
+      newObject[key] = obj[key];
+    });
   return newObject;
 }
 
@@ -71,5 +74,5 @@ pkgJson.dependencies = sortObject(baseDependencies);
 
 fs.writeFileSync(
   require.resolve('../package.json'),
-  JSON.stringify(pkgJson, null, 2) + '\n'
+  JSON.stringify(pkgJson, null, 2) + '\n',
 );
