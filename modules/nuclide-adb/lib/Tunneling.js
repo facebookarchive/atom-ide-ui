@@ -31,8 +31,8 @@ export type AdbTunnelingOptions = {
 let passesGK = async _ => false;
 try {
   const fbPassesGK =
-    // eslint-disable-next-line nuclide-internal/modules-dependencies, $FlowFB
-    require('../../../pkg/commons-node/passesGK');
+    // eslint-disable-next-line nuclide-internal/modules-dependencies
+    require('nuclide-commons/passesGK');
   passesGK = fbPassesGK.default;
 } catch (e) {}
 
