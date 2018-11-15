@@ -23,7 +23,7 @@ describe('ConsoleView', () => {
         clearRecords={() => {}}
         createPaste={null}
         currentExecutor={null}
-        displayableRecords={[]}
+        records={[]}
         enableRegExpFilter={true}
         execute={() => {}}
         executors={new Map()}
@@ -33,7 +33,6 @@ describe('ConsoleView', () => {
         getProvider={() => {}}
         history={[]}
         invalidFilterInput={false}
-        onDisplayableRecordHeightChange={() => {}}
         resetAllFilters={() => {}}
         selectExecutor={() => {}}
         selectSources={() => {}}

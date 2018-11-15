@@ -100,6 +100,24 @@ export function getNativeAutoGenConfig(
     defaultValue: '',
     visible: true,
   };
+  const corePath = {
+    name: 'coreDumpPath',
+    type: 'path',
+    description: 'Optional path to a core file to load in the debugger',
+    required: false,
+    defaultValue: '',
+    visible: true,
+  };
+
+  const stopOnEntry = {
+    name: 'pauseProgramOnEntry',
+    type: 'boolean',
+    description:
+      'If true, the debugger will stop the program at entry before starting execution.',
+    required: false,
+    defaultValue: false,
+    visible: true,
+  };
 
   const debugTypeMessage = `using ${
     vsAdapterType === VsAdapterTypes.NATIVE_GDB ? 'gdb' : 'lldb'
@@ -108,8 +126,7 @@ export function getNativeAutoGenConfig(
   const autoGenLaunchConfig: AutoGenLaunchConfig = {
     launch: true,
     vsAdapterType,
-    threads: true,
-    properties: [program, cwd, args, env],
+    properties: [program, cwd, args, env, stopOnEntry, corePath],
     scriptPropertyName: 'program',
     scriptExtension: '.c',
     cwdPropertyName: 'working directory',
@@ -134,7 +151,6 @@ export function getNativeAutoGenConfig(
   const autoGenAttachConfig: AutoGenAttachConfig = {
     launch: false,
     vsAdapterType,
-    threads: true,
     properties: [pid],
     header: <p>Attach to a running native process {debugTypeMessage}</p>,
     getProcessName(values) {

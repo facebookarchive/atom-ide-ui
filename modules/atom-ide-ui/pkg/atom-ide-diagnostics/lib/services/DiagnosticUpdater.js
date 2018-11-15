@@ -9,98 +9,90 @@
  * @flow strict-local
  * @format
  */
-import type MessageRangeTracker from '../MessageRangeTracker';
+
 import type {
   AppState,
   CodeActionsState,
   DescriptionsState,
   DiagnosticMessage,
   DiagnosticMessages,
-  Store,
   DiagnosticMessageKind,
+  Store,
   UiConfig,
+  LastUpdateSource,
 } from '../types';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
+import {throttle} from 'nuclide-commons/observable';
 import * as Actions from '../redux/Actions';
 import * as Selectors from '../redux/Selectors';
-import {arrayEqual} from 'nuclide-commons/collection';
+import observableFromReduxStore from 'nuclide-commons/observableFromReduxStore';
+import {arrayEqual, mapEqual} from 'nuclide-commons/collection';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {Observable} from 'rxjs';
+
+// Receiving all messages is potentially dangerous as there can sometimes be
+// tens of thousands, and updates can occur **on keystroke**. Throttle these to
+// half of a second.
+const THROTTLE_ALL_MESSAGES_MS = 500;
+const THROTTLE_FILE_MESSAGES_MS = 100;
 
 export default class DiagnosticUpdater {
   _store: Store;
   _states: Observable<AppState>;
-  _allMessageUpdates: Observable<Array<DiagnosticMessage>>;
-  _messageRangeTracker: MessageRangeTracker;
 
-  constructor(store: Store, messageRangeTracker: MessageRangeTracker) {
+  constructor(store: Store) {
     this._store = store;
-    // $FlowIgnore: Flow doesn't know about Symbol.observable
-    this._states = Observable.from(store);
-    this._messageRangeTracker = messageRangeTracker;
-    this._allMessageUpdates = this._states
-      .distinctUntilChanged((a, b) => a.messages === b.messages)
-      .map(this._getMessagesSupportedByMessageRangeTracker)
-      .distinctUntilChanged((a, b) => arrayEqual(a, b));
-  }
-
-  // Following two helper function is to keep track of messages whose marker may
-  // already shifted lines when an update is triggered. In that case, we replace
-  // the message.range with the range we get from atom
-
-  // wrapper on Selectors.getMessages
-  _getMessagesSupportedByMessageRangeTracker = (
-    state: AppState,
-  ): Array<DiagnosticMessage> => {
-    const messages = Selectors.getMessages(state);
-    return this._updateMessageRangeFromAtomRange(messages);
-  };
-
-  // wrapper on Selectors.getFileMessageUpdates()
-  _getFileMessageUpdatesSupportedByMessageRangeTracker = (
-    filePath: NuclideUri,
-    state: AppState,
-  ): DiagnosticMessages => {
-    const currentState = state ? state : this._store.getState();
-    const diagnosticsMessages = Selectors.getFileMessageUpdates(
-      currentState,
-      filePath,
-    );
-    return {
-      ...diagnosticsMessages,
-      messages: this._updateMessageRangeFromAtomRange(
-        diagnosticsMessages.messages,
-      ),
-    };
-  };
-
-  _updateMessageRangeFromAtomRange(
-    messages: Array<DiagnosticMessage>,
-  ): Array<DiagnosticMessage> {
-    return messages.map(message => {
-      const range = this._messageRangeTracker.getCurrentRange(message);
-      return range ? {...message, range} : message;
-    });
+    this._states = observableFromReduxStore(store);
   }
 
   getMessages = (): Array<DiagnosticMessage> => {
-    return this._getMessagesSupportedByMessageRangeTracker(
-      this._store.getState(),
-    );
+    return Selectors.getMessages(this._store.getState());
   };
 
   getFileMessageUpdates = (filePath: NuclideUri): DiagnosticMessages => {
-    return this._getFileMessageUpdatesSupportedByMessageRangeTracker(
-      filePath,
-      this._store.getState(),
-    );
+    return Selectors.getFileMessageUpdates(this._store.getState(), filePath);
+  };
+
+  getLastUpdateSource = (): LastUpdateSource => {
+    return this._store.getState().lastUpdateSource;
   };
 
   observeMessages = (
     callback: (messages: Array<DiagnosticMessage>) => mixed,
   ): IDisposable => {
-    return new UniversalDisposable(this._allMessageUpdates.subscribe(callback));
+    return new UniversalDisposable(
+      this._states
+        .let(throttle(THROTTLE_ALL_MESSAGES_MS))
+        .map(Selectors.getMessages)
+        .distinctUntilChanged()
+        .subscribe(callback),
+    );
+  };
+
+  observeFileMessagesIterator = (
+    filePath: NuclideUri,
+    callback: (update: Iterable<DiagnosticMessage>) => mixed,
+  ): IDisposable => {
+    return new UniversalDisposable(
+      this._states
+        .distinctUntilChanged((a, b) => a.messages === b.messages)
+        .let(throttle(THROTTLE_FILE_MESSAGES_MS))
+        .map(state => [
+          Selectors.getProviderToMessagesForFile(state)(filePath),
+          state,
+        ])
+        .distinctUntilChanged(([aMessages], [bMessages]) =>
+          mapEqual(aMessages, bMessages),
+        )
+        .map(([, state]) => ({
+          [Symbol.iterator]() {
+            return Selectors.getBoundedThreadedFileMessages(state, filePath);
+          },
+        }))
+        // $FlowFixMe Flow doesn't know about Symbol.iterator
+        .subscribe(callback),
+    );
   };
 
   observeFileMessages = (
@@ -112,13 +104,13 @@ export default class DiagnosticUpdater {
       // Whether that's worth it depends on how often this is actually called with the same path.
       this._states
         .distinctUntilChanged((a, b) => a.messages === b.messages)
-        .map(state =>
-          this._getFileMessageUpdatesSupportedByMessageRangeTracker(
-            filePath,
-            state,
-          ),
+        .let(throttle(THROTTLE_FILE_MESSAGES_MS))
+        .map(state => Selectors.getFileMessageUpdates(state, filePath))
+        .distinctUntilChanged(
+          (a, b) =>
+            a.totalMessages === b.totalMessages &&
+            arrayEqual(a.messages, b.messages),
         )
-        .distinctUntilChanged((a, b) => arrayEqual(a.messages, b.messages))
         .subscribe(callback),
     );
   };
@@ -155,7 +147,16 @@ export default class DiagnosticUpdater {
 
   observeUiConfig = (callback: (config: UiConfig) => mixed): IDisposable => {
     return new UniversalDisposable(
-      this._states.map(Selectors.getUiConfig).subscribe(callback),
+      this._states
+        .map(Selectors.getUiConfig)
+        // Being a selector means we'll always get the same ui config for a given
+        // slice of state (in this case `state.providers`). However, other parts
+        // of state may change. Don't emit in those cases, or in the common case
+        // that the config changed from an empty array to a different empty array.
+        .distinctUntilChanged(
+          (a, b) => a === b || (a.length === 0 && b.length === 0),
+        )
+        .subscribe(callback),
     );
   };
 

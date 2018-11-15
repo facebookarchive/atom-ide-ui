@@ -10,21 +10,14 @@
  * @format
  */
 
-import type {
-  DisplayableRecord,
-  Executor,
-  OutputProvider,
-  RecordHeightChangeHandler,
-  Source,
-  Severity,
-} from '../types';
+import type {Executor, Severity, Record, Source, SourceInfo} from '../types';
 import type {RegExpFilterChange} from 'nuclide-commons-ui/RegExpFilter';
 
 import {macrotask} from 'nuclide-commons/observable';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import * as React from 'react';
 import {Observable} from 'rxjs';
-import FilteredMessagesReminder from './FilteredMessagesReminder';
+import FilterReminder from 'nuclide-commons-ui/FilterReminder';
 import OutputTable from './OutputTable';
 import ConsoleHeader from './ConsoleHeader';
 import InputArea from './InputArea';
@@ -37,7 +30,7 @@ import recordsChanged from '../recordsChanged';
 import StyleSheet from 'nuclide-commons-ui/StyleSheet';
 
 type Props = {|
-  displayableRecords: Array<DisplayableRecord>,
+  records: Array<Record>,
   history: Array<string>,
   clearRecords: () => void,
   createPaste: ?() => Promise<void>,
@@ -52,8 +45,7 @@ type Props = {|
   selectSources: (sourceIds: Array<string>) => void,
   sources: Array<Source>,
   updateFilter: (change: RegExpFilterChange) => void,
-  getProvider: (id: string) => ?OutputProvider,
-  onDisplayableRecordHeightChange: RecordHeightChangeHandler,
+  getProvider: (id: string) => ?SourceInfo,
   filteredRecordCount: number,
   filterText: string,
   resetAllFilters: () => void,
@@ -148,10 +140,7 @@ export default class ConsoleView extends React.Component<Props, State> {
     // automatically scroll.
     if (
       this._isScrolledNearBottom &&
-      recordsChanged(
-        prevProps.displayableRecords,
-        this.props.displayableRecords,
-      )
+      recordsChanged(prevProps.records, this.props.records)
     ) {
       this._startScrollToBottom();
     }
@@ -190,17 +179,14 @@ export default class ConsoleView extends React.Component<Props, State> {
 
   UNSAFE_componentWillReceiveProps(nextProps: Props): void {
     // If the messages were cleared, hide the notification.
-    if (nextProps.displayableRecords.length === 0) {
+    if (nextProps.records.length === 0) {
       this._isScrolledNearBottom = true;
       this.setState({unseenMessages: false});
     } else if (
       // If we receive new messages after we've scrolled away from the bottom, show the "new
       // messages" notification.
       !this._isScrolledNearBottom &&
-      recordsChanged(
-        this.props.displayableRecords,
-        nextProps.displayableRecords,
-      )
+      recordsChanged(this.props.records, nextProps.records)
     ) {
       this.setState({unseenMessages: true});
     }
@@ -232,7 +218,7 @@ export default class ConsoleView extends React.Component<Props, State> {
     return this.props.executors.get(id);
   };
 
-  _getProvider = (id: string): ?OutputProvider => {
+  _getProvider = (id: string): ?SourceInfo => {
     return this.props.getProvider(id);
   };
 
@@ -272,22 +258,21 @@ export default class ConsoleView extends React.Component<Props, State> {
           <div
             className="console-scroll-pane-wrapper atom-ide-filterable"
             ref={el => (this._consoleScrollPaneEl = el)}>
-            <FilteredMessagesReminder
+            <FilterReminder
+              noun="message"
+              nounPlural="messages"
               filteredRecordCount={this.props.filteredRecordCount}
               onReset={this.props.resetAllFilters}
             />
             <OutputTable
               // $FlowFixMe(>=0.53.0) Flow suppress
               ref={this._handleOutputTable}
-              displayableRecords={this.props.displayableRecords}
+              records={this.props.records}
               showSourceLabels={this.props.selectedSourceIds.length > 1}
               fontSize={this.props.fontSize}
               getExecutor={this._getExecutor}
               getProvider={this._getProvider}
               onScroll={this._handleScroll}
-              onDisplayableRecordHeightChange={
-                this.props.onDisplayableRecordHeightChange
-              }
               shouldScrollToBottom={this._shouldScrollToBottom}
             />
             <NewMessagesNotification
@@ -327,6 +312,7 @@ export default class ConsoleView extends React.Component<Props, State> {
         <InputArea
           ref={(component: ?InputArea) => (this._inputArea = component)}
           scopeName={this.state.scopeName}
+          fontSize={this.props.fontSize}
           onSubmit={this._executePrompt}
           history={this.props.history}
           watchEditor={this.props.watchEditor}

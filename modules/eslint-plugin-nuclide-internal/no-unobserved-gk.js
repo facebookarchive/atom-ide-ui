@@ -7,14 +7,11 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @noflow
+ * @format
  */
 'use strict';
 
-/* eslint
-  comma-dangle: [1, always-multiline],
-  prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
-  */
+/* eslint nuclide-internal/no-commonjs: 0 */
 
 function resolveValueInScope(node, scope) {
   if (node.type === 'Literal') {
@@ -62,7 +59,7 @@ function getFbGatekeepers() {
 
   try {
     // $FlowFB
-    fbGatekeepers = require('../../pkg/commons-node/fb-gatekeeper-list.js'); // eslint-disable-line nuclide-internal/modules-dependencies
+    fbGatekeepers = require('../fb-gatekeeper-raw/fb-gatekeeper-list.js'); // eslint-disable-line nuclide-internal/modules-dependencies
   } catch (_) {}
 
   fbGatekeepersLoaded = true;

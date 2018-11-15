@@ -31,24 +31,23 @@ import {Toolbar} from 'nuclide-commons-ui/Toolbar';
 import {ToolbarLeft} from 'nuclide-commons-ui/ToolbarLeft';
 import {ToolbarRight} from 'nuclide-commons-ui/ToolbarRight';
 import * as React from 'react';
+import shallowEqual from 'shallowequal';
 import {Button, ButtonSizes} from 'nuclide-commons-ui/Button';
 import {ButtonGroup} from 'nuclide-commons-ui/ButtonGroup';
 import FilterButton from './FilterButton';
 import RegExpFilter from 'nuclide-commons-ui/RegExpFilter';
 import SettingsModal from './SettingsModal';
-import DiagnosticsTableNux from './DiagnosticsTableNux';
 
-export type Props = {
+export type Props = {|
   diagnostics: Array<DiagnosticMessage>,
   filterByActiveTextEditor: boolean,
   onFilterByActiveTextEditorChange: (isChecked: boolean) => mixed,
   showDirectoryColumn: boolean,
   showTraces: boolean,
-  showNuxContent: boolean,
   onShowTracesChange: (isChecked: boolean) => mixed,
   gotoMessageLocation: (
     message: DiagnosticMessage,
-    options: {|focusEditor: boolean|},
+    options: {|focusEditor: boolean, pendingPane: boolean|},
   ) => void,
   selectMessage: (message: DiagnosticMessage) => void,
   selectedMessage: ?DiagnosticMessage,
@@ -62,8 +61,7 @@ export type Props = {
   onTypeFilterChange: (type: DiagnosticGroup) => mixed,
   textFilter: RegExpFilterValue,
   onTextFilterChange: (change: RegExpFilterChange) => mixed,
-  onDismissNux: () => mixed,
-};
+|};
 
 /**
  * Dismissable panel that displays the diagnostics from nuclide-diagnostics-store.
@@ -75,7 +73,7 @@ export default class DiagnosticsView extends React.Component<Props> {
   _table: ?DiagnosticsTable;
 
   shouldComponentUpdate(nextProps: Props): boolean {
-    return nextProps.isVisible;
+    return nextProps.isVisible && !shallowEqual(this.props, nextProps);
   }
 
   componentDidMount() {
@@ -92,13 +90,8 @@ export default class DiagnosticsView extends React.Component<Props> {
     nullthrows(this._disposables).dispose();
   }
 
-  render(): React.Element<any> {
-    const {
-      diagnostics,
-      showDirectoryColumn,
-      showNuxContent,
-      showTraces,
-    } = this.props;
+  render(): React.Node {
+    const {diagnostics, showDirectoryColumn, showTraces} = this.props;
 
     const groups = ['errors', 'warnings', 'info'];
     if (this.props.supportedMessageKinds.has('review')) {
@@ -175,9 +168,6 @@ export default class DiagnosticsView extends React.Component<Props> {
             />
           </ToolbarRight>
         </Toolbar>
-        {showNuxContent ? (
-          <DiagnosticsTableNux onDismiss={this.props.onDismissNux} />
-        ) : null}
         <div
           className="atom-ide-filterable"
           ref={el => (this._diagnosticsTableWrapperEl = el)}

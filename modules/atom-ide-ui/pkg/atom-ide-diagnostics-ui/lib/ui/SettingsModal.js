@@ -15,16 +15,16 @@ import BoundSettingsControl from 'nuclide-commons-ui/BoundSettingsControl';
 import {HR} from 'nuclide-commons-ui/HR';
 import featureConfig from 'nuclide-commons-atom/feature-config';
 
-type Props = {
+type Props = {|
   config: Array<SettingsSectionProps>,
-};
+|};
 
-type SettingsSectionProps = {
+type SettingsSectionProps = {|
   providerName: string,
   settings: Array<string>,
-};
+|};
 
-export default function SettingsModal(props: Props): ?React.Element<any> {
+export default function SettingsModal(props: Props): React.Node {
   const hasProviderSettings = props.config.some(
     config => config.settings.length > 0,
   );
@@ -48,7 +48,7 @@ export default function SettingsModal(props: Props): ?React.Element<any> {
   );
 }
 
-function SettingsSection(props: SettingsSectionProps): ?React.Element<any> {
+function SettingsSection(props: SettingsSectionProps): React.Node {
   return (
     <section className="settings-panel">
       <h1 className="section-heading">{props.providerName}</h1>

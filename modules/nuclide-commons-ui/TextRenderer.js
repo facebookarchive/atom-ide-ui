@@ -21,11 +21,15 @@ export type EvaluationResult = {
   description?: string,
   objectId?: string,
   subtype?: string,
+  // Or:
+  objects?: Array<{
+    description: string,
+    type: ?string,
+    expression: Object,
+  }>,
 };
 
-export function TextRenderer(
-  evaluationResult: EvaluationResult,
-): ?React.Element<any> {
+export function TextRenderer(evaluationResult: EvaluationResult): React.Node {
   const {type, value} = evaluationResult;
   if (type === 'text') {
     return <span>{value}</span>;

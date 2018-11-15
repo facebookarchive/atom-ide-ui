@@ -7,14 +7,11 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @noflow
+ * @format
  */
 'use strict';
 
-/* eslint
-  comma-dangle: [1, always-multiline],
-  prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
-  */
+/* eslint nuclide-internal/no-commonjs: 0 */
 
 const path = require('path');
 const resolveFrom = require('resolve-from');
@@ -33,6 +30,8 @@ module.exports = function(context) {
       !id.includes('/') &&
       !ATOM_BUILTIN_PACKAGES.has(id) &&
       !pkgJson.dependencies.hasOwnProperty(id) &&
+      // We rewrite imports from rxjs to be from rxjs-compat
+      !(id === 'rxjs' && pkgJson.dependencies.hasOwnProperty('rxjs-compat')) &&
       !filename.includes('/spec/') &&
       !filename.includes('/scripts/') &&
       !filename.includes('.eslintrc.js') &&

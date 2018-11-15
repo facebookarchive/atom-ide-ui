@@ -7,14 +7,11 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @noflow
+ * @format
  */
 'use strict';
 
-/* eslint
-  comma-dangle: [1, always-multiline],
-  prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
-  */
+/* eslint nuclide-internal/no-commonjs: 0 */
 /* eslint-disable max-len */
 
 module.exports = {
@@ -41,9 +38,17 @@ module.exports = {
     node: true,
   },
 
-  extends: [
-    'plugin:jsx-a11y/recommended',
-  ],
+  settings: {
+    react: {
+      // TODO: (wbinnssmith) T35336490
+      // Remove this when we update to a version of eslint-plugin-react
+      // that automatically detects the react version:
+      // https://github.com/yannickcr/eslint-plugin-react/commit/dc28d2636b11aaed033454e7ff98c486c08740df
+      version: require('./package.json').dependencies.react,
+    },
+  },
+
+  extends: ['plugin:jsx-a11y/recommended'],
 
   globals: {
     atom: false,
@@ -90,13 +95,13 @@ module.exports = {
     'array-callback-return': 0,
     'block-scoped-var': 0,
     'class-methods-use-this': 0,
-    'complexity': 0,
+    complexity: 0,
     'consistent-return': 0,
-    'curly': 1,
+    curly: 1,
     'default-case': 0,
     'dot-location': [1, 'property'],
     'dot-notation': 1,
-    'eqeqeq': [1, 'always', {null: 'never'}],
+    eqeqeq: [1, 'always', {null: 'never'}],
     'getter-return': 2,
     'guard-for-in': 0,
     'no-alert': 0,
@@ -152,15 +157,15 @@ module.exports = {
     'no-warning-comments': 0,
     'no-with': 1,
     'prefer-promise-reject-errors': 1,
-    'radix': 1,
+    radix: 1,
     'require-await': 0,
     // 'require-await': 1,
     'vars-on-top': 0,
     'wrap-iife': [1, 'inside'],
-    'yoda': 1,
+    yoda: 1,
 
     // Strict Mode (http://eslint.org/docs/rules/#strict-mode)
-    'strict': 0,
+    strict: 0,
 
     // Variables (http://eslint.org/docs/rules/#variables)
     'init-declarations': 0,
@@ -192,7 +197,7 @@ module.exports = {
     'array-bracket-spacing': 1,
     'block-spacing': 1,
     'brace-style': [1, '1tbs', {allowSingleLine: true}],
-    'camelcase': 0,
+    camelcase: 0,
     'capitalized-comments': 0,
     'comma-dangle': 0,
     'comma-spacing': 1,
@@ -256,20 +261,30 @@ module.exports = {
     'one-var': [1, 'never'],
     'operator-assignment': 1,
     'operator-linebreak': 0,
-    'padded-blocks': [1, {blocks: 'never', classes: 'never', switches: 'never'}],
+    'padded-blocks': [
+      1,
+      {blocks: 'never', classes: 'never', switches: 'never'},
+    ],
     // 'quote-props': [1, 'as-needed'],
-    'quotes': [1, 'single', 'avoid-escape'],
+    quotes: [1, 'single', 'avoid-escape'],
     'require-jsdoc': 0,
     // 'semi-spacing': 1,
-    'semi': 1,
+    semi: 1,
     'sort-keys': 0,
     'sort-vars': 0,
     'space-before-blocks': 1,
-    'space-before-function-paren': [1, {anonymous: 'never', named: 'never', asyncArrow: 'always'}],
+    'space-before-function-paren': [
+      1,
+      {anonymous: 'never', named: 'never', asyncArrow: 'always'},
+    ],
     'space-in-parens': [1, 'never'],
     'space-infix-ops': 1,
     'space-unary-ops': 1,
-    'spaced-comment': [1, 'always', {line: {exceptions: ['-']}, block: {balanced: true}}],
+    'spaced-comment': [
+      1,
+      'always',
+      {line: {exceptions: ['-']}, block: {balanced: true, markers: [':']}},
+    ],
     'template-tag-spacing': 1,
     'unicode-bom': [1, 'never'],
     'wrap-regex': 0,
@@ -375,6 +390,7 @@ module.exports = {
     'nuclide-internal/require-universal-disposable': 1,
     'nuclide-internal/use-nuclide-ui-components': 1,
     'nuclide-internal/no-commonjs': 1,
+    'nuclide-internal/unused-subscription': 1,
 
     // prefer-object-spread (https://github.com/bryanrsmith/eslint-plugin-prefer-object-spread)
     'prefer-object-spread/prefer-object-spread': 1,
@@ -421,7 +437,10 @@ module.exports = {
     'react/sort-prop-types': 0,
     'react/style-prop-object': 0,
     'react/jsx-boolean-value': 0,
-    'react/jsx-closing-bracket-location': [1, {selfClosing: 'tag-aligned', nonEmpty: 'after-props'}],
+    'react/jsx-closing-bracket-location': [
+      1,
+      {selfClosing: 'tag-aligned', nonEmpty: 'after-props'},
+    ],
     // 'react/jsx-curly-spacing': [1, 'never'],
     'react/jsx-equals-spacing': 0,
     'react/jsx-filename-extension': 0,
@@ -477,6 +496,7 @@ module.exports = {
         ],
       },
     ],
+    'jsx-a11y/label-has-associated-control': 0,
     'jsx-a11y/label-has-for': 0,
     'jsx-a11y/lang': 0,
     'jsx-a11y/mouse-events-have-key-events': 0,
@@ -561,11 +581,31 @@ module.exports = {
 
   overrides: [
     {
-      files: '**/__{atom_,}tests__/**/*',
+      files: ['**/__e2e_fixtures__/**/*'],
+      rules: {
+        'no-implicit-coercion': 0,
+        'nuclide-internal/atom-apis': 0,
+        'nuclide-internal/license-header': 0,
+        'nuclide-internal/modules-dependencies': 0,
+        'nuclide-internal/prefer-nuclide-uri': 0,
+        'nuclide-internal/unused-subscription': 0,
+        'nuclide-internal/no-commonjs': 0,
+      },
+    },
+    {
+      files: ['**/__{atom_,e2e_,}tests__/**/*', 'jest/**/*'],
       rules: {
         'nuclide-internal/prefer-nuclide-uri': 0,
         'nuclide-internal/modules-dependencies': 0,
         'nuclide-internal/atom-apis': 0,
+        'nuclide-internal/unused-subscription': 0,
+        'no-implicit-coercion': 0,
+      },
+    },
+    {
+      files: ['**/*-spec.js', '**/__mocks__/**/*'],
+      rules: {
+        'nuclide-internal/unused-subscription': 0,
       },
     },
   ],

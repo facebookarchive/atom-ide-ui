@@ -12,9 +12,12 @@
 
 import SettingsControl from './SettingsControl';
 import * as React from 'react';
+import {track} from 'nuclide-commons/analytics';
 
 type Props = {|
   keyPath: string,
+  hideDetails?: boolean,
+  onChangeCallback?: () => void,
 |};
 
 type State = {|
@@ -68,14 +71,23 @@ export default class BoundSettingsControl extends React.Component<
     return (
       <SettingsControl
         keyPath={this.props.keyPath}
+        title={schema.title}
         value={this.state.value}
         onChange={this._onChange}
         schema={schema}
+        hideDetails={this.props.hideDetails}
       />
     );
   }
 
   _onChange = (value: any): void => {
+    track('bound-settings-control-change', {
+      keyPath: this.props.keyPath,
+      value,
+    });
+    if (this.props.onChangeCallback != null) {
+      this.props.onChangeCallback();
+    }
     atom.config.set(this.props.keyPath, value);
   };
 }

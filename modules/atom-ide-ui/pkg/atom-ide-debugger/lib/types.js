@@ -46,13 +46,11 @@ import * as DebugProtocol from 'vscode-debugprotocol';
 import type {IProcessConfig} from 'nuclide-debugger-common';
 
 export interface RemoteDebuggerService {
-  onDidStartDebugSession(
-    callback: (config: IProcessConfig) => mixed,
+  onDidChangeDebuggerSessions(
+    callback: (sessionConfigs: IProcessConfig[]) => mixed,
   ): IDisposable;
   startVspDebugging(config: IProcessConfig): Promise<void>;
-  onDidChangeProcesses(
-    callback: (processes: Array<IProcess>) => void,
-  ): IDisposable;
+  getDebugSessions(): IProcessConfig[];
 }
 
 export interface ITreeElement {
@@ -243,6 +241,7 @@ export interface IProcess extends ITreeElement {
   +session: ISession & ITreeElement;
   +sources: Map<string, ISource>;
   +debuggerMode: DebuggerModeType;
+  exceptionBreakpoints: IExceptionBreakpoint[];
   getThread(threadId: number): ?IThread;
   getAllThreads(): IThread[];
   getSource(raw: ?DebugProtocol.Source): ISource;
@@ -258,12 +257,13 @@ export interface IEnableable extends ITreeElement {
   enabled: boolean;
 }
 
-export interface IRawBreakpoint {
-  line: number;
-  column?: number;
-  enabled?: boolean;
+export interface IUIBreakpoint {
+  +id: string;
+  +uri: string;
+  +line: number;
+  +column: number;
+  enabled: boolean;
   condition?: string;
-  hitCondition?: string;
 }
 
 export interface IExceptionBreakpoint extends IEnableable {
@@ -318,24 +318,12 @@ export interface IModel extends ITreeElement {
   getExceptionBreakpoints(): IExceptionBreakpoint[];
   getWatchExpressions(): IEvaluatableExpression[];
 
-  onDidChangeBreakpoints(
-    callback: (event: ?IBreakpointsChangeEvent) => mixed,
-  ): IDisposable;
+  onDidChangeBreakpoints(callback: () => mixed): IDisposable;
   onDidChangeCallStack(callback: () => mixed): IDisposable;
   onDidChangeWatchExpressions(
     callback: (expression: ?IExpression) => mixed,
   ): IDisposable;
   onDidChangeProcesses(callback: () => mixed): IDisposable;
-
-  // TODO: Ericblue this is here for the legacy DebuggerThreadsComponent,
-  // which is going away soon.
-  refreshCallStack(threadI: IThread, fetchAllFrames: boolean): Promise<void>;
-}
-
-export interface IBreakpointsChangeEvent {
-  added?: (IBreakpoint | IFunctionBreakpoint)[];
-  removed?: (IBreakpoint | IFunctionBreakpoint)[];
-  changed?: (IBreakpoint | IFunctionBreakpoint)[];
 }
 
 /* Debugger mode */
@@ -366,17 +354,14 @@ export interface IDebugService {
   ): IDisposable;
 
   /**
-   * Adds new breakpoints to the model for the file specified with the uri. Notifies debug adapter of breakpoint changes.
+   * Adds new breakpoints to the model. Notifies debug adapter of breakpoint changes.
    */
-  addBreakpoints(uri: string, rawBreakpoints: IRawBreakpoint[]): Promise<void>;
+  addUIBreakpoints(uiBreakpoints: IUIBreakpoint[]): Promise<void>;
 
   /**
-   * Updates the breakpoints.
+   * Updates breakpoints from the UI.
    */
-  updateBreakpoints(
-    uri: string,
-    data: {[id: string]: DebugProtocol.Breakpoint},
-  ): void;
+  updateBreakpoints(uiBreakpoints: IUIBreakpoint[]): void;
 
   /**
    * Enables or disables all breakpoints. If breakpoint is passed only enables or disables the passed breakpoint.
@@ -464,6 +449,11 @@ export interface IDebugService {
    * Gets the current debug model.
    */
   getModel(): IModel;
+
+  /**
+   * Terminates the specified threads in the target.
+   */
+  terminateThreads(threadIds: Array<number>): Promise<void>;
 }
 
 export interface IStackFrame extends ITreeElement {
@@ -473,7 +463,7 @@ export interface IStackFrame extends ITreeElement {
   frameId: number;
   range: atom$Range;
   source: ISource;
-  getScopes(): Promise<IScope[]>;
+  getScopes(forceRefresh: boolean): Promise<IScope[]>;
   getMostSpecificScopes(range: atom$Range): Promise<IScope[]>;
   restart(): Promise<void>;
   toString(): string;
@@ -481,17 +471,19 @@ export interface IStackFrame extends ITreeElement {
 }
 
 export interface IBreakpoint extends IEnableable {
-  uri: string;
-  line: number;
-  endLine: ?number;
-  column: number;
-  endColumn: ?number;
-  condition: ?string;
-  hitCondition: ?string;
-  verified: boolean;
-  idFromAdapter: ?number;
-  message: ?string;
-  adapterData?: any;
+  +uri: string;
+  +originalLine: number;
+  +line: number;
+  +column: number;
+  +condition: ?string;
+  +verified: boolean;
+  +idFromAdapter: ?number;
+  +adapterData?: any;
+  // The following fields are used by the protocol but not by Nuclide.
+  // endLine: ?number;
+  // endColumn: ?number;
+  // hitCondition: ?string;
+  +hitCount: ?number;
 }
 
 export interface IFunctionBreakpoint extends IEnableable {

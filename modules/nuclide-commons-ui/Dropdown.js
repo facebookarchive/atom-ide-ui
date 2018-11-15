@@ -13,14 +13,16 @@
 import type {IconName} from './Icon';
 import type {ButtonType} from './Button';
 
-import {Button, ButtonSizes} from './Button';
-import {Icon} from './Icon';
 import classnames from 'classnames';
 import invariant from 'assert';
-import electron from 'electron';
 import * as React from 'react';
+import nullthrows from 'nullthrows';
 
-const {remote} = electron;
+import {Button, ButtonSizes} from './Button';
+import {Icon} from './Icon';
+
+import remote from 'nuclide-commons/electron-remote';
+
 invariant(remote != null);
 
 // For backwards compat, we have to do some conversion here.
@@ -40,6 +42,7 @@ export type MenuItem = {
   icon?: IconName,
   iconset?: string,
   disabled?: boolean,
+  hidden?: boolean,
 };
 
 type SubMenuItem = {
@@ -89,7 +92,8 @@ export class Dropdown extends React.Component<Props> {
   };
 
   // Make sure that menus don't outlive the dropdown.
-  _menu: ?electron$Menu;
+  _menu: ?remote.Menu;
+  _button: ?HTMLButtonElement;
 
   componentWillUnmount() {
     this._closeMenu();
@@ -105,6 +109,10 @@ export class Dropdown extends React.Component<Props> {
       this._menu = null;
     }
   }
+
+  _updateButtonRef = (button: ?HTMLButtonElement) => {
+    this._button = button;
+  };
 
   render(): React.Node {
     const {label: providedLabel, options, placeholder} = this.props;
@@ -130,9 +138,10 @@ export class Dropdown extends React.Component<Props> {
         buttonType={this.props.buttonType}
         className={this.props.className}
         disabled={this.props.disabled}
+        onButtonDOMNodeChange={this._updateButtonRef}
         isFlat={this.props.isFlat}
         buttonComponent={this.props.buttonComponent}
-        onExpand={this._handleDropdownClick}
+        onExpand={this._openMenu}
         size={this.props.size}
         tooltip={this.props.tooltip}>
         {label}
@@ -156,9 +165,14 @@ export class Dropdown extends React.Component<Props> {
     return text;
   }
 
-  _handleDropdownClick = (event: SyntheticMouseEvent<>): void => {
+  _openMenu = (event: SyntheticEvent<> | KeyboardEvent): void => {
+    const buttonRect = nullthrows(this._button).getBoundingClientRect();
     this._menu = this._menuFromOptions(this.props.options);
-    this._menu.popup({x: event.clientX, y: event.clientY, async: true});
+    this._menu.popup({
+      x: Math.floor(buttonRect.left),
+      y: Math.floor(buttonRect.bottom),
+      async: true,
+    });
     event.stopPropagation();
   };
 
@@ -177,7 +191,7 @@ export class Dropdown extends React.Component<Props> {
             submenu: this._menuFromOptions(submenu),
           }),
         );
-      } else {
+      } else if (!Boolean(option.hidden)) {
         menu.append(
           new remote.MenuItem({
             type: 'checkbox',
@@ -231,7 +245,8 @@ type DropdownButtonProps = {
   isFlat?: boolean,
   size?: ShortButtonSize,
   tooltip?: atom$TooltipsAddOptions,
-  onExpand?: (event: SyntheticMouseEvent<>) => void,
+  onExpand?: (event: SyntheticMouseEvent<> | KeyboardEvent) => void,
+  onButtonDOMNodeChange?: (?HTMLButtonElement) => mixed,
 };
 
 const noop = () => {};
@@ -240,31 +255,72 @@ const noop = () => {};
  * Just the button part. This is useful for when you want to customize the dropdown behavior (e.g.)
  * show it asynchronously.
  */
-export function DropdownButton(props: DropdownButtonProps): React.Element<any> {
-  const ButtonComponent = props.buttonComponent || Button;
-  const className = classnames('nuclide-ui-dropdown', props.className, {
-    'nuclide-ui-dropdown-flat': props.isFlat === true,
-  });
+export class DropdownButton extends React.Component<DropdownButtonProps> {
+  _button: ?HTMLButtonElement;
+  _disposable: ?IDisposable;
 
-  const label =
-    props.children == null ? null : (
-      <span className="nuclide-dropdown-label-text-wrapper">
-        {props.children}
-      </span>
+  componentDidMount() {
+    this._disposable = atom.commands.add(
+      nullthrows(this._button),
+      'core:move-down',
+      ({originalEvent}) => {
+        invariant(originalEvent instanceof KeyboardEvent);
+        if (this.props.onExpand != null) {
+          this.props.onExpand(originalEvent);
+        }
+      },
     );
+  }
 
-  return (
-    <ButtonComponent
-      buttonType={props.buttonType}
-      tooltip={props.tooltip}
-      size={getButtonSize(props.size)}
-      className={className}
-      disabled={props.disabled === true}
-      onClick={props.onExpand || noop}>
-      {label}
-      <Icon icon="triangle-down" className="nuclide-ui-dropdown-icon" />
-    </ButtonComponent>
-  );
+  componentWillUnmount() {
+    nullthrows(this._disposable).dispose();
+  }
+
+  _handleButtonDOMNodeChange = (button: ?HTMLButtonElement) => {
+    this._button = button;
+    if (this.props.onButtonDOMNodeChange != null) {
+      this.props.onButtonDOMNodeChange(button);
+    }
+  };
+
+  render() {
+    const {
+      buttonComponent,
+      buttonType,
+      children,
+      disabled,
+      isFlat,
+      onExpand,
+      size,
+      tooltip,
+    } = this.props;
+
+    const ButtonComponent = buttonComponent || Button;
+    const className = classnames('nuclide-ui-dropdown', this.props.className, {
+      'nuclide-ui-dropdown-flat': isFlat === true,
+    });
+
+    const label =
+      children == null ? (
+        <span className="sr-only">Open Dropdown</span>
+      ) : (
+        <span className="nuclide-dropdown-label-text-wrapper">{children}</span>
+      );
+
+    return (
+      <ButtonComponent
+        buttonType={buttonType}
+        onButtonDOMNodeChange={this._handleButtonDOMNodeChange}
+        tooltip={tooltip}
+        size={getButtonSize(size)}
+        className={className}
+        disabled={disabled === true}
+        onClick={onExpand || noop}>
+        {label}
+        <Icon icon="triangle-down" className="nuclide-ui-dropdown-icon" />
+      </ButtonComponent>
+    );
+  }
 }
 
 function getButtonSize(size: ?ShortButtonSize): ButtonSize {

@@ -56,8 +56,7 @@ import type {
   IProcess,
   IRawStoppedDetails,
   IEnableable,
-  IBreakpointsChangeEvent,
-  IRawBreakpoint,
+  IUIBreakpoint,
   IExceptionInfo,
   IExceptionBreakpoint,
   IFunctionBreakpoint,
@@ -141,7 +140,7 @@ export class Source implements ISource {
   }
 }
 
-class ExpressionContainer implements IExpressionContainer {
+export class ExpressionContainer implements IExpressionContainer {
   static allValues: Map<string, string> = new Map();
   // Use chunks to support variable paging #9537
   static BASE_CHUNK_SIZE = 100;
@@ -538,8 +537,8 @@ export class StackFrame implements IStackFrame {
     return `stackframe:${this.thread.getId()}:${this.frameId}:${this.index}`;
   }
 
-  async getScopes(): Promise<IScope[]> {
-    if (this.scopes == null) {
+  async getScopes(forceRefresh: boolean): Promise<IScope[]> {
+    if (this.scopes == null || forceRefresh) {
       this.scopes = this._getScopesImpl();
     }
     return (this.scopes: any);
@@ -579,7 +578,7 @@ export class StackFrame implements IStackFrame {
   }
 
   async getMostSpecificScopes(range: atom$Range): Promise<IScope[]> {
-    const scopes: Array<IScope> = (await this.getScopes()).filter(
+    const scopes: Array<IScope> = (await this.getScopes(false)).filter(
       s => !s.expensive,
     );
     const haveRangeInfo = scopes.some(s => s.range != null);
@@ -902,6 +901,8 @@ export class Process implements IProcess {
   _configuration: IProcessConfig;
   _pendingStart: boolean;
   _pendingStop: boolean;
+  breakpoints: Breakpoint[];
+  exceptionBreakpoints: IExceptionBreakpoint[];
 
   constructor(configuration: IProcessConfig, session: ISession & ITreeElement) {
     this._configuration = configuration;
@@ -910,6 +911,8 @@ export class Process implements IProcess {
     this._sources = new Map();
     this._pendingStart = true;
     this._pendingStop = false;
+    this.breakpoints = [];
+    this.exceptionBreakpoints = [];
   }
 
   get sources(): Map<string, ISource> {
@@ -1074,41 +1077,45 @@ export class Process implements IProcess {
 export class Breakpoint implements IBreakpoint {
   verified: boolean;
   idFromAdapter: ?number;
-  message: ?string;
-  endLine: ?number;
-  endColumn: ?number;
-  id: string;
+  uiBreakpointId: string;
   uri: string;
   line: number;
+  originalLine: number;
   column: number;
   enabled: boolean;
   condition: ?string;
-  hitCondition: ?string;
   adapterData: any;
+  hitCount: ?number;
 
   constructor(
+    uiBreakpointId: string,
     uri: string,
     line: number,
-    column: ?number,
-    enabled: ?boolean,
+    column: number,
+    enabled: boolean,
     condition: ?string,
-    hitCondition: ?string,
     adapterData?: any,
   ) {
     this.uri = uri;
     this.line = line;
-    this.column = column == null ? 1 : column;
-    this.enabled = enabled == null ? true : enabled;
+    this.originalLine = line;
+    this.column = column;
+    this.enabled = enabled;
     this.condition = condition;
-    this.hitCondition = hitCondition;
     this.adapterData = adapterData;
     this.verified = false;
-    this.id = uuid.v4();
-    this.endLine = null;
+    this.uiBreakpointId = uiBreakpointId;
+    this.hitCount = null;
+
+    if (condition != null && condition.trim() !== '') {
+      this.condition = condition;
+    } else {
+      this.condition = null;
+    }
   }
 
   getId(): string {
-    return this.id;
+    return this.uiBreakpointId;
   }
 }
 
@@ -1160,29 +1167,44 @@ const WATCH_EXPRESSIONS_CHANGED = 'WATCH_EXPRESSIONS_CHANGED';
 const CALLSTACK_CHANGED = 'CALLSTACK_CHANGED';
 const PROCESSES_CHANGED = 'PROCESSES_CHANGED';
 
+type getFocusedProcessCallback = () => ?IProcess;
+
+type SyncOptions = {
+  fireEvent: boolean,
+};
+
 export class Model implements IModel {
   _processes: Process[];
-  _breakpoints: Breakpoint[];
+  _uiBreakpoints: IUIBreakpoint[];
   _breakpointsActivated: boolean;
   _functionBreakpoints: FunctionBreakpoint[];
-  _exceptionBreakpoints: ExceptionBreakpoint[];
   _watchExpressions: Expression[];
   _disposables: UniversalDisposable;
   _emitter: Emitter;
+  _getFocusedProcess: getFocusedProcessCallback;
+
+  // Exception breakpoint filters are different for each debugger back-end, so they
+  // are process-specific. However, when we're not debugging, ideally we'd want to still
+  // show filters so that a user can set break on exception before starting debugging, to
+  // enable breaking on early exceptions as the target starts. For this reason, we cache
+  // whatever options the most recently focused process offered, and offer those.
+  _mostRecentExceptionBreakpoints: IExceptionBreakpoint[];
 
   constructor(
-    breakpoints: Breakpoint[],
+    uiBreakpoints: IUIBreakpoint[],
     breakpointsActivated: boolean,
     functionBreakpoints: FunctionBreakpoint[],
     exceptionBreakpoints: ExceptionBreakpoint[],
     watchExpressions: Expression[],
+    getFocusedProcess: getFocusedProcessCallback,
   ) {
     this._processes = [];
-    this._breakpoints = breakpoints;
+    this._uiBreakpoints = uiBreakpoints;
     this._breakpointsActivated = breakpointsActivated;
     this._functionBreakpoints = functionBreakpoints;
-    this._exceptionBreakpoints = exceptionBreakpoints;
+    this._mostRecentExceptionBreakpoints = ((exceptionBreakpoints: any): IExceptionBreakpoint[]);
     this._watchExpressions = watchExpressions;
+    this._getFocusedProcess = getFocusedProcess;
     this._emitter = new Emitter();
     this._disposables = new UniversalDisposable(this._emitter);
   }
@@ -1200,6 +1222,22 @@ export class Model implements IModel {
     session: ISession & ITreeElement,
   ): Process {
     const process = new Process(configuration, session);
+
+    // Add breakpoints to process.
+    const processBreakpoints = process.breakpoints;
+    for (const uiBp of this._uiBreakpoints) {
+      processBreakpoints.push(
+        new Breakpoint(
+          uiBp.id,
+          uiBp.uri,
+          uiBp.line,
+          uiBp.column,
+          uiBp.enabled,
+          uiBp.condition,
+        ),
+      );
+    }
+
     this._processes.push(process);
     this._emitter.emit(PROCESSES_CHANGED);
     return process;
@@ -1216,12 +1254,15 @@ export class Model implements IModel {
       }
     });
     this._emitter.emit(PROCESSES_CHANGED);
+
+    if (removedProcesses.length > 0) {
+      this._mostRecentExceptionBreakpoints =
+        removedProcesses[0].exceptionBreakpoints;
+    }
     return removedProcesses;
   }
 
-  onDidChangeBreakpoints(
-    callback: (event: IBreakpointsChangeEvent) => mixed,
-  ): IDisposable {
+  onDidChangeBreakpoints(callback: () => mixed): IDisposable {
     return this._emitter.on(BREAKPOINTS_CHANGED, callback);
   }
 
@@ -1288,26 +1329,54 @@ export class Model implements IModel {
     this._emitter.emit(CALLSTACK_CHANGED);
   }
 
+  getUIBreakpoints(): IUIBreakpoint[] {
+    return this._uiBreakpoints;
+  }
+
   getBreakpoints(): IBreakpoint[] {
-    return (this._breakpoints: any);
+    // If we're currently debugging, return the breakpoints as the current
+    // debug adapter sees them.
+    const focusedProcess = this._getFocusedProcess();
+    if (focusedProcess != null) {
+      const currentProcess = this._processes.find(
+        p => p.getId() === focusedProcess.getId(),
+      );
+      if (currentProcess != null) {
+        return (currentProcess.breakpoints: any);
+      }
+    }
+
+    // Otherwise, return the UI breakpoints. Since there is no debug process,
+    // the breakpoints have their original line location and no notion of
+    // verified vs not.
+    return this._uiBreakpoints.map(uiBp => {
+      const bp = new Breakpoint(
+        uiBp.id,
+        uiBp.uri,
+        uiBp.line,
+        uiBp.column,
+        uiBp.enabled,
+        uiBp.condition,
+      );
+      bp.verified = true;
+      return bp;
+    });
   }
 
   getBreakpointAtLine(uri: string, line: number): ?IBreakpoint {
-    // Since we show calibrated breakpoints at their end line, prefer an end line
-    // match. If there is no such breakpoint, try a start line match.
-    let breakpoint = this._breakpoints.find(
-      bp => bp.uri === uri && bp.endLine === line,
+    let breakpoint = this.getBreakpoints().find(
+      bp => bp.uri === uri && bp.line === line,
     );
     if (breakpoint == null) {
-      breakpoint = this._breakpoints.find(
-        bp => bp.uri === uri && bp.line === line,
+      breakpoint = this.getBreakpoints().find(
+        bp => bp.uri === uri && bp.originalLine === line,
       );
     }
     return breakpoint;
   }
 
   getBreakpointById(id: string): ?IBreakpoint {
-    return this._breakpoints.find(bp => bp.getId() === id);
+    return this.getBreakpoints().find(bp => bp.getId() === id);
   }
 
   getFunctionBreakpoints(): IFunctionBreakpoint[] {
@@ -1315,14 +1384,19 @@ export class Model implements IModel {
   }
 
   getExceptionBreakpoints(): IExceptionBreakpoint[] {
-    return (this._exceptionBreakpoints: any);
+    const focusedProcess = this._getFocusedProcess();
+    if (focusedProcess != null) {
+      return (focusedProcess.exceptionBreakpoints: any);
+    }
+    return (this._mostRecentExceptionBreakpoints: any);
   }
 
   setExceptionBreakpoints(
+    process: IProcess,
     data: DebugProtocol.ExceptionBreakpointsFilter[],
   ): void {
-    this._exceptionBreakpoints = data.map(d => {
-      const ebp = this._exceptionBreakpoints
+    process.exceptionBreakpoints = data.map(d => {
+      const ebp = process.exceptionBreakpoints
         .filter(bp => bp.filter === d.filter)
         .pop();
       return new ExceptionBreakpoint(
@@ -1343,64 +1417,72 @@ export class Model implements IModel {
     this._emitter.emit(BREAKPOINTS_CHANGED);
   }
 
-  addBreakpoints(
-    uri: string,
-    rawData: IRawBreakpoint[],
+  addUIBreakpoints(
+    uiBreakpoints: IUIBreakpoint[],
     fireEvent?: boolean = true,
-  ): Breakpoint[] {
-    const newBreakpoints = rawData.map(
-      rawBp =>
-        new Breakpoint(
-          uri,
-          rawBp.line,
-          rawBp.column,
-          rawBp.enabled,
-          rawBp.condition,
-          rawBp.hitCondition,
-        ),
-    );
-    this._breakpoints = this._breakpoints.concat(newBreakpoints);
+  ): void {
+    this._uiBreakpoints = this._uiBreakpoints.concat(uiBreakpoints);
     this._breakpointsActivated = true;
-    this._sortAndDeDup();
-
-    if (fireEvent) {
-      this._emitter.emit(BREAKPOINTS_CHANGED, {added: newBreakpoints});
-    }
-
-    return newBreakpoints;
+    this._sortSyncAndDeDup({fireEvent});
   }
 
   removeBreakpoints(toRemove: IBreakpoint[]): void {
-    this._breakpoints = this._breakpoints.filter(
-      bp => !toRemove.some(r => r.getId() === bp.getId()),
+    this._uiBreakpoints = this._uiBreakpoints.filter(
+      bp => !toRemove.some(r => r.getId() === bp.id),
     );
-    this._emitter.emit(BREAKPOINTS_CHANGED, {removed: toRemove});
+
+    this._sortSyncAndDeDup();
   }
 
-  updateBreakpoints(data: {[id: string]: DebugProtocol.Breakpoint}): void {
-    const updated: IBreakpoint[] = [];
-    this._breakpoints.forEach(bp => {
+  updateBreakpoints(newBps: IUIBreakpoint[]): void {
+    this._uiBreakpoints = this._uiBreakpoints
+      .filter(bp => !newBps.some(n => n.id === bp.id))
+      .concat(newBps);
+
+    this._sortSyncAndDeDup();
+  }
+
+  // This is called when a breakpoint is updated by the debug adapter.
+  // It affects only breakpoints for a particular session.
+  updateProcessBreakpoints(
+    process: IProcess,
+    data: {
+      [id: string]: DebugProtocol.Breakpoint,
+    },
+  ): void {
+    const proc = this._processes.find(p => p.getId() === process.getId());
+    if (proc == null) {
+      return;
+    }
+
+    const breakpoints = proc.breakpoints;
+    breakpoints.forEach(bp => {
       const bpData = data[bp.getId()];
       if (bpData != null) {
-        bp.line = bpData.line != null ? bpData.line : bp.line;
-        bp.endLine = bpData.endLine != null ? bpData.endLine : bp.endLine;
+        // The breakpoint's calibrated location can be different from its
+        // initial location. Since we don't display ranges in the UX, a bp
+        // has only one line location. We prefer the endLine if the bp instruction
+        // matches a range of lines. Otherwise fall back to the (start) line.
+        bp.line =
+          bpData.endLine != null
+            ? bpData.endLine
+            : bpData.line != null
+              ? bpData.line
+              : bp.line;
         bp.column = bpData.column != null ? bpData.column : bp.column;
-        bp.endColumn = bpData.endColumn;
         bp.verified = bpData.verified != null ? bpData.verified : bp.verified;
         bp.idFromAdapter = bpData.id;
-        bp.message = bpData.message;
         bp.adapterData = bpData.source
           ? bpData.source.adapterData
           : bp.adapterData;
-        updated.push(bp);
+        bp.hitCount = bpData.nuclide_hitCount;
       }
     });
-    this._sortAndDeDup();
-    this._emitter.emit(BREAKPOINTS_CHANGED, {changed: updated});
+    this._sortSyncAndDeDup();
   }
 
-  _sortAndDeDup(): void {
-    this._breakpoints = this._breakpoints.sort((first, second) => {
+  _sortSyncAndDeDup(options?: SyncOptions): void {
+    const comparer = (first, second) => {
       if (first.uri !== second.uri) {
         return first.uri.localeCompare(second.uri);
       }
@@ -1409,50 +1491,77 @@ export class Model implements IModel {
       }
 
       return first.line - second.line;
-    });
-    this._breakpoints = distinct(
-      this._breakpoints,
-      bp =>
-        `${bp.uri}:${bp.endLine != null ? bp.endLine : bp.line}:${bp.column}`,
+    };
+
+    this._uiBreakpoints = distinct(
+      this._uiBreakpoints.sort(comparer),
+      bp => `${bp.uri}:${bp.line}:${bp.column}`,
     );
+
+    // Sync with all active processes.
+    const bpIds = new Set();
+    for (const bp of this._uiBreakpoints) {
+      bpIds.add(bp.id);
+    }
+
+    for (const process of this._processes) {
+      // Remove any breakpoints from the process that no longer exist in the UI.
+      process.breakpoints = process.breakpoints.filter(bp =>
+        bpIds.has(bp.getId()),
+      );
+
+      // Sync any to the process that are missing.
+      const processBps = new Map();
+      for (const processBreakpoint of process.breakpoints) {
+        processBps.set(processBreakpoint.getId(), processBreakpoint);
+      }
+
+      for (const uiBp of this._uiBreakpoints) {
+        const processBp = processBps.get(uiBp.id);
+        if (processBp == null) {
+          process.breakpoints.push(
+            new Breakpoint(
+              uiBp.id,
+              uiBp.uri,
+              uiBp.line,
+              uiBp.column,
+              uiBp.enabled,
+              uiBp.condition,
+            ),
+          );
+        } else {
+          processBp.enabled = uiBp.enabled;
+          processBp.condition = uiBp.condition;
+        }
+      }
+
+      // Sort.
+      process.breakpoints = process.breakpoints.sort(comparer);
+    }
+
+    if (options == null || options.fireEvent) {
+      this._emitter.emit(BREAKPOINTS_CHANGED);
+    }
   }
 
   setEnablement(element: IEnableable, enable: boolean): void {
-    const changed: Array<IBreakpoint | IFunctionBreakpoint> = [];
-    if (
-      element.enabled !== enable &&
-      (element instanceof Breakpoint || element instanceof FunctionBreakpoint)
-    ) {
-      changed.push(element);
-    }
-
     element.enabled = enable;
-    if (element instanceof Breakpoint && !element.enabled) {
-      element.verified = false;
+    const uiBp = this._uiBreakpoints.find(bp => bp.id === element.getId());
+    if (uiBp != null) {
+      uiBp.enabled = enable;
     }
-
-    this._emitter.emit(BREAKPOINTS_CHANGED, {changed});
+    this._sortSyncAndDeDup();
   }
 
   enableOrDisableAllBreakpoints(enable: boolean): void {
-    const changed: (IBreakpoint | IFunctionBreakpoint)[] = [];
-    this._breakpoints.forEach(bp => {
-      if (bp.enabled !== enable) {
-        changed.push(bp);
-      }
+    this._uiBreakpoints.forEach(bp => {
       bp.enabled = enable;
-      if (!enable) {
-        bp.verified = false;
-      }
     });
     this._functionBreakpoints.forEach(fbp => {
-      if (fbp.enabled !== enable) {
-        changed.push(fbp);
-      }
       fbp.enabled = enable;
     });
 
-    this._emitter.emit(BREAKPOINTS_CHANGED, {changed});
+    this._sortSyncAndDeDup();
   }
 
   addFunctionBreakpoint(functionName: string): FunctionBreakpoint {
@@ -1462,7 +1571,7 @@ export class Model implements IModel {
       null,
     );
     this._functionBreakpoints.push(newFunctionBreakpoint);
-    this._emitter.emit(BREAKPOINTS_CHANGED, {added: [newFunctionBreakpoint]});
+    this._emitter.emit(BREAKPOINTS_CHANGED);
     return newFunctionBreakpoint;
   }
 
@@ -1474,8 +1583,6 @@ export class Model implements IModel {
       hitCondition?: string,
     },
   }): void {
-    const changed: IFunctionBreakpoint[] = [];
-
     this._functionBreakpoints.forEach(fbp => {
       const fbpData = data[fbp.getId()];
       if (fbpData != null) {
@@ -1483,12 +1590,10 @@ export class Model implements IModel {
         fbp.verified = fbpData.verified || fbp.verified;
         fbp.idFromAdapter = fbpData.id;
         fbp.hitCondition = fbpData.hitCondition;
-
-        changed.push(fbp);
       }
     });
 
-    this._emitter.emit(BREAKPOINTS_CHANGED, {changed});
+    this._emitter.emit(BREAKPOINTS_CHANGED);
   }
 
   removeFunctionBreakpoints(id?: string): void {

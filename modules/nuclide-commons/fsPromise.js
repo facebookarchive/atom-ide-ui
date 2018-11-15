@@ -21,6 +21,12 @@ import temp from 'temp';
 import nuclideUri from './nuclideUri';
 import {runCommand} from './process';
 
+type WriteOptions = {
+  encoding?: string,
+  mode?: number,
+  flag?: string,
+};
+
 /**
  * Create a temp directory with given prefix. The caller is responsible for cleaning up the
  *   drectory.
@@ -299,7 +305,7 @@ async function copyFilePermissions(
 function writeFile(
   filename: string,
   data: Buffer | string,
-  options?: Object | string,
+  options?: WriteOptions | string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     fsPlus.writeFile(filename, data, options, (err, result) => {
@@ -315,7 +321,7 @@ function writeFile(
 async function writeFileAtomic(
   path: string,
   data: Buffer | string,
-  options?: Object | string,
+  options?: WriteOptions | string,
 ): Promise<void> {
   const tempFilePath = await tempfile('nuclide');
   try {
@@ -337,6 +343,12 @@ async function writeFileAtomic(
     // if we did the mv() then the chmod(), there would be a brief period between
     // those two operations where the destination file might have the wrong permissions.
     await copyFilePermissions(realPath, tempFilePath);
+
+    // Ensure file has new permissions updated.
+    const mode = typeof options !== 'string' ? options?.mode : null;
+    if (mode != null) {
+      await chmod(tempFilePath, mode);
+    }
 
     // TODO: put renames into a queue so we don't write older save over new save.
     // Use mv as fs.rename doesn't work across partitions.
@@ -380,6 +392,42 @@ function close(fd: number): Promise<void> {
     fs.close(fd, err => {
       if (err == null) {
         resolve();
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+function fstat(fd: number): Promise<fs.Stats> {
+  return new Promise((resolve, reject) => {
+    fs.fstat(fd, (err, result) => {
+      if (err == null) {
+        resolve(result);
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+async function fsync(fd: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    fs.fsync(fd, (err, result) => {
+      if (err == null) {
+        resolve(result);
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+function ftruncate(fd: number, len: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    fs.ftruncate(fd, len, (err, result) => {
+      if (err == null) {
+        resolve(result);
       } else {
         reject(err);
       }
@@ -713,6 +761,9 @@ export default {
   chmod,
   chown,
   close,
+  fstat,
+  fsync,
+  ftruncate,
   lstat,
   mkdir,
   mv,

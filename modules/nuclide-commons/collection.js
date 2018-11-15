@@ -103,6 +103,20 @@ export function findSubArrayIndex<T>(
 }
 
 /**
+ * Separates an array into two subarrays -- the first contains all elements that
+ * match the predicate and the latter contains all the rest that fail.
+ */
+export function arrayPartition<T>(
+  array: $ReadOnlyArray<T>,
+  predicate: (elem: T) => boolean,
+): [Array<T>, Array<T>] {
+  const pass = [];
+  const fail = [];
+  array.forEach(elem => (predicate(elem) ? pass.push(elem) : fail.push(elem)));
+  return [pass, fail];
+}
+
+/**
  * Merges a given arguments of maps into one Map, with the latest maps
  * overriding the values of the prior maps.
  */
@@ -153,14 +167,14 @@ export function mapTransform<T, V1, V2>(
 export function mapEqual<T, X>(
   map1: Map<T, X>,
   map2: Map<T, X>,
-  equalComparator?: (val1: X, val2: X, key1?: T, key2?: T) => boolean,
+  equalComparator?: (val1: X, val2: X, key?: T) => boolean,
 ) {
   if (map1.size !== map2.size) {
     return false;
   }
   const equalFunction = equalComparator || ((a: X, b: X) => a === b);
-  for (const [key1, value1] of map1) {
-    if (!map2.has(key1) || !equalFunction(value1, (map2.get(key1): any))) {
+  for (const [key, value1] of map1) {
+    if (!map2.has(key) || !equalFunction(value1, (map2.get(key): any))) {
       return false;
     }
   }
@@ -635,4 +649,48 @@ export class DefaultMap<K, V> extends Map<K, V> {
     // If the key is present we must have a value of type V.
     return (super.get(key): any);
   }
+}
+
+export class DefaultWeakMap<K: {}, V> extends WeakMap<K, V> {
+  _factory: () => V;
+
+  constructor(factory: () => V, iterable: ?Iterable<[K, V]>) {
+    super(iterable);
+    this._factory = factory;
+  }
+
+  get(key: K): V {
+    if (!this.has(key)) {
+      const value = this._factory();
+      this.set(key, value);
+      return value;
+    }
+    // If the key is present we must have a value of type V.
+    return (super.get(key): any);
+  }
+}
+
+/**
+ * Return the highest ranked item in a list, according to the provided ranking function. A max rank
+ * may optionally be provided so the whole list doesn't have to be iterated. Items with ranks of
+ * zero or less are never returned.
+ */
+export function findTopRanked<T>(
+  items: Iterable<T>,
+  ranker: T => number,
+  maxRank?: number,
+): ?T {
+  let maxSeenRank = 0;
+  let maxRankedItem;
+  for (const item of items) {
+    const rank = ranker(item);
+    if (rank === maxRank) {
+      return item;
+    }
+    if (rank > 0 && rank > maxSeenRank) {
+      maxSeenRank = rank;
+      maxRankedItem = item;
+    }
+  }
+  return maxRankedItem;
 }

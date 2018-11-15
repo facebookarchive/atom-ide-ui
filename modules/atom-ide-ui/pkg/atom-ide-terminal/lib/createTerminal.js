@@ -11,6 +11,7 @@
  */
 
 import type {TerminalOptions} from 'xterm';
+import type {Terminal} from './types';
 
 import {
   boolean,
@@ -23,9 +24,9 @@ import {
   guard,
 } from 'decoders';
 import featureConfig from 'nuclide-commons-atom/feature-config';
-import {Terminal as XTerminal} from 'xterm';
-import * as Fit from 'xterm/lib/addons/fit/fit';
-import * as WebLinks from 'xterm/lib/addons/webLinks/webLinks';
+import {Terminal as XTerminal} from 'vscode-xterm';
+import * as Fit from 'vscode-xterm/lib/addons/fit/fit';
+import * as WebLinks from 'vscode-xterm/lib/addons/webLinks/webLinks';
 import {
   CHAR_ATLAS_CONFIG,
   CURSOR_BLINK_CONFIG,
@@ -38,19 +39,6 @@ import {
   getFontSize,
   RENDERER_TYPE_CONFIG,
 } from './config';
-
-export type Terminal = TerminalClass;
-declare class TerminalClass extends XTerminal {
-  proposeGeometry: () => {rows: number, cols: number};
-  fit: () => void;
-  webLinksInit: (handler?: (event: Event, link: string) => void) => void;
-
-  // TODO: Update xterm types?
-  linkifier: any;
-  buffer: any;
-  selectionManager: any;
-  dispose: () => void;
-}
 
 const assertTerminalOptionsInFeatureConfig = guard(
   object({
@@ -106,5 +94,16 @@ export function createTerminal(options: TerminalOptions = {}): Terminal {
       ...options,
     }),
   );
+  // Patch into xterm Linkifier to catch errors on out of bounds line fetching.
+  // Track issue at https://github.com/xtermjs/xterm.js/issues/1669
+  const linkifier = terminal._core.linkifier;
+  const doLinkifyRow = linkifier._doLinkifyRow;
+  linkifier._doLinkifyRow = (row, text, matcher, offset) => {
+    try {
+      doLinkifyRow.call(linkifier, row, text, matcher, offset);
+    } catch (e) {
+      // swallow errors to avoid red box because the linkifier runs on a timer.
+    }
+  };
   return terminal;
 }

@@ -73,6 +73,17 @@ import {isIterable} from 'nuclide-commons/collection';
  *   mutations.subscribe(record => console.log(record));
  */
 
+// A bug in Chrome < 62 frees PerformanceObservers and their listeners
+// once the PerformanceObserver is eligible for GC:
+// https://bugs.chromium.org/p/chromium/issues/detail?id=742530
+//
+// This means that callbacks for a PerformanceObserver will stop getting called
+// (and themselves GCed) at an abitrary time.
+//
+// Intentionally hold references to all DOM Observers in this set, and delete
+// them when the last subscriber unsubscribes.
+const observers = new Set();
+
 // $FlowFixMe(>=0.55.0) Flow suppress
 type RecordCallback = (records: any, ...rest: Array<any>) => mixed;
 interface DOMObserver {
@@ -172,6 +183,7 @@ class DOMObserverObservable<
       for (const observation of this._observations) {
         this._domObserver.observe(...observation);
       }
+      observers.add(this._domObserver);
     }
 
     const subscription = new Subscription();
@@ -185,6 +197,7 @@ class DOMObserverObservable<
         invariant(this._domObserver != null);
         this._domObserver.disconnect();
         this._domObserver = null;
+        observers.delete(this._domObserver);
       }
     });
 
@@ -219,7 +232,6 @@ export class IntersectionObservable extends DOMObserverObservable<
 export class MutationObservable extends DOMObserverObservable<
   Array<MutationRecord>,
   MutationRecord,
-  // $FlowFixMe
   [Node, MutationObserverInit],
 > {
   constructor(target: Node, options?: MutationObserverInit) {
@@ -229,7 +241,7 @@ export class MutationObservable extends DOMObserverObservable<
       'environment must contain MutationObserver',
     );
     // $FlowFixMe(>=0.55.0) Flow suppress
-    super(MutationObserver, target);
+    super(MutationObserver, target, options);
   }
 }
 
@@ -287,7 +299,7 @@ function lastRectPerTarget(
 function remeasureContentRect(
   element: HTMLElement,
   contentRect: DOMRectReadOnly,
-): DOMRect {
+): DOMRectReadOnly {
   const {clientHeight, clientWidth} = element;
 
   // Client height/width include padding
@@ -301,7 +313,7 @@ function remeasureContentRect(
   const width =
     clientWidth - parseFloat(paddingLeft) - parseFloat(paddingRight);
 
-  return new DOMRect(contentRect.x, contentRect.y, width, height);
+  return new DOMRectReadOnly(contentRect.x, contentRect.y, width, height);
 }
 
 /*

@@ -7,14 +7,11 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @noflow
+ * @format
  */
 'use strict';
 
-/* eslint
-  comma-dangle: [1, always-multiline],
-  prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
-  */
+/* eslint nuclide-internal/no-commonjs: 0 */
 
 module.exports = {
   rules: {
@@ -30,6 +27,7 @@ module.exports = {
     'modules-dependencies': require('./modules-dependencies'),
     'no-commonjs': require('./no-commonjs'),
     'no-cross-atom-imports': require('./no-cross-atom-imports'),
+    'no-fb-deps-from-oss': require('./no-fb-deps-from-oss'),
     'no-unnecessary-disposable-wrapping': require('./no-unnecessary-disposable-wrapping'),
     'no-unobserved-gk': require('./no-unobserved-gk'),
     'no-unresolved': require('./no-unresolved'),
@@ -37,6 +35,7 @@ module.exports = {
     'react-virtualized-import': require('./react-virtualized-import'),
     'require-universal-disposable': require('./require-universal-disposable'),
     'use-nuclide-ui-components': require('./use-nuclide-ui-components'),
+    'unused-subscription': require('./unused-subscription'),
   },
   rulesConfig: {
     'api-spelling': 0,
@@ -50,6 +49,7 @@ module.exports = {
     'license-header': 0,
     'modules-dependencies': 0,
     'no-cross-atom-imports': 0,
+    'no-fb-deps-from-oss': 0,
     'no-unnecessary-disposable-wrapping': 0,
     'no-unobserved-gk': 0,
     'no-unresolved': 0,
@@ -57,5 +57,6 @@ module.exports = {
     'react-virtualized-import': 0,
     'require-universal-disposable': 0,
     'use-nuclide-ui-components': 0,
+    'unused-subscription': 0,
   },
 };

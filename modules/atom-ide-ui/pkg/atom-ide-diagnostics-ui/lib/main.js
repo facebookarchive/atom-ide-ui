@@ -20,15 +20,14 @@ import type {
 } from '../../atom-ide-datatip/lib/types';
 import type {
   DiagnosticMessage,
-  DiagnosticMessages,
   DiagnosticUpdater,
+  ObservableDiagnosticProvider,
 } from '../../atom-ide-diagnostics/lib/types';
 
 import {areSetsEqual} from 'nuclide-commons/collection';
-import {fastDebounce, diffSets} from 'nuclide-commons/observable';
+import {diffSets, throttle} from 'nuclide-commons/observable';
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import analytics from 'nuclide-commons/analytics';
-import AsyncStorage from 'idb-keyval';
 import createPackage from 'nuclide-commons-atom/createPackage';
 import idx from 'idx';
 import invariant from 'assert';
@@ -49,6 +48,7 @@ import showActionsMenu from './showActionsMenu';
 import showAtomLinterWarning from './showAtomLinterWarning';
 import StatusBarTile from './ui/StatusBarTile';
 import ReactDOM from 'react-dom';
+import {STALE_MESSAGE_UPDATE_THROTTLE_TIME} from './utils';
 
 const MAX_OPEN_ALL_FILES = 20;
 const SHOW_TRACES_SETTING = 'atom-ide-diagnostics-ui.showDiagnosticTraces';
@@ -61,26 +61,24 @@ export type DiagnosticsState = {|
   ...ActivationState,
   ...OpenBlockDecorationState,
   diagnosticUpdater: ?DiagnosticUpdater,
-  showNuxContent: boolean,
 |};
 
 type OpenBlockDecorationState = {|
   openedMessageIds: Set<string>,
 |};
 
-const NUX_ASYNC_STORAGE_KEY = 'nuclide_diagnostics_nux_shown';
+const NUCLIDE_DIAGNOSTICS_STALE_GK = 'nuclide_diagnostics_stale';
 
 class Activation {
   _subscriptions: UniversalDisposable;
   _model: Model<DiagnosticsState>;
   _statusBarTile: ?StatusBarTile;
-  _fileDiagnostics: WeakMap<atom$TextEditor, Array<DiagnosticMessage>>;
+  _fileDiagnostics: WeakMap<atom$TextEditor, Iterable<DiagnosticMessage>>;
   _globalViewStates: ?Observable<GlobalViewState>;
   _gatekeeperServices: BehaviorSubject<?GatekeeperService> = new BehaviorSubject();
 
   constructor(state: ?Object): void {
     this._model = new Model({
-      showNuxContent: false,
       filterByActiveTextEditor:
         idx(state, _ => _.filterByActiveTextEditor) === true,
       diagnosticUpdater: null,
@@ -89,7 +87,6 @@ class Activation {
     this._subscriptions = new UniversalDisposable(
       this.registerOpenerAndCommand(),
       this._registerActionsMenu(),
-      this._observeDiagnosticsAndOfferTable(),
       showAtomLinterWarning(),
     );
     this._fileDiagnostics = new WeakMap();
@@ -124,7 +121,10 @@ class Activation {
   }
 
   consumeDiagnosticUpdates(diagnosticUpdater: DiagnosticUpdater): IDisposable {
-    this._getStatusBarTile().consumeDiagnosticUpdates(diagnosticUpdater);
+    this._getStatusBarTile().consumeDiagnosticUpdates(
+      diagnosticUpdater,
+      this._getIsStaleMessageEnabledStream(),
+    );
 
     this._subscriptions.add(
       this._gutterConsumeDiagnosticUpdates(diagnosticUpdater),
@@ -149,13 +149,14 @@ class Activation {
         const subscription = getEditorDiagnosticUpdates(
           editor,
           diagnosticUpdater,
+          this._getIsStaleMessageEnabledStream(),
         )
           .finally(() => {
             this._subscriptions.remove(subscription);
             this._fileDiagnostics.delete(editor);
           })
-          .subscribe(update => {
-            this._fileDiagnostics.set(editor, update.messages);
+          .subscribe(providerToMessages => {
+            this._fileDiagnostics.set(editor, providerToMessages);
           });
         this._subscriptions.add(subscription);
       }),
@@ -231,77 +232,20 @@ class Activation {
     );
   }
 
-  _observeDiagnosticsAndOfferTable(): IDisposable {
-    return new UniversalDisposable(
-      this._gatekeeperServices
-        .switchMap(gatekeeperService => {
-          if (gatekeeperService == null) {
-            return Observable.of(null);
-          }
-
-          return gatekeeperService.passesGK('nuclide_diagnostics_nux');
-        })
-        .filter(Boolean)
-        .take(1)
-        // Don't show it to the user if they've seen it before
-        .switchMap(() => AsyncStorage.get(NUX_ASYNC_STORAGE_KEY))
-        .filter(seen => !seen)
-        .switchMap(() =>
-          // Only display once there are errors originating from multiple files
-          this._getGlobalViewStates()
-            .debounceTime(500)
-            .map(state => state.diagnostics)
-            .filter(diags => {
-              // make sure there are diagnostics from at least two different uris
-              // and that those diagnostics are errors
-              const firstErrorDiagIndex = diags.findIndex(
-                diag => diag.type === 'Error',
-              );
-              if (firstErrorDiagIndex === -1) {
-                return false;
-              }
-
-              const firstUri = diags[firstErrorDiagIndex].filePath;
-              for (let i = firstErrorDiagIndex + 1; i < diags.length; i++) {
-                if (
-                  diags[i].type === 'Error' &&
-                  diags[i].filePath !== firstUri
-                ) {
-                  return true;
-                }
-              }
-              return false;
-            })
-            .take(1),
-        )
-        .subscribe(async () => {
-          // capture the current focus since opening diagnostics will change it
-          const previouslyFocusedElement = document.activeElement;
-          this._model.setState({showNuxContent: true});
-
-          // we need to await this as we must wait for the panel to activate to
-          // change the focus back
-          await goToLocation(WORKSPACE_VIEW_URI);
-          AsyncStorage.set(NUX_ASYNC_STORAGE_KEY, true);
-          analytics.track('diagnostics-table-nux-shown');
-
-          // and then restore the focus if it existed before
-          if (previouslyFocusedElement != null) {
-            previouslyFocusedElement.focus();
-          }
-        }),
-    );
-  }
-
   _createDiagnosticsViewModel(): DiagnosticsViewModel {
     return new DiagnosticsViewModel(this._getGlobalViewStates());
   }
 
-  _dismissNux = () => {
-    this._model.setState({
-      showNuxContent: false,
-    });
-  };
+  _getIsStaleMessageEnabledStream(): Observable<boolean> {
+    return this._gatekeeperServices
+      .switchMap(gkService => {
+        if (gkService != null) {
+          return gkService.passesGK(NUCLIDE_DIAGNOSTICS_STALE_GK);
+        }
+        return Observable.of(false);
+      })
+      .distinctUntilChanged();
+  }
 
   /**
    * An observable of the state that's shared between all panel copies. State that's unique to a
@@ -315,9 +259,6 @@ class Activation {
       const updaters = packageStates
         .map(state => state.diagnosticUpdater)
         .distinctUntilChanged();
-      const showNuxContentStream = packageStates.map(
-        state => state.showNuxContent,
-      );
 
       const diagnosticsStream = updaters
         .switchMap(
@@ -326,8 +267,27 @@ class Activation {
               ? Observable.of([])
               : observableFromSubscribeFunction(updater.observeMessages),
         )
-        .map(diagnostics => diagnostics.filter(d => d.type !== 'Hint'))
-        .let(fastDebounce(100))
+        .combineLatest(this._getIsStaleMessageEnabledStream())
+        .let(
+          throttle(([, isStaleMessageEnabled]) =>
+            Observable.interval(
+              isStaleMessageEnabled ? STALE_MESSAGE_UPDATE_THROTTLE_TIME : 0,
+            ),
+          ),
+        )
+        .map(([diagnostics, isStaleMessageEnabled]) =>
+          diagnostics.filter(d => d.type !== 'Hint').map(diagnostic => {
+            if (!isStaleMessageEnabled) {
+              // Note: reason of doing this is currently Flow is sending message
+              // marked as stale sometimes(on user type or immediately on save).
+              // Until we turn on the gk, we don't want user to see the Stale
+              // style/behavior just yet. so here we mark them as not stale.
+              diagnostic.stale = false;
+            }
+            return diagnostic;
+          }),
+        )
+        .let(throttle(300))
         .startWith([]);
 
       const showTracesStream: Observable<
@@ -386,7 +346,6 @@ class Activation {
         showDirectoryColumnStream,
         autoVisibilityStream,
         supportedMessageKindsStream,
-        showNuxContentStream,
         uiConfigStream,
         // $FlowFixMe
         (
@@ -397,7 +356,6 @@ class Activation {
           showDirectoryColumn,
           autoVisibility,
           supportedMessageKinds,
-          showNuxContent,
           uiConfig,
         ) => ({
           diagnostics,
@@ -408,9 +366,7 @@ class Activation {
           autoVisibility,
           onShowTracesChange: setShowTraces,
           onFilterByActiveTextEditorChange: setFilterByActiveTextEditor,
-          onDismissNux: this._dismissNux,
           supportedMessageKinds,
-          showNuxContent,
           uiConfig,
         }),
       );
@@ -478,13 +434,22 @@ class Activation {
     editor: atom$TextEditor,
     position: atom$Point,
   ): Array<DiagnosticMessage> {
-    const messagesForFile = this._fileDiagnostics.get(editor);
-    if (messagesForFile == null) {
+    const messages = this._fileDiagnostics.get(editor);
+
+    if (messages == null) {
       return [];
     }
-    return messagesForFile.filter(
-      message => message.range != null && message.range.containsPoint(position),
-    );
+
+    const messagesAtPosition = [];
+    for (const message of messages) {
+      if (message.range && message.range.end.row > position.row) {
+        break;
+      }
+      if (message.range != null && message.range.containsPoint(position)) {
+        messagesAtPosition.push(message);
+      }
+    }
+    return messagesAtPosition;
   }
 
   _gutterConsumeDiagnosticUpdates(
@@ -515,13 +480,23 @@ class Activation {
 
         const subscription = Observable.combineLatest(
           updateOpenedMessageIds,
-          getEditorDiagnosticUpdates(editor, diagnosticUpdater),
+          getEditorDiagnosticUpdates(
+            editor,
+            diagnosticUpdater,
+            this._getIsStaleMessageEnabledStream(),
+          ),
         )
           .finally(() => {
             subscriptions.remove(subscription);
           })
           .subscribe(
-            ([openedMessageIds: Set<string>, update: DiagnosticMessages]) => {
+            ([
+              openedMessageIds: Set<string>,
+              update: Map<
+                ObservableDiagnosticProvider,
+                Array<DiagnosticMessage>,
+              >,
+            ]) => {
               // Although the subscription should be cleaned up on editor destroy,
               // the very act of destroying the editor can trigger diagnostic updates.
               // Thus this callback can still be triggered after the editor is destroyed.
@@ -560,6 +535,7 @@ function addAtomCommands(diagnosticUpdater: DiagnosticUpdater): IDisposable {
 
   const openAllFilesWithErrors = () => {
     analytics.track('diagnostics-panel-open-all-files-with-errors');
+    // eslint-disable-next-line nuclide-internal/unused-subscription
     observableFromSubscribeFunction(diagnosticUpdater.observeMessages)
       .first()
       .subscribe((messages: Array<DiagnosticMessage>) => {
@@ -648,25 +624,42 @@ function getActiveEditorPaths(): Observable<?NuclideUri> {
 function getEditorDiagnosticUpdates(
   editor: atom$TextEditor,
   diagnosticUpdater: DiagnosticUpdater,
-): Observable<DiagnosticMessages> {
+  isStaleMessageEnabledStream: Observable<boolean>,
+): Observable<Iterable<DiagnosticMessage>> {
   return observableFromSubscribeFunction(editor.onDidChangePath.bind(editor))
     .startWith(editor.getPath())
     .switchMap(
       filePath =>
         filePath != null
           ? observableFromSubscribeFunction(cb =>
-              diagnosticUpdater.observeFileMessages(filePath, cb),
+              diagnosticUpdater.observeFileMessagesIterator(filePath, cb),
             )
           : Observable.empty(),
     )
-    .map(diagnosticMessages => {
-      return {
-        ...diagnosticMessages,
-        messages: diagnosticMessages.messages.filter(
-          diagnostic => diagnostic.type !== 'Hint',
+    .combineLatest(isStaleMessageEnabledStream)
+    .let(
+      throttle(([_, isStaleMessageEnabled]) =>
+        Observable.interval(
+          isStaleMessageEnabled ? STALE_MESSAGE_UPDATE_THROTTLE_TIME : 0,
         ),
-      };
-    })
+      ),
+    )
+    .map(
+      ([messages, isStaleMessageEnabled]) =>
+        // Flow and other providers have begun sending updates that mark prior
+        // messages as stale. For users outside the stale diagnostics GK,
+        // never show these messages as stale.
+        isStaleMessageEnabled
+          ? messages
+          : (function*() {
+              for (const message of messages) {
+                if (message != null && message.type !== 'Hint') {
+                  message.stale = false;
+                }
+                yield message;
+              }
+            })(),
+    )
     .takeUntil(
       observableFromSubscribeFunction(editor.onDidDestroy.bind(editor)),
     );

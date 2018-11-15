@@ -22,6 +22,7 @@ import ProcessTreeNode from './ProcessTreeNode';
 import {Button, ButtonSizes} from 'nuclide-commons-ui/Button';
 import {ButtonGroup} from 'nuclide-commons-ui/ButtonGroup';
 import featureConfig from 'nuclide-commons-atom/feature-config';
+import {AddTargetButton} from './DebuggerAddTargetButton';
 
 type Props = {
   service: IDebugService,
@@ -40,7 +41,6 @@ export default class DebuggerProcessComponent extends React.PureComponent<
   State,
 > {
   _disposables: UniversalDisposable;
-  _treeView: ?TreeList;
 
   constructor(props: Props) {
     super(props);
@@ -146,6 +146,7 @@ export default class DebuggerProcessComponent extends React.PureComponent<
               tooltip={{title: 'Clear thread filters'}}
             />
           </ButtonGroup>
+          {AddTargetButton('debugger-stepping-buttongroup')}
         </div>
         <TreeList showArrows={true}>{processElements}</TreeList>
       </div>

@@ -77,6 +77,7 @@ declare class atom$Package {
   getType(): 'atom' | 'textmate' | 'theme',
   hasActivationCommands(): boolean,
   hasActivationHooks(): boolean,
+  initializeTime: number,
   getActivationHooks(): Array<string>,
   onDidDeactivate(cb: () => mixed): IDisposable,
   activateNow(): void,
@@ -223,6 +224,10 @@ declare class atom$Config {
 }
 
 declare class atom$Cursor {
+  // Cursor Marker
+  marker: atom$Marker;
+  editor: atom$TextEditor;
+
   // Event Subscription
   onDidChangePosition(
     callback: (event: {
@@ -242,6 +247,8 @@ declare class atom$Cursor {
 
   // Cursor Position Details
   // Moving the Cursor
+  moveUp(rowCount: number, {moveToEndOfSelection?: boolean}): void,
+  moveDown(rowCount: number, {moveToEndOfSelection?: boolean}): void,
 
   // Local Positions and Ranges
   getCurrentWordBufferRange(options?: {wordRegex: RegExp}): atom$Range,
@@ -272,6 +279,7 @@ declare class atom$DisplayMarkerLayer {
   markBufferRange(range: atom$Range | atom$RangeLike, options?: MarkerOptions): atom$Marker,
   findMarkers(options: MarkerOptions): Array<atom$Marker>,
   getMarkers(): Array<atom$Marker>,
+  onDidUpdate(callback: () => mixed): IDisposable
 }
 
 declare class atom$LayerDecoration {
@@ -289,6 +297,7 @@ declare class atom$Disposable {
 }
 
 declare class atom$Emitter {
+  static onEventHandlerException(error: any): IDisposable,
   dispose(): void,
   on(name: string, callback: (v: any) => mixed): IDisposable,
   once(name: string, callback: (v: any) => mixed): IDisposable,
@@ -306,7 +315,7 @@ declare class atom$Gutter {
   destroy(): void,
   decorateMarker(
     marker: atom$Marker,
-    options?: {'class'?: string, item?: Object | HTMLElement},
+    options?: {type?: string, 'class'?: string, item?: Object | HTMLElement},
   ): atom$Decoration,
   show(): void,
   hide(): void,
@@ -336,6 +345,7 @@ declare class atom$Marker {
   isValid(): boolean,
   isDestroyed(): boolean,
   onDidDestroy(callback: () => mixed): IDisposable,
+  getScreenRange(): atom$Range,
   setBufferRange(
     range: atom$RangeLike,
     properties?: {reversed: boolean},
@@ -386,6 +396,7 @@ declare class atom$PackageManager {
   getActivePackage(name: string): ?atom$Package,
   getActivePackages(): Array<atom$Package>,
   isPackageActive(name: string): boolean,
+  hasActivatedInitialPackages(): boolean,
 
   // Activating and deactivating packages
   activatePackage(name: string): Promise<atom$Package>,
@@ -394,6 +405,7 @@ declare class atom$PackageManager {
   getLoadedPackage(name: string): ?atom$Package,
   getLoadedPackages(): Array<atom$Package>,
   isPackageLoaded(name: string): boolean,
+  hasLoadedInitialPackages(): boolean,
 
   // Accessing available packages
   getAvailablePackageNames(): Array<string>,
@@ -404,6 +416,7 @@ declare class atom$PackageManager {
   deactivatePackages(): Promise<void>,
   deactivatePackage(name: string, suppressSerialization?: boolean): Promise<void>,
   emitter: atom$Emitter,
+  loadedPackages: {[packageName: string]: atom$Package},
   loadPackage(name: string): void,
   loadPackages(): void,
   serializePackage(pkg: atom$Package): void,
@@ -792,6 +805,9 @@ type DecorateMarkerParams = {
   type: 'block',
   item: HTMLElement,
   position?: 'before' | 'after', // Defaults to 'before' when unspecified.
+} | {
+  type: 'line-number',
+  class?: string,
 };
 
 type ChangeCursorPositionEvent = {
@@ -828,6 +844,8 @@ declare class atom$TextEditor extends atom$Model {
   onDidStopChanging(callback: () => mixed): IDisposable,
   onDidChangeCursorPosition(callback: (event: ChangeCursorPositionEvent) => mixed):
     IDisposable,
+  onDidAddCursor(callback: (cursor: atom$Cursor) => mixed): IDisposable;
+  onDidRemoveCursor(callback: (cursor: atom$Cursor) => mixed): IDisposable;
   onDidDestroy(callback: () => mixed): IDisposable,
   onDidSave(callback: (event: {path: string}) => mixed): IDisposable,
   getBuffer(): atom$TextBuffer,
@@ -870,6 +888,7 @@ declare class atom$TextEditor extends atom$Model {
   getText(): string,
   getTextInBufferRange(range: atom$RangeLike): string,
   getLineCount(): number,
+  getScreenLineCount(): number,
   getLastScreenRow(): number,
 
   // Mutating Text
@@ -1122,6 +1141,7 @@ declare class atom$TextEditorComponent {
 
   setScrollLeft(scrollLeft: number): void,
   getScrollLeft(): number,
+  updateSync(useScheduler?: boolean): void,
 }
 
 /**
@@ -1589,6 +1609,13 @@ declare class atom$Grammar {
   name: string,
   scopeName: string,
   tokenizeLines(text: string): Array<Array<atom$GrammarToken>>,
+  tokenizeLine(line: string, ruleStack: mixed, firstLine: boolean): {
+    line: string,
+    tags: Array<number>,
+    // Dynamic property: invoking it will incur additional overhead
+    tokens: Array<atom$GrammarToken>,
+    ruleStack: mixed
+  },
 }
 
 type atom$GrammarToken = {
@@ -1875,6 +1902,7 @@ declare class atom$TextBuffer {
   getLastRow(): number,
   getRange(): atom$Range,
   rangeForRow(row: number, includeNewLine?: boolean): atom$Range,
+  getLength(): number,
 
   // Position/Index mapping
   characterIndexForPosition(position: atom$PointLike): number,
@@ -2025,11 +2053,21 @@ type AtomGlobal = {
   getCurrentWindow: void,
 
   // Messaging the User
-  confirm(options: {
-    buttons?: Array<string> | {[buttonName: string]: () => mixed},
-    detailedMessage?: string,
-    message: string,
-  }): ?number,
+  +confirm:
+    & ((
+      {
+        message: string,
+        detail?: string,
+        buttons?: Array<string>,
+      },
+      (number) => void,
+    ) => void)
+    // The synchronous form. You really shouldn't use this.
+    & (({
+        message: string,
+        detailedMessage?: string,
+        buttons?: Array<string> | {[buttonName: string]: () => mixed},
+      }) => ?number),
 
   open(params: {
     pathsToOpen?: Array<string>,

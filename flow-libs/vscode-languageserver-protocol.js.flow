@@ -107,7 +107,7 @@ declare module 'vscode-languageserver-protocol' {
     arguments?: any[],
   };
 
-  declare type TextEdit = {
+  declare export type TextEdit = {
     // The range of the text document to be manipulated. To insert
     // text into a document create a range where start === end.
     range: Range,
@@ -304,6 +304,11 @@ declare module 'vscode-languageserver-protocol' {
   |};
 
   declare type WindowClientCapabilities = {|
+    //  Capabilities specific to the `window/showStatus` request.
+    status?: {|
+      //  Status requests supports dynamic registration.
+      dynamicRegistration?: boolean,
+    |},
     //  Capabilities specific to the `window/progress` notification.
     progress?: {|
       //  Progress notification supports dynamic registration.
@@ -484,18 +489,6 @@ declare module 'vscode-languageserver-protocol' {
     // A human-readable string with additional information
     // about this item, like type or symbol information.
     detail?: string,
-    // (Nuclide-specific) A human-readable string that should be displayed along
-    // with the label. This is typically a subset of what's present in detail
-    // and/or documentation fields; those fields, however, are typically
-    // only shown when the user selects a label. If absent, then it won't be
-    // displayed alongside the label.
-    inlineDetail?: string,
-    // (Nuclide-specific) The type of the item, if applicable. The editor may
-    // chose to also display this along with the label. The type is typically
-    // a subset of what's present in detail and/or documentation fields; by
-    // putting the information here as well, the editor has more flexibility.
-    // If absent, then the type of the item won't be displayed.
-    itemType?: string,
     // A human-readable string that represents a doc-comment.
     documentation?: string | MarkupContent,
     //  A string that should be used when comparing this item
@@ -979,4 +972,20 @@ declare module 'vscode-languageserver-protocol' {
     write(msg: Message): void;
     dispose(): void;
   }
+
+  declare export class RequestType {
+    constructor(type: string): void;
+  }
+
+  declare export class NotificationType {
+    constructor(type: string): void;
+  }
+
+  /**
+   * A request send from the client to the server to execute a command. The request might return
+   * a workspace edit which the client will apply to the workspace.
+   */
+  declare export var ExecuteCommandRequest: {
+    type: 'workspace/executeCommand',
+  };
 }

@@ -14,7 +14,6 @@ import type {DiagnosticMessage} from '../../../atom-ide-diagnostics/lib/types';
 
 import * as React from 'react';
 import {Button, ButtonTypes} from 'nuclide-commons-ui/Button';
-import {ButtonGroup} from 'nuclide-commons-ui/ButtonGroup';
 import {DiagnosticsMessageText} from './DiagnosticsMessageText';
 import {DiagnosticsMessageDescription} from './DiagnosticsMessageDescription';
 import {DiagnosticsTraceItem} from './DiagnosticsTraceItem';
@@ -54,9 +53,19 @@ function diagnosticHeader(props: DiagnosticsMessageProps) {
       </Button>
     );
   }
+
+  const staleBox = Boolean(message.stale) ? (
+    <span className="diagnostics-popup-header-stale-box highlight">
+      {'Stale'}
+    </span>
+  ) : null;
+
   return (
     <div className="diagnostics-popup-header">
-      <ButtonGroup>{fixButton}</ButtonGroup>
+      <span>
+        {staleBox}
+        {fixButton}
+      </span>
       <span className={providerClassName}>{message.providerName}</span>
     </div>
   );

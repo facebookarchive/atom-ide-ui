@@ -36,11 +36,11 @@ export type ConsoleApi = {
   dispose(): void,
 
   // Set the status of the source. See "Stoppable Sources" below.
-  setStatus(status: OutputProviderStatus): void,
+  setStatus(status: ConsoleSourceStatus): void,
 };
 
 // A type representing the possible values for the `console.setStatus()` API.
-export type OutputProviderStatus = 'starting' | 'running' | 'stopped';
+export type ConsoleSourceStatus = 'starting' | 'running' | 'stopped';
 
 // The shape of the argument to the `ConsoleService` function.
 export type SourceInfo = {
@@ -52,6 +52,8 @@ export type SourceInfo = {
   // for more information.
   start?: () => void,
   stop?: () => void,
+  // `getProperties()` can be optionally provided for expandable messages.
+  getProperties?: (objectId: string) => Observable<?ExpansionResult>,
 };
 
 // Message levels. For use with the `console.append()` API.
@@ -91,35 +93,6 @@ export type Message = {
 
 //
 //
-// The following types are part of deprecated APIs and shouldn't be used outside of this package.
-//
-//
-
-type BasicOutputProvider = {
-  messages: Observable<Message>,
-  // The source can't be part of the message because we want to be able to populate a filter menu
-  // before we even have any messages.
-  id: string,
-  getProperties?: (objectId: string) => Observable<?ExpansionResult>,
-};
-
-type ControllableOutputProviderProps = {
-  observeStatus(callback: (status: OutputProviderStatus) => mixed): IDisposable,
-  start(): void,
-  stop(): void,
-};
-
-type ControllableOutputProvider = BasicOutputProvider &
-  ControllableOutputProviderProps;
-
-export type OutputProvider = BasicOutputProvider | ControllableOutputProvider;
-
-export type OutputService = {
-  registerOutputProvider(outputProvider: OutputProvider): IDisposable,
-};
-
-//
-//
 // The following types aren't part of public API but rather are used within the package.
 //
 //
@@ -131,7 +104,7 @@ type MessageFormat = 'ansi';
 // Messages are transformed into these.
 // Make sure shouldAccumulateRecordCount in Reducers.js is up to date with these fields
 export type Record = {
-  messageId?: number,
+  messageId?: string,
   text: string,
   level: Level,
   incomplete: boolean,
@@ -141,6 +114,7 @@ export type Record = {
 
   kind: MessageKind,
   sourceId: string,
+  sourceName: string,
   scopeName: ?string,
   data?: ?EvaluationResult,
   timestamp: Date,
@@ -156,7 +130,7 @@ export type RecordToken = {|
   setComplete: () => void,
 |};
 
-export type AppState = {
+export type AppState = {|
   createPasteFunction: ?CreatePasteFunction,
   currentExecutorId: ?string,
   executors: Map<string, Executor>,
@@ -168,30 +142,15 @@ export type AppState = {
   incompleteRecords: List<Record>,
   history: Array<string>,
   providers: Map<string, SourceInfo>,
-  providerStatuses: Map<string, OutputProviderStatus>,
-};
-
-// A special type used internally by the Console component to represent each record that is
-// displayed with its height. This is stored at the component level since the expansion state of any
-// record (which affects its height) is unique to each Console pane (whereas the records themselves
-// are shared between all Console panes). The height is needed for partial rendering.
-export type DisplayableRecord = {
-  id: number,
-  record: Record,
-  height: number,
-  expansionStateId: Object,
-};
-
-export type RecordHeightChangeHandler = (
-  recordId: number,
-  newHeight: number,
-  callback: () => void,
-) => void;
+  providerStatuses: Map<string, ConsoleSourceStatus>,
+  fontSize?: number,
+  watchEditor?: ?atom$AutocompleteWatchEditor,
+|};
 
 export type Source = {
   id: string,
   name: string,
-  status: OutputProviderStatus,
+  status: ConsoleSourceStatus,
   start?: () => void,
   stop?: () => void,
 };
@@ -202,8 +161,14 @@ type BasicRecordProvider = {
   getProperties?: (objectId: string) => Observable<?ExpansionResult>,
 };
 
+type ControllableRecordProviderProps = {
+  observeStatus(callback: (status: ConsoleSourceStatus) => mixed): IDisposable,
+  start(): void,
+  stop(): void,
+};
+
 type ControllableRecordProvider = BasicRecordProvider &
-  ControllableOutputProviderProps;
+  ControllableRecordProviderProps;
 
 export type RecordProvider = BasicRecordProvider | ControllableRecordProvider;
 
@@ -245,6 +210,7 @@ export type CreatePasteFunction = (
 export type Store = {
   getState(): AppState,
   dispatch(action: Action): void,
+  subscribe(() => void): () => void,
 };
 
 export type Action =
@@ -272,7 +238,7 @@ export type Action =
   | {
       type: 'RECORD_UPDATED',
       payload: {
-        messageId: number,
+        messageId: string,
         appendText: ?string,
         overrideLevel: ?Level,
         setComplete: boolean,
@@ -324,7 +290,7 @@ export type Action =
       type: 'UPDATE_STATUS',
       payload: {
         providerId: string,
-        status: OutputProviderStatus,
+        status: ConsoleSourceStatus,
       },
     }
   | {

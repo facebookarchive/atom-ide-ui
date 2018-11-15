@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  *
- * @flow
+ * @flow strict-local
  * @format
  */
 
@@ -21,11 +21,13 @@ import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 
 type DefaultProps = {
   contained: boolean,
+  focusOnMount: boolean,
 };
 
 type Props = {
   children?: React$Node,
   contained: boolean,
+  focusOnMount: boolean,
   className?: string,
 };
 
@@ -41,19 +43,20 @@ export default class TabbableContainer extends React.Component<Props> {
 
   static defaultProps: DefaultProps = {
     contained: false,
-    autoFocus: false,
+    focusOnMount: true,
   };
 
   componentDidMount() {
     const rootNode = this._rootNode;
     invariant(rootNode != null);
+    const {focusOnMount} = this.props;
 
     // If focus has been deliberately set inside the container, don't try
     // to override it
-    if (!rootNode.contains(document.activeElement)) {
+    if (focusOnMount && !rootNode.contains(document.activeElement)) {
       const tabbableElements = tabbable(rootNode);
       const firstTabbableElement = tabbableElements[0];
-      if (firstTabbableElement != null) {
+      if (firstTabbableElement instanceof HTMLElement) {
         firstTabbableElement.focus();
       }
     }
@@ -228,7 +231,7 @@ function eachTabIndexedElement(
       // $FlowFixMe(>=0.68.0) Flow suppress (T27187857)
       element.disabled === true ||
       element.tabIndex == null ||
-      element.tabIndex === -1
+      element.tabIndex < 0
     ) {
       continue;
     }
@@ -239,18 +242,7 @@ function eachTabIndexedElement(
 }
 
 function getFocusedElement(): ?Element {
-  // Some inputs have a hidden-input with tabindex = -1 that gets focused, so
-  // activeElement is actually not what we want. In these cases, we must find
-  // the parent tag that has the actual tabindex to use. An example is the
-  // atom-text-editor.
-  let currentElement = document.activeElement;
-  if (currentElement && currentElement.classList.contains('hidden-input')) {
-    currentElement = findParentElement(
-      currentElement.parentElement,
-      element => element instanceof HTMLElement && element.tabIndex >= 0,
-    );
-  }
-  return currentElement;
+  return document.activeElement;
 }
 
 /**

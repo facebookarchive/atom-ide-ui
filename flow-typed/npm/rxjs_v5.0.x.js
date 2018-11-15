@@ -472,23 +472,14 @@ declare class rxjs$Observable<+T> {
   first(
     predicate?: (value: T, index: number, source: rxjs$Observable<T>) => boolean
   ): rxjs$Observable<T>;
-  first<U>(
+  first<T>(
     predicate: ?(
       value: T,
       index: number,
       source: rxjs$Observable<T>
     ) => boolean,
-    resultSelector: (value: T, index: number) => U
-  ): rxjs$Observable<U>;
-  first<U>(
-    predicate: ?(
-      value: T,
-      index: number,
-      source: rxjs$Observable<T>
-    ) => boolean,
-    resultSelector: ?(value: T, index: number) => U,
-    defaultValue: U
-  ): rxjs$Observable<U>;
+    defaultValue: T
+  ): rxjs$Observable<T>;
 
   groupBy<K>(
     keySelector: (value: T) => K,
@@ -698,6 +689,8 @@ declare class rxjs$Observable<+T> {
   scan<U>(f: (acc: U, value: T) => U, initialValue: U): rxjs$Observable<U>;
 
   share(): rxjs$Observable<T>;
+
+  shareReplay(bufferSize?: number, windowTime?: number, scheduler?: rxjs$SchedulerClass): rxjs$Observable<T>;
 
   skip(count: number): rxjs$Observable<T>;
 

@@ -13,15 +13,13 @@
 import type {AppState, DiagnosticMessage, Store} from '../types';
 import type MessageRangeTracker from '../MessageRangeTracker';
 
-import {
-  combineEpics,
-  createEpicMiddleware,
-} from 'nuclide-commons/redux-observable';
-import {arrayFlatten} from 'nuclide-commons/collection';
-import {diffSets} from 'nuclide-commons/observable';
+import {combineEpicsFromImports} from 'nuclide-commons/epicHelpers';
+import {createEpicMiddleware} from 'nuclide-commons/redux-observable';
+import {diffSets, throttle} from 'nuclide-commons/observable';
+import observableFromReduxStore from 'nuclide-commons/observableFromReduxStore';
+import * as Selectors from './Selectors';
 import * as Reducers from './Reducers';
 import * as Epics from './Epics';
-import {getLogger} from 'log4js';
 import {
   applyMiddleware,
   combineReducers,
@@ -29,36 +27,37 @@ import {
 } from 'redux';
 import {Observable} from 'rxjs';
 
+// Unlike text decorations, these don't need to be rapidly updated on screen as
+// the user types, though they need to be reasonably responsive once the user
+// accepts a fix and the diagnostic (hopefully) disappears as a result.
+const THROTTLE_MESSAGES_WITH_FIXES = 300;
+
 export default function createStore(
   messageRangeTracker: MessageRangeTracker,
   initialState: AppState = INITIAL_STATE,
 ): Store {
-  const epics = Object.keys(Epics)
-    .map(k => Epics[k])
-    .filter(epic => typeof epic === 'function');
   const rootEpic = (actions, store) =>
-    combineEpics(...epics)(actions, store, {messageRangeTracker})
-      // Log errors and continue.
-      .catch((err, stream) => {
-        getLogger('atom-ide-diagnostics').error(err);
-        return stream;
-      });
+    combineEpicsFromImports(Epics, 'atom-ide-diagnostics')(actions, store, {
+      messageRangeTracker,
+    });
   const store = _createStore(
     combineReducers(Reducers),
     initialState,
     applyMiddleware(createEpicMiddleware(rootEpic)),
   );
 
-  // When we get new messages, track them.
-  const allMessages = getFileMessages(store);
-  allMessages.let(diffSets()).subscribe(({added, removed}) => {
-    if (added.size > 0) {
-      messageRangeTracker.addFileMessages(added);
-    }
-    if (removed.size > 0) {
-      messageRangeTracker.removeFileMessages(removed);
-    }
-  });
+  // When we get new messages with fixes, track them.
+  // eslint-disable-next-line nuclide-internal/unused-subscription
+  observeAllMessagesWithFixes(store)
+    .let(diffSets())
+    .subscribe(({added, removed}) => {
+      if (added.size > 0) {
+        messageRangeTracker.addFileMessages(added);
+      }
+      if (removed.size > 0) {
+        messageRangeTracker.removeFileMessages(removed);
+      }
+    });
 
   return store;
 }
@@ -69,19 +68,22 @@ const INITIAL_STATE = {
   codeActionsForMessage: new Map(),
   descriptions: new Map(),
   providers: new Set(),
+  lastUpdateSource: 'Provider',
 };
 
-function getFileMessages(store: Store): Observable<Set<DiagnosticMessage>> {
-  // $FlowFixMe: Flow doesn't understand Symbol.observable.
-  const states: Observable<AppState> = Observable.from(store);
-  return states
-    .map(state => state.messages)
-    .distinctUntilChanged()
-    .map(messages => {
-      const pathsToFileMessages = [...messages.values()];
-      const allMessages = arrayFlatten(
-        pathsToFileMessages.map(map => arrayFlatten([...map.values()])),
-      );
-      return new Set(allMessages);
-    });
+function observeAllMessagesWithFixes(
+  store: Store,
+): Observable<Set<DiagnosticMessage>> {
+  return (
+    observableFromReduxStore(store)
+      .map(state => state.messages)
+      .distinctUntilChanged()
+      // The initial state of messages is an empty map which would otherwise
+      // immediately start a throttle cooldown. Filter these out eaglery
+      // before throttling as we're not interested in them anyway.
+      .filter(messages => messages.size > 0)
+      .let(throttle(THROTTLE_MESSAGES_WITH_FIXES))
+      .map(() => Selectors.getAllMessagesWithFixes(store.getState()))
+      .filter(messagesWithFixes => messagesWithFixes.size > 0)
+  );
 }

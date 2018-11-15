@@ -15,23 +15,18 @@ import type {DebuggerModeType, IDebugService} from '../types';
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import * as React from 'react';
-import TruncatedButton from 'nuclide-commons-ui/TruncatedButton';
 import {Observable} from 'rxjs';
 import DebuggerSteppingComponent from './DebuggerSteppingComponent';
 import {DebuggerMode} from '../constants';
 import DebuggerControllerView from './DebuggerControllerView';
-import {goToLocation} from 'nuclide-commons-atom/go-to-location';
-
-const DEVICE_PANEL_URL = 'atom://nuclide/devices';
+import {AddTargetButton} from './DebuggerAddTargetButton';
 
 type Props = {
   service: IDebugService,
-  passesMultiGK: boolean,
 };
 
 type State = {
   mode: DebuggerModeType,
-  hasDevicePanelService: boolean,
 };
 
 export default class DebuggerControlsView extends React.PureComponent<
@@ -46,7 +41,6 @@ export default class DebuggerControlsView extends React.PureComponent<
     this._disposables = new UniversalDisposable();
     this.state = {
       mode: DebuggerMode.STOPPED,
-      hasDevicePanelService: false,
     };
   }
 
@@ -72,11 +66,6 @@ export default class DebuggerControlsView extends React.PureComponent<
                 : focusedProcess.debuggerMode,
           });
         }),
-      atom.packages.serviceHub.consume('nuclide.devices', '0.0.0', provider =>
-        this.setState({
-          hasDevicePanelService: true,
-        }),
-      ),
     );
   }
 
@@ -89,60 +78,32 @@ export default class DebuggerControlsView extends React.PureComponent<
   }
 
   render(): React.Node {
-    const {service, passesMultiGK} = this.props;
+    const {service} = this.props;
     const {mode} = this.state;
     const debuggerStoppedNotice =
       mode !== DebuggerMode.STOPPED ? null : (
         <div className="debugger-pane-content">
           <div className="debugger-state-notice">
-            <span>The debugger is not attached.</span>
+            The debugger is not attached.
+          </div>
+          <div className="debugger-state-notice">
+            {AddTargetButton('debugger-buttongroup-center')}
           </div>
         </div>
       );
 
+    const running = mode === DebuggerMode.RUNNING;
+    const paused = mode === DebuggerMode.PAUSED;
     const debuggerRunningNotice =
-      mode !== DebuggerMode.RUNNING ? null : (
+      !running && !paused ? null : (
         <div className="debugger-pane-content">
           <div className="debugger-state-notice">
             {(service.viewModel.focusedProcess == null ||
             service.viewModel.focusedProcess.configuration.processName == null
               ? 'The debug target'
               : service.viewModel.focusedProcess.configuration.processName) +
-              ' is currently running.'}
+              ` is ${running ? 'running' : 'paused'}.`}
           </div>
-        </div>
-      );
-
-    const debuggerNotice =
-      mode !== DebuggerMode.STOPPED && !passesMultiGK ? null : (
-        <div className="padded">
-          <TruncatedButton
-            onClick={() =>
-              atom.commands.dispatch(
-                atom.views.getView(atom.workspace),
-                'debugger:show-attach-dialog',
-              )
-            }
-            icon="nuclicon-debugger"
-            label="Attach debugger..."
-          />
-          <TruncatedButton
-            onClick={() =>
-              atom.commands.dispatch(
-                atom.views.getView(atom.workspace),
-                'debugger:show-launch-dialog',
-              )
-            }
-            icon="nuclicon-debugger"
-            label="Launch debugger..."
-          />
-          {this.state.hasDevicePanelService ? (
-            <TruncatedButton
-              onClick={() => goToLocation(DEVICE_PANEL_URL)}
-              icon="device-mobile"
-              label="Manage devices..."
-            />
-          ) : null}
         </div>
       );
 
@@ -156,7 +117,6 @@ export default class DebuggerControlsView extends React.PureComponent<
         </div>
         {debuggerRunningNotice}
         {debuggerStoppedNotice}
-        {debuggerNotice}
       </div>
     );
   }

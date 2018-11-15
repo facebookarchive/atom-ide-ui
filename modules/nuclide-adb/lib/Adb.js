@@ -11,7 +11,10 @@
  */
 
 import type {AndroidJavaProcess, SimpleProcess, AdbDevice} from './types';
-import type {LegacyProcessMessage} from 'nuclide-commons/process';
+import type {
+  LegacyProcessMessage,
+  ProcessMessage,
+} from 'nuclide-commons/process';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import invariant from 'assert';
@@ -148,23 +151,32 @@ export class Adb {
     return this.getAndroidProp('ro.build.version.release');
   }
 
-  installPackage(packagePath: NuclideUri): Observable<LegacyProcessMessage> {
-    // TODO(T17463635)
+  installPackage(packagePath: NuclideUri): Observable<ProcessMessage> {
     invariant(!nuclideUri.isRemote(packagePath));
-    // The -d option allows downgrades, which happen frequently during development.
-    return this.getAPIVersion()
-      .map(version => parseInt(version, 10) >= 17)
-      .catch(() => Observable.of(false))
-      .switchMap(canUseDowngradeOption =>
-        this.runLongCommand(
-          ...[
-            'install',
-            '-r',
-            ...(canUseDowngradeOption ? ['-d'] : []),
-            packagePath,
-          ],
-        ),
-      );
+    return (
+      this.getAPIVersion()
+        .map(version => parseInt(version, 10) >= 17)
+        .catch(() => Observable.of(false))
+        .switchMap(canUseDowngradeOption =>
+          this.runLongCommandNew(
+            ...[
+              'install',
+              '-r',
+              // The -d option allows downgrades, which happen frequently during development.
+              ...(canUseDowngradeOption ? ['-d'] : []),
+              packagePath,
+            ],
+          ),
+        )
+        // adb install sends a lot of identical progress events to stdout, deduplicate them
+        .distinctUntilChanged((a, b) => {
+          if (a.kind === 'stdout' && b.kind === 'stdout') {
+            return a.data === b.data;
+          } else {
+            return false;
+          }
+        })
+    );
   }
 
   uninstallPackage(packageName: string): Observable<LegacyProcessMessage> {
@@ -332,7 +344,7 @@ export class Adb {
 
   getJavaProcesses(): Observable<Array<AndroidJavaProcess>> {
     const jdwpProcesses = new Set();
-    return this.runShortCommand('shell', 'ps')
+    return this.runPsCommand()
       .map(stdout => {
         const psOutput = stdout.trim();
         return parsePsTableOutput(psOutput, ['user', 'pid', 'name']);
@@ -376,12 +388,25 @@ export class Adb {
   }
 
   getProcesses(): Observable<Array<SimpleProcess>> {
-    return this.runShortCommand('shell', 'ps').map(stdout =>
+    return this.runPsCommand().map(stdout =>
       stdout.split(/\n/).map(line => {
         const info = line.trim().split(/\s+/);
         return {user: info[0], pid: info[1], name: info[info.length - 1]};
       }),
     );
+  }
+
+  runPsCommand(...additionalCommands: string[]): Observable<string> {
+    return this.getAPIVersion().switchMap(apiVersion => {
+      let commands = ['shell', 'ps'];
+      // Starting with Android 8.0 Oreo (API 26) ps only returns all processes
+      // with -A
+      if (parseInt(apiVersion, 10) >= 26) {
+        commands.push('-A');
+      }
+      commands = commands.concat(additionalCommands);
+      return this.runShortCommand(...commands);
+    });
   }
 
   runShortCommand(...command: string[]): Observable<string> {
@@ -394,6 +419,12 @@ export class Adb {
       killTreeWhenDone: true,
       /* TODO(T17353599) */ isExitError: () => false,
     }).catch(error => Observable.of({kind: 'error', error})); // TODO(T17463635)
+  }
+
+  runLongCommandNew(...command: string[]): Observable<ProcessMessage> {
+    return observeProcess('adb', this.getDeviceArgs().concat(command), {
+      killTreeWhenDone: true,
+    });
   }
 
   static _parseDevicesCommandOutput(stdout: string): Array<AdbDevice> {

@@ -15,14 +15,94 @@ import type {
   DiagnosticMessage,
   DiagnosticMessages,
   DiagnosticMessageKind,
+  ObservableDiagnosticProvider,
   UiConfig,
 } from '../types';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 
 import {createSelector} from 'reselect';
+import {DefaultMap, takeIterable} from 'nuclide-commons/collection';
+import {minBy} from 'lodash';
+
+const MAX_MESSAGE_COUNT_PER_FILE = 1000;
 
 const getMessagesState = state => state.messages;
 const getProviders = state => state.providers;
+
+// $FlowFixMe (>=0.85.0) (T35986896) Flow upgrade suppress
+export const getProviderToMessagesForFile = createSelector(
+  [getMessagesState],
+  messages => (filePath: string) => {
+    const providerToMessages = new Map();
+    for (const [provider, providerMessages] of messages) {
+      const fileMessages = providerMessages.get(filePath);
+      if (fileMessages != null && fileMessages.length > 0) {
+        providerToMessages.set(provider, fileMessages);
+      }
+    }
+    return providerToMessages;
+  },
+);
+
+function* getThreadedFileMessages(
+  state: AppState,
+  filePath: NuclideUri,
+): Iterable<DiagnosticMessage> {
+  const providerToMessages = getProviderToMessagesForFile(state)(filePath);
+  const providerToCurrentIndex: DefaultMap<
+    ObservableDiagnosticProvider,
+    number,
+  > = new DefaultMap(() => 0);
+
+  while (providerToMessages.size) {
+    // "Peek" at the next message from each provider, and store them so we can
+    // select the best next one.
+    const nextMessageCandidates: Array<
+      [ObservableDiagnosticProvider, DiagnosticMessage],
+    > = Array.from(providerToMessages.entries()).map(([provider, messages]) => [
+      provider,
+      messages[providerToCurrentIndex.get(provider)],
+    ]);
+
+    // Pick the "closest" (lowest row and column pair) of the options we generated
+    const [closestProvider, closestMessage] = minBy(
+      nextMessageCandidates,
+      ([provider, message]) => {
+        const range = message && message.range;
+        return range
+          ? range.start.row + range.start.column / Number.MAX_SAFE_INTEGER
+          : 0;
+      },
+    );
+
+    // Advance this provider's index forward one. First, get "i"
+    const closestProviderIndex = providerToCurrentIndex.get(closestProvider);
+    const closestProviderMessages = providerToMessages.get(closestProvider);
+    if (
+      closestProviderMessages != null &&
+      closestProviderIndex < closestProviderMessages.length - 1
+    ) {
+      // "i++"
+      providerToCurrentIndex.set(closestProvider, closestProviderIndex + 1);
+    } else {
+      // We've exhausted the messages for this provider. Remove it from future
+      // consideration.
+      providerToMessages.delete(closestProvider);
+    }
+
+    yield closestMessage;
+  }
+}
+
+export function* getBoundedThreadedFileMessages(
+  state: AppState,
+  filePath: NuclideUri,
+): Iterable<DiagnosticMessage> {
+  yield* takeIterable(
+    getThreadedFileMessages(state, filePath),
+    MAX_MESSAGE_COUNT_PER_FILE,
+  );
+}
 
 /**
  * Gets the current diagnostic messages for the file.
@@ -32,15 +112,7 @@ export function getFileMessages(
   state: AppState,
   filePath: NuclideUri,
 ): Array<DiagnosticMessage> {
-  const messages = [];
-  for (const providerMessages of state.messages.values()) {
-    const messagesForFile = providerMessages.get(filePath);
-    if (messagesForFile == null) {
-      continue;
-    }
-    messages.push(...messagesForFile);
-  }
-  return messages;
+  return Array.from(getThreadedFileMessages(state, filePath));
 }
 
 export function getFileMessageUpdates(
@@ -49,7 +121,11 @@ export function getFileMessageUpdates(
 ): DiagnosticMessages {
   return {
     filePath,
-    messages: getFileMessages(state, filePath),
+    // Excessive numbers of items cause performance issues in the gutter, table, and decorations.
+    // Truncate the number of items MAX_MESSAGE_COUNT_PER_FILE.
+    messages: Array.from(getBoundedThreadedFileMessages(state, filePath)),
+    // Include the total number of messages without truncation
+    totalMessages: getFileMessageCount(state, filePath),
   };
 }
 
@@ -57,6 +133,7 @@ export function getFileMessageUpdates(
  * Gets all current diagnostic messages.
  * Prefer to get updates via ::onAllMessagesDidUpdate.
  */
+// $FlowFixMe (>=0.85.0) (T35986896) Flow upgrade suppress
 export const getMessages = createSelector(
   [getMessagesState],
   (messagesState): Array<DiagnosticMessage> => {
@@ -73,6 +150,26 @@ export const getMessages = createSelector(
   },
 );
 
+// $FlowFixMe (>=0.85.0) (T35986896) Flow upgrade suppress
+export const getAllMessagesWithFixes = createSelector(
+  [getMessagesState],
+  (messagesState): Set<DiagnosticMessage> => {
+    // Intentionally does not use the `getMessages` selector so this is O(n*m*p)
+    // rather than O(2n*m*p) and to avoid turning the array into a set
+    const withFixes = new Set();
+    for (const providerMessageMap of messagesState.values()) {
+      for (const providerMessages of providerMessageMap.values()) {
+        for (let i = 0; i < providerMessages.length; i++) {
+          if (providerMessages[i].fix != null) {
+            withFixes.add(providerMessages[i]);
+          }
+        }
+      }
+    }
+    return withFixes;
+  },
+);
+// $FlowFixMe (>=0.85.0) (T35986896) Flow upgrade suppress
 export const getSupportedMessageKinds = createSelector(
   [getProviders],
   (providers): Set<DiagnosticMessageKind> => {
@@ -88,6 +185,7 @@ export const getSupportedMessageKinds = createSelector(
   },
 );
 
+// $FlowFixMe (>=0.85.0) (T35986896) Flow upgrade suppress
 export const getUiConfig = createSelector(
   [getProviders],
   (providers): UiConfig => {
@@ -107,3 +205,15 @@ export const getUiConfig = createSelector(
     return config;
   },
 );
+
+function getFileMessageCount(state: AppState, filePath: NuclideUri): number {
+  let messageCount = 0;
+  for (const providerMessages of state.messages.values()) {
+    const messagesForFile = providerMessages.get(filePath);
+    if (messagesForFile == null) {
+      continue;
+    }
+    messageCount += messagesForFile.length;
+  }
+  return messageCount;
+}

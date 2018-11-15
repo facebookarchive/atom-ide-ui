@@ -44,7 +44,7 @@ export type RangeCodeFormatProvider = {|
     range: atom$Range,
   ) => Promise<Array<TextEdit>>,
   priority: number,
-  grammarScopes: Array<string>,
+  +grammarScopes?: Array<string>,
 |};
 
 /**
@@ -55,12 +55,12 @@ export type FileCodeFormatProvider = {|
   formatEntireFile: (
     editor: atom$TextEditor,
     range: atom$Range,
-  ) => Promise<{
+  ) => Promise<?{
     newCursor?: number,
     formatted: string,
   }>,
   priority: number,
-  grammarScopes: Array<string>,
+  +grammarScopes?: Array<string>,
 |};
 
 /**
@@ -77,7 +77,7 @@ export type OnTypeCodeFormatProvider = {|
     triggerCharacter: string,
   ) => Promise<Array<TextEdit>>,
   priority: number,
-  grammarScopes: Array<string>,
+  +grammarScopes?: Array<string>,
   keepCursorPosition: boolean,
 |};
 
@@ -87,7 +87,7 @@ export type OnTypeCodeFormatProvider = {|
 export type OnSaveCodeFormatProvider = {|
   formatOnSave: (editor: atom$TextEditor) => Promise<Array<TextEdit>>,
   priority: number,
-  grammarScopes: Array<string>,
+  +grammarScopes?: Array<string>,
 |};
 
 export type CodeFormatProvider =

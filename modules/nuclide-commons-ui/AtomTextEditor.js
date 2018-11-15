@@ -19,6 +19,8 @@ import {
   enforceSoftWrap,
 } from 'nuclide-commons-atom/text-editor';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
+import {Observable} from 'rxjs';
+import atomTabIndexForwarder from './atomTabIndexForwarder';
 
 const doNothing = () => {};
 
@@ -63,11 +65,6 @@ function setupTextEditor(props: Props): TextEditorSetup {
 
   if (props.readOnly) {
     enforceReadOnlyEditor(textEditor);
-
-    // Remove the cursor line decorations because that's distracting in read-only mode.
-    textEditor.getDecorations({class: 'cursor-line'}).forEach(decoration => {
-      decoration.destroy();
-    });
   }
   return {
     disposables,
@@ -150,6 +147,23 @@ export class AtomTextEditor extends React.Component<Props, void> {
     const textEditorElement: atom$TextEditorElement = (this._textEditorElement = (document.createElement(
       'atom-text-editor',
     ): any));
+
+    textEditorElement.classList.add('nuclide-wrapped-editor');
+
+    if (parseInt(this.props.tabIndex, 10) >= 0) {
+      // Make tab move to next element instead of inserting a 'tab' character
+      this._editorDisposables.add(
+        // Make AtomTextEditor properly shift-tabbable
+        atomTabIndexForwarder(textEditorElement),
+        // Make 'Tab' change focus instead of inserting tab character
+        Observable.fromEvent(textEditorElement, 'keydown').subscribe(event => {
+          if (event.key === 'Tab') {
+            event.stopPropagation();
+          }
+        }),
+      );
+    }
+
     textEditorElement.setModel(textEditor);
     textEditorElement.setAttribute('tabindex', this.props.tabIndex);
     // HACK! This is a workaround for the ViewRegistry where Atom has a default view provider for
@@ -194,44 +208,44 @@ export class AtomTextEditor extends React.Component<Props, void> {
     }
   }
 
-  componentDidUpdate(prevProps: Props): void {
+  UNSAFE_componentWillReceiveProps(nextProps: Props): void {
     if (
-      this.props.textBuffer !== prevProps.textBuffer ||
-      this.props.readOnly !== prevProps.readOnly
+      nextProps.textBuffer !== this.props.textBuffer ||
+      nextProps.readOnly !== this.props.readOnly
     ) {
       const previousTextContents = this.getTextBuffer().getText();
       const nextTextContents =
-        this.props.textBuffer == null
-          ? this.props.textBuffer
-          : this.props.textBuffer.getText();
+        nextProps.textBuffer == null
+          ? nextProps.textBuffer
+          : nextProps.textBuffer.getText();
       if (nextTextContents !== previousTextContents) {
-        const textEditorSetup = setupTextEditor(this.props);
+        const textEditorSetup = setupTextEditor(nextProps);
 
-        if (this.props.syncTextContents) {
+        if (nextProps.syncTextContents) {
           textEditorSetup.textEditor.setText(previousTextContents);
         }
         this._updateTextEditor(textEditorSetup);
-        this._onDidUpdateTextEditorElement(this.props);
+        this._onDidUpdateTextEditorElement(nextProps);
       }
     }
-    if (this.props.path !== prevProps.path) {
+    if (nextProps.path !== this.props.path) {
       // $FlowIgnore
-      this.getTextBuffer().setPath(this.props.path || '');
+      this.getTextBuffer().setPath(nextProps.path || '');
     }
-    if (this.props.gutterHidden !== prevProps.gutterHidden) {
-      this.getModel().setLineNumberGutterVisible(this.props.gutterHidden);
+    if (nextProps.gutterHidden !== this.props.gutterHidden) {
+      this.getModel().setLineNumberGutterVisible(nextProps.gutterHidden);
     }
-    if (this.props.grammar !== prevProps.grammar) {
-      this.getModel().setGrammar(this.props.grammar);
+    if (nextProps.grammar !== this.props.grammar) {
+      this.getModel().setGrammar(nextProps.grammar);
     }
-    if (this.props.softWrapped !== prevProps.softWrapped) {
-      this.getModel().setSoftWrapped(this.props.softWrapped);
+    if (nextProps.softWrapped !== this.props.softWrapped) {
+      this.getModel().setSoftWrapped(nextProps.softWrapped);
     }
-    if (this.props.disabled !== prevProps.disabled) {
-      this._updateDisabledState(this.props.disabled);
+    if (nextProps.disabled !== this.props.disabled) {
+      this._updateDisabledState(nextProps.disabled);
     }
-    if (this.props.placeholderText !== prevProps.placeholderText) {
-      this.getModel().setPlaceholderText(this.props.placeholderText || '');
+    if (nextProps.placeholderText !== this.props.placeholderText) {
+      this.getModel().setPlaceholderText(nextProps.placeholderText || '');
       this.getModel().scheduleComponentUpdate();
     }
   }

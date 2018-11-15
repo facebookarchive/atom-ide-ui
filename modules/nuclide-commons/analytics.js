@@ -12,9 +12,15 @@
 
 import type {Observable} from 'rxjs';
 
+import getDisplayName from './getDisplayName';
 import UniversalDisposable from './UniversalDisposable';
 import {isPromise} from './promise';
 import performanceNow from './performanceNow';
+
+export type SessionInfo = {
+  id: string,
+  start: number,
+};
 
 export type RawAnalyticsService = {
   track(
@@ -23,11 +29,13 @@ export type RawAnalyticsService = {
     immediate?: boolean,
   ): ?Promise<mixed>,
   isTrackSupported: () => boolean,
+  setApplicationSessionObservable: (Observable<SessionInfo>) => void,
 };
 
 let rawAnalyticsService: RawAnalyticsService = {
   track(): ?Promise<mixed> {},
   isTrackSupported: () => false,
+  setApplicationSessionObservable: (ob: Observable<SessionInfo>) => {},
 };
 
 export type TrackingEvent = {
@@ -128,11 +136,15 @@ export class TimingTracker {
     this._trackTimingEvent(error);
   }
 
+  onCancel(): void {
+    this._trackTimingEvent(/* error */ null, true);
+  }
+
   onSuccess(): void {
     this._trackTimingEvent(/* error */ null);
   }
 
-  _trackTimingEvent(exception: ?Error): void {
+  _trackTimingEvent(exception: ?Error, canceled: boolean = false): void {
     if (canMeasure) {
       /* eslint-disable no-undef */
       // call measure to add this information to the devtools timeline in the
@@ -151,6 +163,7 @@ export class TimingTracker {
       eventName: this._eventName,
       error: exception ? '1' : '0',
       exception: exception ? exception.toString() : '',
+      canceled,
     });
   }
 }
@@ -206,6 +219,18 @@ export function trackTiming<T>(
   }
 }
 
+export function decorateTrackTiming<U: Array<*>, T>(
+  fn: (...args: U) => T,
+  values?: {[key: string]: any} = {},
+): (...args: U) => T {
+  const name = getDisplayName(fn);
+  function decoratedTrackTiming(...args: U) {
+    return trackTiming(name, fn.bind(this, ...args), values);
+  }
+  decoratedTrackTiming.displayName = `trackTiming(${name})`;
+  return decoratedTrackTiming;
+}
+
 /**
  * A sampled version of trackTiming that only tracks every 1/sampleRate calls.
  */
@@ -224,9 +249,24 @@ export function trackTimingSampled<T>(
   return operation();
 }
 
+export function decorateTrackTimingSampled<U: Array<*>, T>(
+  fn: (...args: U) => T,
+  sampleRate: number,
+  values?: {[key: string]: any} = {},
+): (...args: U) => T {
+  const name = getDisplayName(fn);
+  function decoratedTrackTimingSampled(...args: U) {
+    return trackTimingSampled(name, fn.bind(this, ...args), sampleRate, values);
+  }
+  decoratedTrackTimingSampled.displayName = `trackTimingSampled(${name})`;
+  return decoratedTrackTimingSampled;
+}
+
 export function setRawAnalyticsService(
   analyticsService: RawAnalyticsService,
+  ob: Observable<SessionInfo>,
 ): void {
+  analyticsService.setApplicationSessionObservable(ob);
   rawAnalyticsService = analyticsService;
 }
 
@@ -238,4 +278,6 @@ export default {
   trackTimingSampled,
   startTracking,
   TimingTracker,
+  decorateTrackTiming,
+  decorateTrackTimingSampled,
 };

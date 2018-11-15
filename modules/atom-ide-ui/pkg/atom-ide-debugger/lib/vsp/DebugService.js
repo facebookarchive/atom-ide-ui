@@ -40,9 +40,11 @@ SOFTWARE.
 */
 
 import type {ConsoleMessage} from 'atom-ide-ui';
-import type {GatekeeperService} from 'nuclide-commons-atom/types';
-import type {RecordToken} from '../../../atom-ide-console/lib/types';
-import type {TerminalInfo} from '../../../atom-ide-terminal/lib/types';
+import type {RecordToken, Level} from '../../../atom-ide-console/lib/types';
+import type {
+  TerminalInfo,
+  TerminalInstance,
+} from '../../../atom-ide-terminal/lib/types';
 import type {
   DebuggerModeType,
   IDebugService,
@@ -52,7 +54,7 @@ import type {
   IThread,
   IEnableable,
   IEvaluatableExpression,
-  IRawBreakpoint,
+  IUIBreakpoint,
   IStackFrame,
   SerializedState,
 } from '../types';
@@ -61,7 +63,6 @@ import type {
   MessageProcessor,
   VSAdapterExecutableInfo,
 } from 'nuclide-debugger-common';
-import type {EvaluationResult} from 'nuclide-commons-ui/TextRenderer';
 import type {TimingTracker} from 'nuclide-commons/analytics';
 import * as DebugProtocol from 'vscode-debugprotocol';
 import * as React from 'react';
@@ -102,6 +103,7 @@ import {
   Breakpoint,
   Expression,
   Process,
+  ExpressionContainer,
 } from './DebuggerModel';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {Emitter, TextBuffer} from 'atom';
@@ -132,8 +134,6 @@ const CHANGE_EXPRESSION_CONTEXT = 'CHANGE_EXPRESSION_CONTEXT';
 
 // Berakpoint events may arrive sooner than breakpoint responses.
 const MAX_BREAKPOINT_EVENT_DELAY_MS = 5 * 1000;
-
-let _gkService: ?GatekeeperService;
 
 class ViewModel implements IViewModel {
   _focusedProcess: ?IProcess;
@@ -247,6 +247,10 @@ class ViewModel implements IViewModel {
     }
   }
 
+  evaluateContextChanged(): void {
+    this._emitter.emit(CHANGE_EXPRESSION_CONTEXT, {explicit: true});
+  }
+
   setFocusedProcess(process: ?IProcess, explicit: boolean) {
     if (process == null) {
       this._focusedProcess = null;
@@ -293,11 +297,12 @@ export default class DebugService implements IDebugService {
   _model: Model;
   _disposables: UniversalDisposable;
   _sessionEndDisposables: UniversalDisposable;
-  _consoleDisposables: IDisposable;
+  _consoleDisposables: UniversalDisposable;
   _emitter: Emitter;
   _viewModel: ViewModel;
   _timer: ?TimingTracker;
   _breakpointsToSendOnSave: Set<string>;
+  _consoleOutput: Subject<ConsoleMessage>;
 
   constructor(state: ?SerializedState) {
     this._disposables = new UniversalDisposable();
@@ -306,6 +311,7 @@ export default class DebugService implements IDebugService {
     this._emitter = new Emitter();
     this._viewModel = new ViewModel();
     this._breakpointsToSendOnSave = new Set();
+    this._consoleOutput = new Subject();
 
     this._model = new Model(
       this._loadBreakpoints(state),
@@ -313,8 +319,9 @@ export default class DebugService implements IDebugService {
       this._loadFunctionBreakpoints(state),
       this._loadExceptionBreakpoints(state),
       this._loadWatchExpressions(state),
+      () => this._viewModel.focusedProcess,
     );
-    this._disposables.add(this._model);
+    this._disposables.add(this._model, this._consoleOutput);
     this._registerListeners();
   }
 
@@ -480,9 +487,12 @@ export default class DebugService implements IDebugService {
           return Observable.fromPromise(stackFrame.openInEditor()).switchMap(
             editor => {
               if (editor == null) {
-                atom.notifications.addError(
-                  'Failed to open source file for stack frame!',
-                );
+                const uri = stackFrame.source.uri;
+                const errorMsg =
+                  uri == null || uri === ''
+                    ? 'The selected stack frame has no known source location'
+                    : `Nuclide could not open ${uri}`;
+                atom.notifications.addError(errorMsg);
                 return Observable.empty();
               }
               return Observable.of({editor, explicit, stackFrame});
@@ -508,6 +518,7 @@ export default class DebugService implements IDebugService {
           }
 
           this._model.setExceptionBreakpoints(
+            process,
             stackFrame.thread.process.session.capabilities
               .exceptionBreakpointFilters || [],
           );
@@ -661,6 +672,9 @@ export default class DebugService implements IDebugService {
       session.observeStopEvents().subscribe(() => {
         this._onDebuggerModeChanged(process, DebuggerMode.PAUSED);
       }),
+      session.observeEvaluations().subscribe(() => {
+        this._viewModel.evaluateContextChanged();
+      }),
       session
         .observeStopEvents()
         .flatMap(event =>
@@ -778,6 +792,31 @@ export default class DebugService implements IDebugService {
       }),
     );
 
+    const outputEvents = session
+      .observeOutputEvents()
+      .filter(
+        event => event.body != null && typeof event.body.output === 'string',
+      )
+      .share();
+
+    const notificationStream = outputEvents
+      .filter(e => e.body.category === 'nuclide_notification')
+      .map(e => ({
+        type: nullthrows(e.body.data).type,
+        message: e.body.output,
+      }));
+    const nuclideTrackStream = outputEvents.filter(
+      e => e.body.category === 'nuclide_track',
+    );
+    this._sessionEndDisposables.add(
+      notificationStream.subscribe(({type, message}) => {
+        atom.notifications.add(type, message);
+      }),
+      nuclideTrackStream.subscribe(e => {
+        track(e.body.output, e.body.data || {});
+      }),
+    );
+
     const createConsole = getConsoleService();
     if (createConsole != null) {
       const name = getDebuggerName(process.configuration.adapterType);
@@ -786,77 +825,84 @@ export default class DebugService implements IDebugService {
         name,
       });
       this._sessionEndDisposables.add(consoleApi);
-      const outputEvents = session
-        .observeOutputEvents()
-        .filter(
-          event => event.body != null && typeof event.body.output === 'string',
-        )
-        .share();
-      const KNOWN_CATEGORIES = new Set([
-        'stderr',
-        'console',
+      const CATEGORIES_MAP = new Map([
+        ['stderr', 'error'],
+        ['console', 'warning'],
+        ['success', 'success'],
+      ]);
+      const IGNORED_CATEGORIES = new Set([
         'telemetry',
-        'success',
+        'nuclide_notification',
+        'nuclide_track',
       ]);
       const logStream = outputEvents
-        .filter(e => !KNOWN_CATEGORIES.has(e.body.category))
-        .map(e => stripAnsi(e.body.output));
-      const [errorStream, warningsStream, successStream] = [
-        'stderr',
-        'console',
-        'success',
-      ].map(category =>
-        outputEvents
-          .filter(e => category === e.body.category)
-          .map(e => stripAnsi(e.body.output)),
-      );
-      const notificationStream = outputEvents
-        .filter(e => e.body.category === 'nuclide_notification')
+        .filter(e => e.body.variablesReference == null)
+        .filter(e => !IGNORED_CATEGORIES.has(e.body.category))
         .map(e => ({
-          type: nullthrows(e.body.data).type,
-          message: e.body.output,
+          text: stripAnsi(e.body.output),
+          level: CATEGORIES_MAP.get(e.body.category) || 'log',
+        }))
+        .filter(e => e.level != null);
+      const objectStream = outputEvents
+        .filter(e => e.body.variablesReference != null)
+        .map(e => ({
+          category: e.body.category,
+          variablesReference: nullthrows(e.body.variablesReference),
         }));
 
       let lastEntryToken: ?RecordToken = null;
-      const shouldUpdateLastEntry = level => {
-        return (
-          lastEntryToken != null &&
-          lastEntryToken.getCurrentLevel() === level &&
-          !lastEntryToken.getCurrentText().endsWith('\n')
-        );
-      };
       const handleMessage = (line, level) => {
-        const incomplete = !line.endsWith('\n');
-        let newToken;
-        if (!incomplete) {
-          newToken = consoleApi.append({text: line, level, incomplete: false});
-          invariant(newToken == null);
+        const complete = line.endsWith('\n');
+        const sameLevel =
+          lastEntryToken != null && lastEntryToken.getCurrentLevel() === level;
+        if (sameLevel) {
+          lastEntryToken = nullthrows(lastEntryToken).appendText(line);
+          if (complete) {
+            lastEntryToken.setComplete();
+            lastEntryToken = null;
+          }
         } else {
-          newToken =
-            lastEntryToken != null && shouldUpdateLastEntry(level)
-              ? lastEntryToken.appendText(line)
-              : consoleApi.append({text: line, level, incomplete});
-        }
-
-        if (newToken !== lastEntryToken) {
           if (lastEntryToken != null) {
             lastEntryToken.setComplete();
           }
-          lastEntryToken = newToken;
+          lastEntryToken = consoleApi.append({
+            text: line,
+            level,
+            incomplete: !complete,
+          });
         }
       };
       this._sessionEndDisposables.add(
-        () => {
-          lastEntryToken = null;
-        },
-        errorStream.subscribe(line => handleMessage(line, 'error')),
-        warningsStream.subscribe(line => handleMessage(line, 'warning')),
-        successStream.subscribe(line => handleMessage(line, 'success')),
-        logStream.subscribe(line => handleMessage(line, 'log')),
+        logStream.subscribe(e => handleMessage(e.text, e.level)),
         notificationStream.subscribe(({type, message}) => {
           atom.notifications.add(type, message);
         }),
-        // TODO handle non string output (e.g. files & objects)
+        objectStream.subscribe(({category, variablesReference}) => {
+          const level = CATEGORIES_MAP.get(category) || 'log';
+          const container = new ExpressionContainer(
+            this._viewModel.focusedProcess,
+            variablesReference,
+            uuid.v4(),
+          );
+          container.getChildren().then(children => {
+            const result = {
+              type: 'objects',
+              objects: children.map(variable => ({
+                description: variable.getValue(),
+                type: variable.type,
+                expression: variable,
+              })),
+            };
+            this._consoleOutput.next({text: 'object', data: result, level});
+          });
+        }),
+        () => {
+          if (lastEntryToken != null) {
+            lastEntryToken.setComplete();
+          }
+          lastEntryToken = null;
+        },
+        // TODO handle non string output (e.g. files)
       );
     }
 
@@ -921,23 +967,21 @@ export default class DebugService implements IDebugService {
         .subscribe(
           ({reason, breakpoint, sourceBreakpoint, functionBreakpoint}) => {
             if (reason === BreakpointEventReasons.NEW && breakpoint.source) {
+              // The debug adapter is adding a new (unexpected) breakpoint to the UI.
+              // TODO: Consider adding this to the current process only.
               const source = process.getSource(breakpoint.source);
-              const bps = this._model.addBreakpoints(
-                source.uri,
+              this._model.addUIBreakpoints(
                 [
                   {
                     column: breakpoint.column || 0,
                     enabled: true,
                     line: breakpoint.line == null ? -1 : breakpoint.line,
+                    uri: source.uri,
+                    id: uuid.v4(),
                   },
                 ],
                 false,
               );
-              if (bps.length === 1) {
-                this._model.updateBreakpoints({
-                  [bps[0].getId()]: breakpoint,
-                });
-              }
             } else if (reason === BreakpointEventReasons.REMOVED) {
               if (sourceBreakpoint != null) {
                 this._model.removeBreakpoints([sourceBreakpoint]);
@@ -952,7 +996,7 @@ export default class DebugService implements IDebugService {
                 if (!sourceBreakpoint.column) {
                   breakpoint.column = undefined;
                 }
-                this._model.updateBreakpoints({
+                this._model.updateProcessBreakpoints(process, {
                   [sourceBreakpoint.getId()]: breakpoint,
                 });
               }
@@ -1029,22 +1073,27 @@ export default class DebugService implements IDebugService {
     return this._emitter.on(CHANGE_DEBUG_MODE, callback);
   }
 
-  _loadBreakpoints(state: ?SerializedState): Breakpoint[] {
-    let result: Breakpoint[] = [];
+  _loadBreakpoints(state: ?SerializedState): IUIBreakpoint[] {
+    let result: IUIBreakpoint[] = [];
     if (state == null || state.sourceBreakpoints == null) {
       return result;
     }
     try {
       result = state.sourceBreakpoints.map(breakpoint => {
-        return new Breakpoint(
-          breakpoint.uri,
-          breakpoint.line,
-          breakpoint.column,
-          breakpoint.enabled,
-          breakpoint.condition,
-          breakpoint.hitCondition,
-          breakpoint.adapterData,
-        );
+        const bp: IUIBreakpoint = {
+          uri: breakpoint.uri,
+          line: breakpoint.originalLine,
+          column: breakpoint.column,
+          enabled: breakpoint.enabled,
+          id: uuid.v4(),
+        };
+        if (
+          breakpoint.condition != null &&
+          breakpoint.condition.trim() !== ''
+        ) {
+          bp.condition = breakpoint.condition;
+        }
+        return bp;
       });
     } catch (e) {}
 
@@ -1124,17 +1173,30 @@ export default class DebugService implements IDebugService {
     return this._sendAllBreakpoints();
   }
 
-  addBreakpoints(uri: string, rawBreakpoints: IRawBreakpoint[]): Promise<void> {
+  async addUIBreakpoints(uiBreakpoints: IUIBreakpoint[]): Promise<void> {
     track(AnalyticsEvents.DEBUGGER_BREAKPOINT_ADD);
-    this._model.addBreakpoints(uri, rawBreakpoints);
-    return this._sendBreakpoints(uri);
+    this._model.addUIBreakpoints(uiBreakpoints);
+
+    const uris = new Set();
+    for (const bp of uiBreakpoints) {
+      uris.add(bp.uri);
+    }
+
+    const promises = [];
+    for (const uri of uris) {
+      promises.push(this._sendBreakpoints(uri));
+    }
+
+    await Promise.all(promises);
   }
 
   addSourceBreakpoint(uri: string, line: number): Promise<void> {
     track(AnalyticsEvents.DEBUGGER_BREAKPOINT_SINGLE_ADD);
     const existing = this._model.getBreakpointAtLine(uri, line);
     if (existing == null) {
-      return this.addBreakpoints(uri, [{line}]);
+      return this.addUIBreakpoints([
+        {line, column: 0, enabled: true, id: uuid.v4(), uri},
+      ]);
     }
     return Promise.resolve(undefined);
   }
@@ -1143,18 +1205,21 @@ export default class DebugService implements IDebugService {
     track(AnalyticsEvents.DEBUGGER_BREAKPOINT_TOGGLE);
     const existing = this._model.getBreakpointAtLine(uri, line);
     if (existing == null) {
-      return this.addBreakpoints(uri, [{line}]);
+      return this.addUIBreakpoints([
+        {line, column: 0, enabled: true, id: uuid.v4(), uri},
+      ]);
     } else {
       return this.removeBreakpoints(existing.getId(), true);
     }
   }
 
-  updateBreakpoints(
-    uri: string,
-    data: {[id: string]: DebugProtocol.Breakpoint},
-  ) {
-    this._model.updateBreakpoints(data);
-    this._breakpointsToSendOnSave.add(uri);
+  updateBreakpoints(uiBreakpoints: IUIBreakpoint[]) {
+    this._model.updateBreakpoints(uiBreakpoints);
+
+    const urisToSend = new Set(uiBreakpoints.map(bp => bp.uri));
+    for (const uri of urisToSend) {
+      this._breakpointsToSendOnSave.add(uri);
+    }
   }
 
   async removeBreakpoints(
@@ -1230,7 +1295,9 @@ export default class DebugService implements IDebugService {
     }
     const existing = this._model.getBreakpointAtLine(uri, line);
     if (existing == null) {
-      await this.addBreakpoints(uri, [{line}]);
+      await this.addUIBreakpoints([
+        {line, column: 0, enabled: true, id: uuid.v4(), uri},
+      ]);
       const runToLocationBreakpoint = this._model.getBreakpointAtLine(
         uri,
         line,
@@ -1359,6 +1426,11 @@ export default class DebugService implements IDebugService {
           sessionId,
         );
 
+        // If this is the first process, register the console executor.
+        if (this._model.getProcesses().length === 0) {
+          this._registerConsoleExecutor();
+        }
+
         process = this._model.addProcess(config, newSession);
         this._viewModel.setFocusedProcess(process, false);
         this._onDebuggerModeChanged(process, DebuggerMode.STARTING);
@@ -1392,6 +1464,7 @@ export default class DebugService implements IDebugService {
         }
 
         this._model.setExceptionBreakpoints(
+          process,
           newSession.getCapabilities().exceptionBreakpointFilters || [],
         );
         return newSession;
@@ -1515,6 +1588,7 @@ export default class DebugService implements IDebugService {
       clientPreprocessors,
       adapterPreprocessors,
       this._runInTerminal,
+      Boolean(configuration.isReadOnly),
     );
   }
 
@@ -1585,7 +1659,8 @@ export default class DebugService implements IDebugService {
       icon: 'nuclicon-debugger',
       defaultLocation: 'bottom',
     };
-    const terminal = await terminalService.open(info);
+    const terminal: TerminalInstance = await terminalService.open(info);
+
     terminal.setProcessExitCallback(() => {
       // This callback is invoked if the target process dies first, ensuring
       // we tear down the debugger.
@@ -1599,6 +1674,9 @@ export default class DebugService implements IDebugService {
       terminal.setProcessExitCallback(() => {});
       terminal.terminateProcess();
     });
+
+    const spawn = observableFromSubscribeFunction(cb => terminal.onSpawn(cb));
+    return spawn.take(1).toPromise();
   };
 
   canRestartProcess(): boolean {
@@ -1623,59 +1701,24 @@ export default class DebugService implements IDebugService {
   async startDebugging(config: IProcessConfig): Promise<void> {
     this._timer = startTracking('debugger-atom:startDebugging');
 
-    const currentProcess = this._viewModel.focusedProcess;
-    if (currentProcess != null) {
-      // We currently support only running only one debug session at a time,
-      // so stop the current debug session.
-
-      if (_gkService != null) {
-        const passesMultiGK = await _gkService.passesGK(
-          'nuclide_multitarget_debugging',
-        );
-
-        if (!passesMultiGK && currentProcess != null) {
-          this.stopProcess(currentProcess);
-        }
-      } else {
-        this.stopProcess(currentProcess);
-      }
-    }
-
-    if (_gkService != null) {
-      _gkService
-        .passesGK('nuclide_processtree_debugging')
-        .then(passesProcessTree => {
-          if (passesProcessTree) {
-            track(AnalyticsEvents.DEBUGGER_TREE_OPENED);
-          }
-        });
-    }
-
     // Open the console window if it's not already opened.
     // eslint-disable-next-line nuclide-internal/atom-apis
     atom.workspace.open(CONSOLE_VIEW_URI, {searchAllPanes: true});
 
-    // If this is the first process, register the console executor.
-    if (this._model.getProcesses().length === 0) {
-      this._consoleDisposables = this._registerConsoleExecutor();
-    }
     await this._doCreateProcess(config, uuid.v4());
 
     if (this._model.getProcesses().length > 1) {
-      const debuggerTypes = [];
-      this._model.getProcesses().forEach(process => {
-        debuggerTypes.push(process.configuration.adapterType);
-      });
+      const debuggerTypes = this._model
+        .getProcesses()
+        .map(
+          ({configuration}) =>
+            `${configuration.adapterType}: ${configuration.processName || ''}`,
+        );
       track(AnalyticsEvents.DEBUGGER_MULTITARGET, {
         processesCount: this._model.getProcesses().length,
         debuggerTypes,
       });
     }
-  }
-
-  consumeGatekeeperService(service: GatekeeperService): IDisposable {
-    _gkService = service;
-    return new UniversalDisposable(() => (_gkService = null));
   }
 
   _onSessionEnd = async (session: VsDebugSession): Promise<void> => {
@@ -1750,21 +1793,6 @@ export default class DebugService implements IDebugService {
       this._timer.onSuccess();
       this._timer = null;
     }
-
-    // set breakpoints back to unverified since the session ended.
-    const data: {
-      [id: string]: DebugProtocol.Breakpoint,
-    } = {};
-    this._model.getBreakpoints().forEach(bp => {
-      data[bp.getId()] = {
-        line: bp.line,
-        verified: false,
-        column: bp.column,
-        endLine: bp.endLine == null ? undefined : bp.endLine,
-        endColumn: bp.endColumn == null ? undefined : bp.endColumn,
-      };
-    });
-    this._model.updateBreakpoints(data);
   };
 
   getModel(): IModel {
@@ -1796,19 +1824,25 @@ export default class DebugService implements IDebugService {
       return;
     }
 
-    const breakpointsToSend = this._model
-      .getBreakpoints()
-      .filter(
-        bp =>
-          this._model.areBreakpointsActivated() && bp.enabled && bp.uri === uri,
-      );
+    const breakpointsToSend = ((sourceModified
+      ? this._model.getUIBreakpoints()
+      : this._model.getBreakpoints()
+    ).filter(
+      bp =>
+        this._model.areBreakpointsActivated() && bp.enabled && bp.uri === uri,
+    ): any);
 
     const rawSource = process.getSource({
       path: uri,
       name: nuclideUri.basename(uri),
     }).raw;
 
-    if (breakpointsToSend.length && !rawSource.adapterData) {
+    if (
+      !sourceModified &&
+      breakpointsToSend.length > 0 &&
+      !rawSource.adapterData &&
+      breakpointsToSend[0].adapterData
+    ) {
       rawSource.adapterData = breakpointsToSend[0].adapterData;
     }
 
@@ -1816,12 +1850,21 @@ export default class DebugService implements IDebugService {
     const response = await session.setBreakpoints({
       source: (rawSource: any),
       lines: breakpointsToSend.map(bp => bp.line),
-      breakpoints: breakpointsToSend.map(bp => ({
-        line: bp.line,
-        column: bp.column,
-        condition: bp.condition,
-        hitCondition: bp.hitCondition,
-      })),
+      breakpoints: breakpointsToSend.map(bp => {
+        const bpToSend: Object = {
+          line: bp.line,
+        };
+        // Column and condition are optional in the protocol, but should
+        // only be included on the object sent to the debug adapter if
+        // they have values that exist.
+        if (bp.column != null && bp.column > 0) {
+          bpToSend.column = bp.column;
+        }
+        if (bp.condition != null && bp.condition !== '') {
+          bpToSend.condition = bp.condition;
+        }
+        return bpToSend;
+      }),
       sourceModified,
     });
     if (response == null || response.body == null) {
@@ -1830,14 +1873,23 @@ export default class DebugService implements IDebugService {
 
     const data: {[id: string]: DebugProtocol.Breakpoint} = {};
     for (let i = 0; i < breakpointsToSend.length; i++) {
-      data[breakpointsToSend[i].getId()] = response.body.breakpoints[i];
+      // If sourceModified === true, we're dealing with new UI breakpoints that
+      // represent the new location(s) the breakpoints ended up in due to the
+      // file contents changing. These are of type IUIBreakpoint.  Otherwise,
+      // we have process breakpoints of type IBreakpoint here. These types both have
+      // an ID, but we get it a little differently.
+      const bpId = sourceModified
+        ? breakpointsToSend[i].id
+        : breakpointsToSend[i].getId();
+
+      data[bpId] = response.body.breakpoints[i];
       if (!breakpointsToSend[i].column) {
         // If there was no column sent ignore the breakpoint column response from the adapter
-        data[breakpointsToSend[i].getId()].column = undefined;
+        data[bpId].column = undefined;
       }
     }
 
-    this._model.updateBreakpoints(data);
+    this._model.updateProcessBreakpoints(process, data);
   }
 
   _getCurrentSession(): ?VsDebugSession {
@@ -1898,55 +1950,54 @@ export default class DebugService implements IDebugService {
     });
   }
 
-  _registerConsoleExecutor(): IDisposable {
-    const disposables = new UniversalDisposable();
+  _evaluateExpression(expression: IEvaluatableExpression, level: Level) {
+    const {focusedProcess, focusedStackFrame} = this._viewModel;
+    if (focusedProcess == null) {
+      logger.error('Cannot evaluate while there is no active debug session');
+      return;
+    }
+    const subscription =
+      // We filter here because the first value in the BehaviorSubject is null no matter what, and
+      // we want the console to unsubscribe the stream after the first non-null value.
+      expressionAsEvaluationResultStream(
+        expression,
+        focusedProcess,
+        focusedStackFrame,
+        'repl',
+      )
+        .skip(1) // Skip the first pending null value.
+        .subscribe(result => {
+          // Evaluate all watch expressions and fetch variables again since repl evaluation might have changed some.
+          this._viewModel.setFocusedStackFrame(
+            this._viewModel.focusedStackFrame,
+            false,
+          );
+
+          if (result == null || !expression.available) {
+            const message: ConsoleMessage = {
+              text: expression.getValue(),
+              level: 'error',
+            };
+            this._consoleOutput.next(message);
+          } else {
+            this._consoleOutput.next({text: 'object', data: result, level});
+          }
+          this._consoleDisposables.remove(subscription);
+        });
+    this._consoleDisposables.add(subscription);
+  }
+
+  _registerConsoleExecutor() {
+    this._consoleDisposables = new UniversalDisposable();
     const registerExecutor = getConsoleRegisterExecutor();
     if (registerExecutor == null) {
-      return disposables;
+      return;
     }
-    const output: Subject<
-      ConsoleMessage | {result?: EvaluationResult},
-    > = new Subject();
-    const evaluateExpression = rawExpression => {
-      const expression = new Expression(rawExpression);
-      const {focusedProcess, focusedStackFrame} = this._viewModel;
-      if (focusedProcess == null) {
-        logger.error('Cannot evaluate while there is no active debug session');
-        return;
-      }
-      disposables.add(
-        // We filter here because the first value in the BehaviorSubject is null no matter what, and
-        // we want the console to unsubscribe the stream after the first non-null value.
-        expressionAsEvaluationResultStream(
-          expression,
-          focusedProcess,
-          focusedStackFrame,
-          'repl',
-        )
-          .skip(1) // Skip the first pending null value.
-          .subscribe(result => {
-            // Evaluate all watch expressions and fetch variables again since repl evaluation might have changed some.
-            this._viewModel.setFocusedStackFrame(
-              this._viewModel.focusedStackFrame,
-              false,
-            );
-
-            if (result == null || !expression.available) {
-              const message: ConsoleMessage = {
-                text: expression.getValue(),
-                level: 'error',
-              };
-              output.next(message);
-            } else {
-              output.next({data: result});
-            }
-          }),
-      );
-    };
 
     const emitter = new Emitter();
     const SCOPE_CHANGED = 'SCOPE_CHANGED';
     const viewModel = this._viewModel;
+    const evaluateExpression = this._evaluateExpression.bind(this);
     const executor = {
       id: 'debugger',
       name: 'Debugger',
@@ -1963,20 +2014,19 @@ export default class DebugService implements IDebugService {
         return emitter.on(SCOPE_CHANGED, callback);
       },
       send(expression: string) {
-        evaluateExpression(expression);
+        evaluateExpression(new Expression(expression), 'log');
       },
-      output,
+      output: this._consoleOutput,
       getProperties: (fetchChildrenForLazyComponent: any),
     };
 
-    disposables.add(
+    this._consoleDisposables.add(
       emitter,
       this._viewModel.onDidChangeDebuggerFocus(() => {
         emitter.emit(SCOPE_CHANGED);
       }),
     );
-    disposables.add(registerExecutor(executor));
-    return disposables;
+    this._consoleDisposables.add(registerExecutor(executor));
   }
 
   dispose(): void {

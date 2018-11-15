@@ -8,14 +8,11 @@
  *
  * @noflow
  * @emails oncall+nuclide
+ * @format
  */
 'use strict';
 
-/* eslint
-  comma-dangle: [1, always-multiline],
-  prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
-  */
+/* eslint nuclide-internal/no-commonjs: 0 */
 
 const rule = require('../license-header');
 const RuleTester = require('eslint').RuleTester;
@@ -34,7 +31,7 @@ const USE_BABEL = "'use babel';";
 
 const LICENSE_ERROR = 'Expected a license header';
 
-const codeWithOncall = `/**
+const codeWithDirectives = `/**
  * Copyright (c) 2015-present, Facebook, Inc.
  * All rights reserved.
  *
@@ -43,6 +40,9 @@ const codeWithOncall = `/**
  *
  * @flow strict
  * @emails oncall+nuclide
+ * @gk-enable test
+ * @gk-disable test2
+ * @sitevars {"LOL": {"test": true}}
  * @format
  */
 
@@ -58,14 +58,11 @@ const BSDCodeWithOncall = `/**
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @noflow
+ * @format
  */
 'use strict';
 
-/* eslint
-  comma-dangle: [1, always-multiline],
-  prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
-  */
+/* eslint nuclide-internal/no-commonjs: 0 */
 
 const rule = require('../license-header');
 `;
@@ -76,7 +73,7 @@ const ruleTester = new RuleTester({
 
 ruleTester.run('license-header', rule, {
   valid: [
-    {code: codeWithOncall},
+    {code: codeWithDirectives},
     {code: BSDCodeWithOncall, options: [{useBSDLicense: true}]},
     {code: [FLOW_FORMAT_AND_TRANSPILE].join('\n')},
     {code: [FLOW_FORMAT_AND_TRANSPILE, LINE].join('\n')},

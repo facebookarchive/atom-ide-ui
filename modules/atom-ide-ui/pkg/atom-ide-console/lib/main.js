@@ -16,9 +16,7 @@ import type {
   ConsoleService,
   SourceInfo,
   Message,
-  OutputProvider,
-  OutputProviderStatus,
-  OutputService,
+  ConsoleSourceStatus,
   Record,
   RecordToken,
   RegisterExecutorFunction,
@@ -30,11 +28,9 @@ import type {CreatePasteFunction} from './types';
 import {List} from 'immutable';
 import createPackage from 'nuclide-commons-atom/createPackage';
 import {destroyItemWhere} from 'nuclide-commons-atom/destroyItemWhere';
+import {combineEpicsFromImports} from 'nuclide-commons/epicHelpers';
 import {Observable} from 'rxjs';
-import {
-  combineEpics,
-  createEpicMiddleware,
-} from 'nuclide-commons/redux-observable';
+import {createEpicMiddleware} from 'nuclide-commons/redux-observable';
 import {observableFromSubscribeFunction} from 'nuclide-commons/event';
 import featureConfig from 'nuclide-commons-atom/feature-config';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
@@ -45,6 +41,7 @@ import {Console, WORKSPACE_VIEW_URI} from './ui/Console';
 import invariant from 'assert';
 import {applyMiddleware, createStore} from 'redux';
 import nullthrows from 'nullthrows';
+import uuid from 'uuid';
 
 const MAXIMUM_SERIALIZED_MESSAGES_CONFIG =
   'atom-ide-console.maximumSerializedMessages';
@@ -104,10 +101,7 @@ class Activation {
   _getStore(): Store {
     if (this._store == null) {
       const initialState = deserializeAppState(this._rawState);
-      const epics = Object.keys(Epics)
-        .map(k => Epics[k])
-        .filter(epic => typeof epic === 'function');
-      const rootEpic = combineEpics(...epics);
+      const rootEpic = combineEpicsFromImports(Epics, 'atom-ide-ui');
       this._store = createStore(
         Reducers,
         initialState,
@@ -147,7 +141,6 @@ class Activation {
   consumeWatchEditor(watchEditor: atom$AutocompleteWatchEditor): IDisposable {
     this._getStore().dispatch(Actions.setWatchEditor(watchEditor));
     return new UniversalDisposable(() => {
-      // $FlowFixMe(>=0.68.0) Flow suppress (T27187857)
       if (this._getStore().getState().watchEditor === watchEditor) {
         this._getStore().dispatch(Actions.setWatchEditor(null));
       }
@@ -219,7 +212,7 @@ class Activation {
 
     // Creates an objet with callbacks to request manipulations on the current
     // console message entry.
-    const createToken = (messageId: number) => {
+    const createToken = (messageId: string) => {
       const findMessage = () => {
         invariant(activation != null);
         return nullthrows(
@@ -255,7 +248,7 @@ class Activation {
     };
 
     const updateMessage = (
-      messageId: number,
+      messageId: string,
       appendText: ?string,
       overrideLevel: ?Level,
       setComplete: boolean,
@@ -308,6 +301,7 @@ class Activation {
             tags: message.tags,
             scopeName: message.scopeName,
             sourceId: sourceInfo.id,
+            sourceName: sourceInfo.name,
             kind: message.kind || 'message',
             timestamp: new Date(), // TODO: Allow this to come with the message?
             repeatCount: 1,
@@ -318,14 +312,14 @@ class Activation {
           if (incomplete) {
             // An ID is only required for incomplete messages, which need
             // to be looked up for mutations.
-            record.messageId = activation._nextMessageId++;
+            record.messageId = uuid.v4();
             token = createToken(record.messageId);
           }
 
           activation._getStore().dispatch(Actions.recordReceived(record));
           return token;
         },
-        setStatus(status: OutputProviderStatus): void {
+        setStatus(status: ConsoleSourceStatus): void {
           invariant(activation != null && !disposed);
           activation
             ._getStore()
@@ -342,31 +336,6 @@ class Activation {
         },
       };
       return console;
-    };
-  }
-
-  provideOutputService(): OutputService {
-    // Create a local, nullable reference so that the service consumers don't keep the Activation
-    // instance in memory.
-    let activation = this;
-    this._disposables.add(() => {
-      activation = null;
-    });
-
-    return {
-      registerOutputProvider(outputProvider: OutputProvider): IDisposable {
-        invariant(activation != null, 'Output service used after deactivation');
-        activation
-          ._getStore()
-          .dispatch(Actions.registerOutputProvider(outputProvider));
-        return new UniversalDisposable(() => {
-          if (activation != null) {
-            activation
-              ._getStore()
-              .dispatch(Actions.unregisterOutputProvider(outputProvider));
-          }
-        });
-      },
     };
   }
 
@@ -444,6 +413,18 @@ function deserializeRecord(record: Object): Record {
   return {
     ...record,
     timestamp: parseDate(record.timestamp) || new Date(0),
+    // At one point in the time the messageId was a number, so the user might
+    // have a number serialized.
+    messageId:
+      record == null ||
+      record.messageId == null ||
+      // Sigh. We (I, -jeldredge) had a bug at one point where we accidentally
+      // converted serialized values of `undefined` to the string `"undefiend"`.
+      // Those could then have been serialized back to disk. So, for a little
+      // while at least, we should ensure we fix these bad values.
+      record.messageId === 'undefined'
+        ? undefined
+        : String(record.messageId),
   };
 }
 

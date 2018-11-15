@@ -32,10 +32,12 @@ export type AtomNotificationType = 'info' | 'warning' | 'error' | 'fatalError';
 
 export type DebuggerConfigAction = 'launch' | 'attach';
 
-export type VSAdapterExecutableInfo = {
+export type VSAdapterExecutableInfo = {|
   command: string,
   args: Array<string>,
-};
+  cwd?: string,
+  env?: {[key: string]: string},
+|};
 
 export type NativeVsAdapterType = 'native_lldb' | 'native_gdb';
 
@@ -75,8 +77,6 @@ export type IProcessConfig = {|
   +adapterPreprocessor?: ?MessageProcessor,
   +processName?: string,
   +customControlButtons?: Array<ControlButtonSpecification>,
-  +threadsComponentTitle?: string,
-  +showThreads?: boolean,
   +servicedFileExtensions?: Array<string>,
 
   // The Atom language grammar to use for this debugger.
@@ -87,6 +87,11 @@ export type IProcessConfig = {|
   // this session requires any external setup that cannot be replayed
   // automatically by the debugger service.
   +isRestartable?: boolean,
+
+  // If true, this debug session is read-only. Control-flow commands are
+  // disabled. Used for debugging core dumps, offline targets, and read-only
+  // VMs.
+  +isReadOnly?: boolean,
 
   // If specified, this callback is invoked when a new debugging session
   // is started for this configuration. It is called after the session is
@@ -145,7 +150,6 @@ export type ResolveConfig = (config: Object) => Promise<void>;
 type AutoGenLaunchOrAttachConfigBase = {
   // General Properties
   properties: AutoGenProperty[],
-  threads: boolean,
   vsAdapterType: VsAdapterType,
   cwdPropertyName?: ?string,
   scriptExtension?: string,

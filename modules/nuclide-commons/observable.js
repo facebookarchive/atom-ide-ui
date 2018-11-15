@@ -30,7 +30,7 @@ import UniversalDisposable from './UniversalDisposable';
 import invariant from 'assert';
 // Note: DOMException is usable in Chrome but not in Node.
 import DOMException from 'domexception';
-import {Observable, ReplaySubject, Subject} from 'rxjs';
+import {Observable, ReplaySubject, Subject, Subscription} from 'rxjs';
 import AbortController from './AbortController';
 import {setDifference} from './collection';
 import debounce from './debounce';
@@ -290,50 +290,88 @@ export function concatLatest<T>(
     .map(accumulator => [].concat(...accumulator));
 }
 
-type ThrottleOptions = {
-  // Should the first element be emitted immeditately? Defaults to true.
-  leading?: boolean,
-};
+// Use a sentinel so we can distinguish between when `null` is emitted and when
+// nothing is.
+const NONE = {};
 
-/**
- * A more sensible alternative to RxJS's throttle/audit/sample operators.
- */
 export function throttle<T>(
-  duration:
+  delay:
     | number
+    | ((value: T) => Observable<any> | Promise<any>)
     | Observable<any>
-    | ((value: T) => Observable<any> | Promise<any>),
-  options_: ?ThrottleOptions,
-): (Observable<T>) => Observable<T> {
-  return (source: Observable<T>) => {
-    const options = options_ || {};
-    const leading = options.leading !== false;
-    let audit;
-    switch (typeof duration) {
-      case 'number':
-        audit = obs => obs.auditTime(duration);
-        break;
-      case 'function':
-        audit = obs => obs.audit(duration);
-        break;
-      default:
-        audit = obs => obs.audit(() => duration);
-    }
+    | Promise<any>,
+): (observable: Observable<T>) => Observable<T> {
+  let getDelay: (value: T) => Observable<any> | Promise<any>;
+  switch (typeof delay) {
+    case 'number':
+      getDelay = () => Observable.timer(delay);
+      break;
+    case 'function':
+      getDelay = delay;
+      break;
+    case 'object':
+      getDelay = () => delay;
+      break;
+    default:
+      throw new Error(`Invalid delay: ${delay}`);
+  }
 
-    if (!leading) {
-      return audit(source);
-    }
-
+  return function doThrottle(source: Observable<T>): Observable<T> {
     return Observable.create(observer => {
-      const connectableSource = source.publish();
-      const throttled = Observable.merge(
-        connectableSource.take(1),
-        audit(connectableSource.skip(1)),
+      // The elements that are actually emitted. We use this to know when to
+      // start ignoring elements.
+      const emittedElements = new Subject();
+      let latestValue = NONE;
+      let shouldIgnore = false;
+
+      const checkShouldNext = () => {
+        if (!shouldIgnore && latestValue !== NONE) {
+          // At this point, latestValue must be of type T
+          latestValue = ((latestValue: any): T);
+
+          const valueToDispatch = latestValue;
+          latestValue = NONE;
+          shouldIgnore = true;
+
+          observer.next(valueToDispatch);
+          emittedElements.next(valueToDispatch);
+        }
+      };
+
+      const sub = new Subscription();
+      sub.add(
+        emittedElements
+          .switchMap(x => {
+            const timer = getDelay(x);
+            if (timer instanceof Observable) {
+              return timer.take(1);
+            } else {
+              return timer;
+            }
+          })
+          .subscribe(() => {
+            shouldIgnore = false;
+            checkShouldNext();
+          }),
       );
-      return new UniversalDisposable(
-        throttled.subscribe(observer),
-        connectableSource.connect(),
+      sub.add(
+        source.subscribe({
+          next: x => {
+            latestValue = x;
+            checkShouldNext();
+          },
+          error: err => {
+            observer.error(err);
+          },
+          complete: () => {
+            shouldIgnore = false;
+            checkShouldNext();
+            observer.complete();
+          },
+        }),
       );
+
+      return sub;
     });
   };
 }
@@ -523,18 +561,18 @@ export function toAbortablePromise<T>(
  * Recommended to use this with let/pipe:
  *
  *   myObservable
- *     .let(obs => takeUntilAbort(obs, signal))
+ *     .let(takeUntilAbort(signal))
  */
 export function takeUntilAbort<T>(
-  observable: Observable<T>,
   signal: AbortSignal,
-): Observable<T> {
-  return Observable.defer(() => {
-    if (signal.aborted) {
-      return Observable.empty();
-    }
-    return observable.takeUntil(Observable.fromEvent(signal, 'abort'));
-  });
+): (Observable<T>) => Observable<T> {
+  return observable =>
+    Observable.defer(() => {
+      if (signal.aborted) {
+        return Observable.empty();
+      }
+      return observable.takeUntil(Observable.fromEvent(signal, 'abort'));
+    });
 }
 
 // Executes tasks. Ensures that at most one task is running at a time.

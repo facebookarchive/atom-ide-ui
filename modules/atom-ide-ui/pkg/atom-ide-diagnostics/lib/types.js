@@ -20,7 +20,7 @@ import type {
 } from '../../atom-ide-code-actions/lib/types';
 import * as React from 'react';
 
-export type UiConfig = Array<{providerName: string, settings: Array<string>}>;
+export type UiConfig = Array<{|providerName: string, settings: Array<string>|}>;
 
 export type DiagnosticProvider =
   | CallbackDiagnosticProvider
@@ -111,10 +111,13 @@ export type DiagnosticMessage = {|
   getBlockComponent?: ?() => React.ComponentType<any>,
 |};
 
-export type DiagnosticMessages = {
+export type DiagnosticMessages = {|
   filePath: NuclideUri,
+  // Note: This list of messages can be incomplete. A simple comparison of
+  // `messages.length === totalMessages` can be used to determine if it is complete.
   messages: Array<DiagnosticMessage>,
-};
+  totalMessages: number,
+|};
 
 export type {default as DiagnosticUpdater} from './services/DiagnosticUpdater';
 
@@ -238,6 +241,7 @@ export type AppState = {
   codeActionsForMessage: CodeActionsState,
   descriptions: DescriptionsState,
   providers: Set<ObservableDiagnosticProvider>,
+  lastUpdateSource: LastUpdateSource,
 };
 
 export type MessagesState = Map<
@@ -245,10 +249,13 @@ export type MessagesState = Map<
   Map<NuclideUri, Array<DiagnosticMessage>>,
 >;
 
+export type LastUpdateSource = 'Provider' | 'Stale';
+
 export type CodeActionsState = Map<DiagnosticMessage, Map<string, CodeAction>>;
 export type DescriptionsState = Map<DiagnosticMessage, string>;
 
 export type Store = {
+  subscribe(() => void): () => void,
   getState(): AppState,
   dispatch(action: Action): void,
 };
@@ -323,5 +330,11 @@ export type Action =
       payload: {
         provider: ObservableDiagnosticProvider,
         invalidation: DiagnosticInvalidationMessage,
+      },
+    }
+  | {
+      type: 'MARK_MESSAGES_STALE',
+      payload: {
+        filePath: NuclideUri,
       },
     };

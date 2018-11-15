@@ -52,6 +52,12 @@
       "type": "boolean",
       "default": false
     },
+    "copyOnSelect": {
+      "title": "Copy on Select",
+      "description": "Selecting text in terminal also copies it to the clipboard. (Macos and Linux only)",
+      "type": "boolean",
+      "default": false
+    },
     "charAtlas": {
       "title": "Character atlas implementation",
       "type": "string",
@@ -71,7 +77,7 @@
         }
       ]
     },
-    "rendererType": {
+    "renderer": {
       "title": "Terminal renderer implementation",
       "type": "string",
       "default": "auto",
@@ -235,7 +241,7 @@
     }
   },
   "styleSheets": [
-    "../../../../../node_modules/xterm/dist/xterm.css",
+    "../../../../../node_modules/vscode-xterm/lib/xterm.css",
     "nuclide-terminal-view.less"
   ],
   "consumedServices": {

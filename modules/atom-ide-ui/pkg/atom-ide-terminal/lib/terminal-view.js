@@ -48,20 +48,17 @@ import {
   setTerminalOption,
   syncTerminalFont,
   RENDERER_TYPE_CONFIG,
+  COPY_ON_SELECT_CONFIG,
 } from './config';
-import {infoFromUri} from './nuclide-terminal-uri';
 import {createOutputSink} from './sink';
 
-import type {Terminal} from './createTerminal';
-import type {TerminalInstance} from './types';
+import type {TerminalInstance, Terminal} from './types';
 import type {IconName} from 'nuclide-commons-ui/Icon';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {Command, Pty, PtyClient, PtyInfo} from './pty-service/rpc-types';
-import type {InstantiatedTerminalInfo} from './nuclide-terminal-uri';
+import type {InstantiatedTerminalInfo} from './nuclide-terminal-info';
 
 import type {Sink} from './sink';
-
-export const URI_PREFIX = 'atom://nuclide-terminal-view';
 
 export interface TerminalViewState {
   deserializer: 'TerminalView';
@@ -162,7 +159,6 @@ export class TerminalView implements PtyClient, TerminalInstance {
           const docsUrl = 'https://nuclide.io/docs/features/terminal';
           terminal.writeln(`For more info check out the docs: ${docsUrl}`);
         }
-
         terminal.focus();
         this._subscriptions.add(this._subscribeFitEvents(terminal));
         this._spawn(cwd)
@@ -252,7 +248,6 @@ export class TerminalView implements PtyClient, TerminalInstance {
           // Note: Manipulating the clipboard directly because atom's core:copy and core:paste
           // commands are not working correctly with terminal selection.
           if (terminal.hasSelection()) {
-            // $FlowFixMe: add types for clipboard
             clipboard.writeText(terminal.getSelection());
           } else {
             document.execCommand('paste');
@@ -262,7 +257,23 @@ export class TerminalView implements PtyClient, TerminalInstance {
           e.stopPropagation();
         }),
       );
+    } else {
+      let copyOnSelect;
+      this._subscriptions.add(
+        featureConfig
+          .observeAsStream(COPY_ON_SELECT_CONFIG)
+          .subscribe(
+            copyOnSelectConf => (copyOnSelect = Boolean(copyOnSelectConf)),
+          ),
+        terminal.addDisposableListener('selection', () => {
+          if (copyOnSelect && terminal.hasSelection()) {
+            clipboard.writeText(terminal.getSelection());
+            terminal.focus();
+          }
+        }),
+      );
     }
+
     this._subscriptions.add(
       atom.commands.add(this._div, 'core:copy', () => {
         document.execCommand('copy');
@@ -343,6 +354,7 @@ export class TerminalView implements PtyClient, TerminalInstance {
     );
     this._syncFontAndFit(terminal);
     this._subscriptions.add(measurePerformance(terminal));
+    this._emitter.emit('spawn', {success: true});
   }
 
   _focused(): void {
@@ -384,6 +396,7 @@ export class TerminalView implements PtyClient, TerminalInstance {
       startDelay: Math.round(performanceNow() - this._startTime),
       error: String(error),
     });
+    this._emitter.emit('spawn', {success: false});
   }
 
   // Since changing the font settings may resize the contents, we have to
@@ -494,7 +507,11 @@ export class TerminalView implements PtyClient, TerminalInstance {
   onExit(code: number, signal: number): void {
     track('nuclide-terminal.exit', {...this._statistics(), code, signal});
 
-    if (code === 0 && !this._terminalInfo.remainOnCleanExit) {
+    if (
+      // eslint-disable-next-line eqeqeq
+      (code === 0 || code === null) &&
+      !this._terminalInfo.remainOnCleanExit
+    ) {
       this._closeTab();
       return;
     }
@@ -589,12 +606,21 @@ export class TerminalView implements PtyClient, TerminalInstance {
     return this._path;
   }
 
+  // Breadcrumbs uses this to determine how to show the path.
+  getPathIsDirectory(): boolean {
+    return true;
+  }
+
   onDidChangePath(callback: (v: ?string) => mixed): IDisposable {
     return this.on('did-change-path', callback);
   }
 
   onDidChangeTitle(callback: (v: ?string) => mixed): IDisposable {
     return this.on('did-change-title', callback);
+  }
+
+  onSpawn(callback: (v: any) => mixed): IDisposable {
+    return this.on('spawn', callback);
   }
 
   on(name: string, callback: (v: any) => mixed): IDisposable {
@@ -617,10 +643,7 @@ export class TerminalView implements PtyClient, TerminalInstance {
 export function deserializeTerminalView(
   state: TerminalViewState,
 ): TerminalView {
-  if (state.initialInfo != null) {
-    return new TerminalView(state.initialInfo);
-  }
-  return new TerminalView(infoFromUri(URI_PREFIX));
+  return new TerminalView(state.initialInfo);
 }
 
 function registerLinkHandlers(terminal: Terminal, cwd: ?NuclideUri): void {
@@ -674,10 +697,13 @@ function registerLinkHandlers(terminal: Terminal, cwd: ?NuclideUri): void {
         if (replacedUrl !== '') {
           const commandClicked =
             process.platform === 'win32' ? event.ctrlKey : event.metaKey;
-          if (commandClicked && tryOpenInAtom(replacedUrl, cwd)) {
-            return;
+          if (shouldOpenInAtom(replacedUrl)) {
+            if (commandClicked) {
+              tryOpenInAtom(replacedUrl, cwd);
+            }
+          } else {
+            shell.openExternal(replacedUrl);
           }
-          shell.openExternal(replacedUrl);
         }
       },
       {matchIndex},
@@ -685,32 +711,31 @@ function registerLinkHandlers(terminal: Terminal, cwd: ?NuclideUri): void {
   }
 }
 
-function tryOpenInAtom(link: string, cwd: ?NuclideUri): boolean {
+function shouldOpenInAtom(link: string): boolean {
   const parsed = url.parse(link);
+  return parsed.protocol === 'open-file-object:';
+}
 
-  if (parsed.protocol === 'open-file-object:') {
-    const path = parsed.path;
-    if (path != null) {
-      const fileLine = path.split(':');
-      let filePath = fileLine[0];
-      let line = 0;
-      if (fileLine.length > 1 && parseInt(fileLine[1], 10) > 0) {
-        line = parseInt(fileLine[1], 10) - 1;
-      }
-      if (cwd != null && nuclideUri.isRemote(cwd)) {
-        const terminalLocation = nuclideUri.parseRemoteUri(cwd);
-        filePath = nuclideUri.createRemoteUri(
-          terminalLocation.hostname,
-          filePath,
-        );
-      }
-
-      goToLocation(filePath, {line});
+function tryOpenInAtom(link: string, cwd: ?NuclideUri): void {
+  const parsed = url.parse(link);
+  const path = parsed.path;
+  if (path != null) {
+    const fileLine = path.split(':');
+    let filePath = fileLine[0];
+    let line = 0;
+    if (fileLine.length > 1 && parseInt(fileLine[1], 10) > 0) {
+      line = parseInt(fileLine[1], 10) - 1;
     }
-    return true;
-  }
+    if (cwd != null && nuclideUri.isRemote(cwd)) {
+      const terminalLocation = nuclideUri.parseRemoteUri(cwd);
+      filePath = nuclideUri.createRemoteUri(
+        terminalLocation.hostname,
+        filePath,
+      );
+    }
 
-  return false;
+    goToLocation(filePath, {line});
+  }
 }
 
 function openLink(event: Event, link: string): void {

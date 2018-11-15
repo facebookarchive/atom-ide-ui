@@ -14,14 +14,14 @@
 
 import type {
   ConsolePersistedState,
-  DisplayableRecord,
-  OutputProviderStatus,
+  ConsoleSourceStatus,
   Record,
   Source,
   Store,
   SourceInfo,
   Severity,
   Level,
+  AppState,
 } from '../types';
 import type {CreatePasteFunction} from '../types';
 import type {RegExpFilterChange} from 'nuclide-commons-ui/RegExpFilter';
@@ -37,9 +37,10 @@ import memoizeUntilChanged from 'nuclide-commons/memoizeUntilChanged';
 import {toggle} from 'nuclide-commons/observable';
 import UniversalDisposable from 'nuclide-commons/UniversalDisposable';
 import {nextAnimationFrame} from 'nuclide-commons/observable';
+import observableFromReduxStore from 'nuclide-commons/observableFromReduxStore';
 import {getFilterPattern} from 'nuclide-commons-ui/RegExpFilter';
-import getCurrentExecutorId from '../getCurrentExecutorId';
 import * as Actions from '../redux/Actions';
+import * as Selectors from '../redux/Selectors';
 import ConsoleView from './ConsoleView';
 import {List} from 'immutable';
 import * as React from 'react';
@@ -57,7 +58,6 @@ type Options = {|
 // State unique to this particular Console instance
 //
 type State = {
-  displayableRecords: Array<DisplayableRecord>,
   filterText: string,
   enableRegExpFilter: boolean,
   unselectedSourceIds: Array<string>,
@@ -76,7 +76,6 @@ export const WORKSPACE_VIEW_URI = 'atom://nuclide/console';
 
 const ERROR_TRANSCRIBING_MESSAGE =
   "// Nuclide couldn't find the right text to display";
-const INITIAL_RECORD_HEIGHT = 21;
 
 const ALL_SEVERITIES = new Set(['error', 'warning', 'info']);
 
@@ -88,10 +87,6 @@ const ALL_SEVERITIES = new Set(['error', 'warning', 'info']);
 export class Console {
   _actionCreators: BoundActionCreators;
 
-  // Associates Records with their display state (height, expansionStateId).
-  _displayableRecords: WeakMap<Record, DisplayableRecord>;
-
-  _nextRecordId: number;
   _titleChanges: Observable<string>;
   _model: Model<State>;
   _store: Store;
@@ -119,14 +114,11 @@ export class Console {
     });
 
     this._store = store;
-    this._nextRecordId = 0;
-    this._displayableRecords = new WeakMap();
     this._destroyed = new ReplaySubject(1);
 
     this._titleChanges = Observable.combineLatest(
       this._model.toObservable(),
-      // $FlowIssue: Flow doesn't know about Symbol.observable
-      Observable.from(store),
+      observableFromReduxStore(store),
     )
       .takeUntil(this._destroyed)
       .map(() => this.getTitle())
@@ -197,6 +189,7 @@ export class Console {
   // TODO: Consider removing records when their source is removed. This will likely require adding
   // the ability to enable and disable sources so, for example, when the debugger is no longer
   // active, it still remains in the source list.
+  // $FlowFixMe (>=0.85.0) (T35986896) Flow upgrade suppress
   _getSourcesMemoized = memoizeUntilChanged(
     getSources,
     opts => opts,
@@ -243,7 +236,9 @@ export class Console {
   };
 
   _createPaste = async (): Promise<void> => {
-    const displayableRecords = this._getDisplayableRecords();
+    const displayableRecords = Selectors.getAllRecords(
+      this._store.getState(),
+    ).toArray();
     const createPasteImpl = this._store.getState().createPasteFunction;
     if (createPasteImpl == null) {
       return;
@@ -254,7 +249,7 @@ export class Console {
   _getFilterInfo(): {
     invalid: boolean,
     selectedSourceIds: Array<string>,
-    filteredRecords: Array<DisplayableRecord>,
+    filteredRecords: Array<Record>,
     selectedSeverities: Set<Severity>,
   } {
     const {pattern, invalid} = getFilterPattern(
@@ -271,7 +266,7 @@ export class Console {
 
     const {selectedSeverities} = this._model.state;
     const filteredRecords = filterRecords(
-      this._getDisplayableRecords(),
+      Selectors.getAllRecords(this._store.getState()).toArray(),
       selectedSourceIds,
       selectedSeverities,
       pattern,
@@ -292,10 +287,13 @@ export class Console {
     }
 
     const actionCreators = this._getBoundActionCreators();
+    const globalStates: Observable<AppState> = observableFromReduxStore(
+      this._store,
+    );
+
     const props = Observable.combineLatest(
       this._model.toObservable(),
-      // $FlowIssue: Flow doesn't know about Symbol.observable
-      Observable.from(this._store),
+      globalStates,
     )
       // Don't re-render when the console isn't visible.
       .let(toggle(observePaneItemVisibility(this)))
@@ -308,7 +306,7 @@ export class Console {
           filteredRecords,
         } = this._getFilterInfo();
 
-        const currentExecutorId = getCurrentExecutorId(globalState);
+        const currentExecutorId = Selectors.getCurrentExecutorId(globalState);
         const currentExecutor =
           currentExecutorId != null
             ? globalState.executors.get(currentExecutorId)
@@ -326,9 +324,9 @@ export class Console {
           unselectedSourceIds: localState.unselectedSourceIds,
           filterText: localState.filterText,
           enableRegExpFilter: localState.enableRegExpFilter,
-          displayableRecords: filteredRecords,
+          records: filteredRecords,
           filteredRecordCount:
-            globalState.records.size - filteredRecords.length,
+            Selectors.getAllRecords(globalState).size - filteredRecords.length,
           history: globalState.history,
           sources: this._getSources(),
           selectedSourceIds,
@@ -336,8 +334,6 @@ export class Console {
           executors: globalState.executors,
           getProvider: id => globalState.providers.get(id),
           updateFilter: this._updateFilter,
-          onDisplayableRecordHeightChange: this
-            ._handleDisplayableRecordHeightChange,
           resetAllFilters: this._resetAllFilters,
           fontSize: globalState.fontSize,
           selectedSeverities,
@@ -403,65 +399,12 @@ export class Console {
     }
     this._model.setState({selectedSeverities: nextSelectedSeverities});
   };
-
-  _handleDisplayableRecordHeightChange = (
-    recordId: number,
-    newHeight: number,
-    callback: () => void,
-  ): void => {
-    const {records, incompleteRecords} = this._store.getState();
-    const nextDisplayableRecords = Array(records.size + incompleteRecords.size);
-    records.concat(incompleteRecords).forEach((record, i) => {
-      let displayableRecord = this._toDisplayableRecord(record);
-      if (displayableRecord.id === recordId) {
-        // Update the record with the new height.
-        displayableRecord = {
-          ...displayableRecord,
-          height: newHeight,
-        };
-        this._displayableRecords.set(record, displayableRecord);
-      }
-      nextDisplayableRecords[i] = displayableRecord;
-    });
-
-    this._model.setState({displayableRecords: nextDisplayableRecords});
-    requestAnimationFrame(callback);
-  };
-
-  _getDisplayableRecords(): Array<DisplayableRecord> {
-    const {records, incompleteRecords} = this._store.getState();
-    const displayableRecords = Array(records.size + incompleteRecords.size);
-    records.concat(incompleteRecords).forEach((record, i) => {
-      displayableRecords[i] = this._toDisplayableRecord(record);
-    });
-    return displayableRecords;
-  }
-
-  /**
-   * Transforms the Records from the store into DisplayableRecords. This caches the result
-   * per-Console instance because the same record can have different heights in different
-   * containers.
-   */
-  _toDisplayableRecord(record: Record): DisplayableRecord {
-    const displayableRecord = this._displayableRecords.get(record);
-    if (displayableRecord != null) {
-      return displayableRecord;
-    }
-    const newDisplayableRecord = {
-      id: this._nextRecordId++,
-      record,
-      height: INITIAL_RECORD_HEIGHT,
-      expansionStateId: {},
-    };
-    this._displayableRecords.set(record, newDisplayableRecord);
-    return newDisplayableRecord;
-  }
 }
 
 function getSources(options: {
   records: List<Record>,
   providers: Map<string, SourceInfo>,
-  providerStatuses: Map<string, OutputProviderStatus>,
+  providerStatuses: Map<string, ConsoleSourceStatus>,
 }): Array<Source> {
   const {providers, providerStatuses, records} = options;
 
@@ -498,21 +441,21 @@ function getSources(options: {
 }
 
 function filterRecords(
-  displayableRecords: Array<DisplayableRecord>,
+  records: Array<Record>,
   selectedSourceIds: Array<string>,
   selectedSeverities: Set<Severity>,
   filterPattern: ?RegExp,
   filterSources: boolean,
-): Array<DisplayableRecord> {
+): Array<Record> {
   if (
     !filterSources &&
     filterPattern == null &&
     areSetsEqual(ALL_SEVERITIES, selectedSeverities)
   ) {
-    return displayableRecords;
+    return records;
   }
 
-  return displayableRecords.filter(({record}) => {
+  return records.filter(record => {
     // Only filter regular messages
     if (record.kind !== 'message') {
       return true;
@@ -588,17 +531,16 @@ async function serializeRecordObject(
 
 async function createPaste(
   createPasteImpl: CreatePasteFunction,
-  records: Array<DisplayableRecord>,
+  records: Array<Record>,
 ): Promise<void> {
   const linePromises = records
     .filter(
-      displayable =>
-        displayable.record.kind === 'message' ||
-        displayable.record.kind === 'request' ||
-        displayable.record.kind === 'response',
+      record =>
+        record.kind === 'message' ||
+        record.kind === 'request' ||
+        record.kind === 'response',
     )
-    .map(async displayable => {
-      const record = displayable.record;
+    .map(async record => {
       const level =
         record.level != null ? record.level.toString().toUpperCase() : 'LOG';
       const timestamp = record.timestamp.toLocaleString();

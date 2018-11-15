@@ -10,8 +10,9 @@
  * @format
  */
 
+/* global requestAnimationFrame */
+
 import * as React from 'react';
-import ReactDOM from 'react-dom';
 import {Button} from './Button';
 import {HighlightedCode} from './HighlightedCode';
 
@@ -21,8 +22,8 @@ class HighlightedCodeExample extends React.Component<{}, {|count: number|}> {
   };
 
   _addOneMore = () => {
-    // $FlowIgnore
-    ReactDOM.unstable_deferredUpdates(() => {
+    // TODO(pelmers): Use react deferred update API when facebook/react/issues/13306 is ready
+    requestAnimationFrame(() => {
       // TODO: (wbinnssmith) T30771435 this setState depends on current state
       // and should use an updater function rather than an object
       // eslint-disable-next-line react/no-access-state-in-setstate
@@ -40,20 +41,20 @@ class HighlightedCodeExample extends React.Component<{}, {|count: number|}> {
       this.state.count,
     );
     // $FlowIgnore: Not an official API yet.
-    const AsyncMode = React.unstable_AsyncMode;
+    const ConcurrentMode = React.unstable_ConcurrentMode;
     return (
       <div>
         The code below is rendered with async React, so highlighting does not
         block (no matter how many lines have to be tokenized).
         <br />
         <Button onClick={this._addOneMore}>Add more code!</Button>
-        <AsyncMode>
+        <ConcurrentMode>
           <HighlightedCode
             grammar={jsGrammar}
             code={code}
             style={{marginTop: '8px'}}
           />
-        </AsyncMode>
+        </ConcurrentMode>
       </div>
     );
   }

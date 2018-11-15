@@ -10,10 +10,6 @@
  * @format
  */
 
-/* eslint
- no-console: 0,
-*/
-
 import type {SshTunnelService} from 'nuclide-adb/lib/types';
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
 import type {Subscription} from 'rxjs';
@@ -35,8 +31,8 @@ export type AdbTunnelingOptions = {
 let passesGK = async _ => false;
 try {
   const fbPassesGK =
-    // eslint-disable-next-line nuclide-internal/modules-dependencies, $FlowFB
-    require('../../../pkg/commons-node/passesGK');
+    // eslint-disable-next-line nuclide-internal/modules-dependencies
+    require('nuclide-commons/passesGK');
   passesGK = fbPassesGK.default;
 } catch (e) {}
 
@@ -108,34 +104,30 @@ export function startTunnelingAdb(
         error: e => {
           getLogger('nuclide-adb:tunneling').error(e);
           track('nuclide-adb:tunneling:error', {host: uri, error: e});
+          if (e.name === MISSING_ADB_ERROR) {
+            return;
+          }
           let detail;
           const buttons = [];
-          if (e.name === MISSING_ADB_ERROR) {
-            // We shouldn't be prompting the user with error message for not
-            // having adb installed.
-            // TODO: log to the nuclide console. console.log in the meanwhile.
-            console.log(e);
-          } else {
-            if (e.name === VERSION_MISMATCH_ERROR) {
-              detail = e.message;
-              const {adbUpgradeLink} = options;
-              if (e.name === VERSION_MISMATCH_ERROR && adbUpgradeLink != null) {
-                buttons.push({
-                  text: 'View upgrade instructions',
-                  onDidClick: () => shell.openExternal(adbUpgradeLink),
-                });
-              }
-            } else {
-              detail =
-                "Your local devices won't be available on this host." +
-                (e.name != null && e.name !== 'Error' ? `\n \n${e.name}` : '');
+          if (e.name === VERSION_MISMATCH_ERROR) {
+            detail = e.message;
+            const {adbUpgradeLink} = options;
+            if (e.name === VERSION_MISMATCH_ERROR && adbUpgradeLink != null) {
+              buttons.push({
+                text: 'View upgrade instructions',
+                onDidClick: () => shell.openExternal(adbUpgradeLink),
+              });
             }
-            atom.notifications.addError('Failed to tunnel Android devices', {
-              dismissable: true,
-              detail,
-              buttons,
-            });
+          } else {
+            detail =
+              "Your local devices won't be available on this host." +
+              (e.name != null && e.name !== 'Error' ? `\n \n${e.name}` : '');
           }
+          atom.notifications.addError('Failed to tunnel Android devices', {
+            dismissable: true,
+            detail,
+            buttons,
+          });
         },
       })
       .add(() => {
@@ -182,19 +174,21 @@ const changes: Subject<void> = new Subject();
 
 function checkInToAdbmux(host: NuclideUri): Observable<?number> {
   return Observable.defer(async () => {
+    const getService: Promise<SshTunnelService> = consumeFirstProvider(
+      'nuclide.ssh-tunnel',
+    );
     const [service, avoidPrecreatingExopackageTunnel] = await Promise.all([
-      consumeFirstProvider('nuclide.ssh-tunnel'),
+      getService,
       passesGK('nuclide_adb_exopackage_tunnel'),
     ]);
     invariant(service);
-    const port = await service.getAvailableServerPort(host);
-    return {service, port, avoidPrecreatingExopackageTunnel};
+    return {service, avoidPrecreatingExopackageTunnel};
   })
-    .switchMap(({service, port, avoidPrecreatingExopackageTunnel}) => {
+    .switchMap(({service, avoidPrecreatingExopackageTunnel}) => {
       const tunnels = [
         {
           description: 'adbmux',
-          from: {host, port, family: 4},
+          from: {host, port: 'any_available', family: 4},
           to: {host: 'localhost', port: 5037, family: 4},
         },
       ];
@@ -205,7 +199,9 @@ function checkInToAdbmux(host: NuclideUri): Observable<?number> {
           to: {host: 'localhost', port: 2829, family: 4},
         });
       }
-      return service.openTunnels(tunnels).mapTo(port);
+      return service
+        .openTunnels(tunnels)
+        .map(resolved => resolved[0].from.port);
     })
     .switchMap(async port => {
       const service = getAdbServiceByNuclideUri(host);

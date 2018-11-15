@@ -11,7 +11,10 @@
  */
 
 import type {NuclideUri} from 'nuclide-commons/nuclideUri';
-import type {LegacyProcessMessage} from 'nuclide-commons/process';
+import type {
+  LegacyProcessMessage,
+  ProcessMessage,
+} from 'nuclide-commons/process';
 import type {AdbDevice, AndroidJavaProcess, Process} from './types';
 
 import fsPromise from 'nuclide-commons/fsPromise';
@@ -20,6 +23,7 @@ import {ConnectableObservable} from 'rxjs';
 import {Adb} from './Adb';
 import {Processes} from './common/Processes';
 import {runCommand} from 'nuclide-commons/process';
+import {observeProcessRaw} from 'nuclide-commons/process';
 
 export function getDeviceInfo(
   serial: string,
@@ -42,6 +46,17 @@ export async function stopProcess(
   return new Adb(serial).stopProcess(packageName, pid);
 }
 
+export function trackDevices(): ConnectableObservable<Array<AdbDevice>> {
+  return (
+    observeProcessRaw('adb', ['track-devices'])
+      .distinctUntilChanged()
+      // track-devices doesn't provide the full output
+      // we use its output as events to trigger an actual devices -l call
+      .switchMap(() => getDeviceList())
+      .publish()
+  );
+}
+
 export function getDeviceList(): Promise<Array<AdbDevice>> {
   return Adb.getDevices();
 }
@@ -56,8 +71,7 @@ export async function getPidFromPackageName(
 export function installPackage(
   serial: string,
   packagePath: NuclideUri,
-): ConnectableObservable<LegacyProcessMessage> {
-  // TODO(T17463635)
+): ConnectableObservable<ProcessMessage> {
   return new Adb(serial).installPackage(packagePath).publish();
 }
 

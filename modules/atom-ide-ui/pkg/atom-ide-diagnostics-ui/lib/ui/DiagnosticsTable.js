@@ -15,7 +15,7 @@ import type {
   DiagnosticMessageKind,
   DiagnosticMessageType,
 } from '../../../atom-ide-diagnostics/lib/types';
-import type {NuclideUri} from 'nuclide-commons/nuclideUri';
+import type {Location, DisplayDiagnostic} from '../types';
 import type {Column, Row} from 'nuclide-commons-ui/Table';
 import type {IconName} from 'nuclide-commons-ui/Icon';
 
@@ -38,38 +38,13 @@ const DIAGNOSTICS_TO_ROWS_TRACES_MAP = new WeakMap();
 const DIAGNOSTICS_TO_ROWS_NO_TRACES_MAP = new WeakMap();
 
 // text is always used for sorting, while we render the element.
-type DescriptionField = {
+type DescriptionField = {|
   diagnostic: DiagnosticMessage,
   showTraces: boolean,
   text: string,
   isPlainText: boolean,
   description: string,
-};
-
-type Location = {|
-  fullPath: NuclideUri,
-  locationInFile: ?{|
-    basename: string,
-    line: number,
-  |},
 |};
-
-export type DisplayDiagnostic = {
-  +classification: {
-    kind: DiagnosticMessageKind,
-    severity: DiagnosticMessageType,
-  },
-  +providerName: string,
-  +description: {
-    showTraces: boolean,
-    diagnostic: DiagnosticMessage,
-    text: string,
-    isPlainText: boolean,
-  },
-  +dir: string,
-  +location: ?Location,
-  +line: ?number,
-};
 
 type ColumnName = $Keys<DisplayDiagnostic>;
 
@@ -77,23 +52,23 @@ type ColumnName = $Keys<DisplayDiagnostic>;
 // reached" message.
 const MAX_RESULTS_COUNT = 1000;
 
-type Props = {
+type Props = {|
   diagnostics: Array<DiagnosticMessage>,
   selectedMessage: ?DiagnosticMessage,
   gotoMessageLocation: (
     message: DiagnosticMessage,
-    options: {|focusEditor: boolean|},
+    options: {|focusEditor: boolean, pendingPane: boolean|},
   ) => void,
   selectMessage: (message: DiagnosticMessage) => void,
   showFileName: ?boolean,
   showDirectoryColumn: boolean,
   showTraces: boolean,
-};
+|};
 
-type State = {
+type State = {|
   sortDescending: boolean,
   sortedColumn: ColumnName,
-};
+|};
 
 export default class DiagnosticsTable extends React.PureComponent<
   Props,
@@ -146,11 +121,17 @@ export default class DiagnosticsTable extends React.PureComponent<
     ) {
       return;
     }
-    this.props.gotoMessageLocation(item.diagnostic, {focusEditor: false});
+    this.props.gotoMessageLocation(item.diagnostic, {
+      focusEditor: false,
+      pendingPane: event.type !== 'click',
+    });
   };
 
   _handleConfirmTableRow = (item: {diagnostic: DiagnosticMessage}): void => {
-    this.props.gotoMessageLocation(item.diagnostic, {focusEditor: true});
+    this.props.gotoMessageLocation(item.diagnostic, {
+      focusEditor: true,
+      pendingPane: false,
+    });
   };
 
   _getColumns(): Array<Column<DisplayDiagnostic>> {
@@ -372,6 +353,7 @@ export default class DiagnosticsTable extends React.PureComponent<
             classification: {
               kind: diagnostic.kind || 'lint',
               severity: diagnostic.type,
+              stale: diagnostic.stale,
             },
             providerName: diagnostic.providerName,
             description: {
@@ -408,12 +390,19 @@ const EmptyComponent = () => (
 type Classification = {
   kind: DiagnosticMessageKind,
   severity: DiagnosticMessageType,
+  stale?: boolean,
 };
 
 function TypeComponent(props: {data: Classification}): React.Element<any> {
   const classification = props.data;
   const iconName = getIconName(classification);
-  return <Icon icon={iconName} />;
+  return (
+    <Icon
+      icon={iconName}
+      className={classification.stale ? 'nuclide-ui-table-type-icon-stale' : ''}
+      title={classification.stale ? 'Stale' : ''}
+    />
+  );
 }
 
 function getIconName(classification: Classification): IconName {

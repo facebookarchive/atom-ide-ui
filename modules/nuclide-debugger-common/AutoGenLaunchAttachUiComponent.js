@@ -23,7 +23,7 @@ import * as React from 'react';
 import idx from 'idx';
 import nullthrows from 'nullthrows';
 import {Checkbox} from 'nuclide-commons-ui/Checkbox';
-import RadioGroup from 'nuclide-commons-ui/RadioGroup';
+import {Dropdown} from 'nuclide-commons-ui/Dropdown';
 import {AtomInput} from 'nuclide-commons-ui/AtomInput';
 import nuclideUri from 'nuclide-commons/nuclideUri';
 import {capitalize, shellParseWithGlobs} from 'nuclide-commons/string';
@@ -324,7 +324,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
     const formattedName =
       capitalize(name.replace(/([A-Z])/g, ' $1')) +
       (required ? ' (Required)' : '');
-    const nameLabel = <label>{formattedName}:</label>;
+    const nameLabel = type === 'boolean' ? formattedName : formattedName + ':';
     const itemType = idx(property, _ => _.itemType);
     if (this._atomInputType(type, itemType)) {
       const value = this.state.atomInputValues.get(name) || '';
@@ -345,11 +345,11 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
     } else if (type === 'boolean') {
       const checked = this.state.booleanValues.get(name) || false;
       return (
-        <div>
-          <div>{nameLabel}</div>
+        <div className="inline-block">
           <Checkbox
             checked={checked}
-            label={description}
+            label={nameLabel}
+            title={description}
             onChange={newValue => {
               this.state.booleanValues.set(name, newValue);
               this.props.configIsValidChanged(this._debugButtonShouldEnable());
@@ -359,19 +359,23 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       );
     } else if (type === 'enum' && property.enums != null) {
       const enums = property.enums;
-      const selectedValue = this.state.enumValues.get(name) || '';
+      const selectedValue = this.state.enumValues.get(name) || null;
       return (
         <div>
           {nameLabel}
-          <RadioGroup
-            selectedIndex={enums.indexOf(selectedValue)}
-            optionLabels={enums.map((enumValue, i) => (
-              <label key={i}>{enumValue}</label>
-            ))}
-            onSelectedChange={index => {
-              this.state.enumValues.set(name, enums[index]);
+          <div>
+            <label>{description}</label>
+          </div>
+          <Dropdown
+            options={enums.map(enumValue => ({
+              value: enumValue,
+              label: capitalize(enumValue.replace(/([A-Z])/g, ' $1')),
+            }))}
+            onChange={enumValue => {
+              this.state.enumValues.set(name, enumValue);
               this.props.configIsValidChanged(this._debugButtonShouldEnable());
             }}
+            value={selectedValue}
           />
         </div>
       );
@@ -511,7 +515,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       deviceAndProcessValues,
       selectSourcesValues,
     } = this.state;
-    const {launch, vsAdapterType, threads, getProcessName} = config;
+    const {launch, vsAdapterType, getProcessName} = config;
 
     const stringValues = new Map();
     const stringArrayValues = new Map();
@@ -530,10 +534,11 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
             const value = atomInputValues.get(name) || '';
             if (type === 'path') {
               try {
+                const trimmedValue = value.trim();
                 const resolvedPath =
                   this.props.pathResolver == null
-                    ? value
-                    : await this.props.pathResolver(targetUri, value);
+                    ? trimmedValue
+                    : await this.props.pathResolver(targetUri, trimmedValue);
                 stringValues.set(name, resolvedPath);
               } catch (_) {
                 stringValues.set(name, value);
@@ -622,9 +627,7 @@ export default class AutoGenLaunchAttachUiComponent extends React.Component<
       debugMode: launch ? 'launch' : 'attach',
       adapterType: vsAdapterType,
       config: values,
-      showThreads: threads,
       customControlButtons: [],
-      threadsComponentTitle: 'Threads',
       processName: getProcessName(values),
       isRestartable: true,
     });

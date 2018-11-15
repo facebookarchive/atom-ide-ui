@@ -10,34 +10,30 @@
  * @format
  */
 
-import type {
-  Level,
-  Record,
-  DisplayableRecord,
-  Executor,
-  OutputProvider,
-} from '../types';
-
+import type {Executor, Level, Record, SourceInfo} from '../types';
 import type {RenderSegmentProps} from 'nuclide-commons-ui/Ansi';
+import type {EvaluationResult} from 'nuclide-commons-ui/TextRenderer';
 
 import classnames from 'classnames';
 import {MeasuredComponent} from 'nuclide-commons-ui/MeasuredComponent';
 import * as React from 'react';
 import {LazyNestedValueComponent} from 'nuclide-commons-ui/LazyNestedValueComponent';
 import SimpleValueComponent from 'nuclide-commons-ui/SimpleValueComponent';
+import FullWidthProgressBar from 'nuclide-commons-ui/FullWidthProgressBar';
 import shallowEqual from 'shallowequal';
 import Ansi from 'nuclide-commons-ui/Ansi';
 import {TextRenderer} from 'nuclide-commons-ui/TextRenderer';
 import debounce from 'nuclide-commons/debounce';
-import {nextAnimationFrame} from 'nuclide-commons/observable';
 import parseText from '../parseText';
+import nullthrows from 'nullthrows';
 
 type Props = {
-  displayableRecord: DisplayableRecord,
+  record: Record,
   showSourceLabel: boolean,
   getExecutor: (id: string) => ?Executor,
-  getProvider: (id: string) => ?OutputProvider,
-  onHeightChange: (recordId: number, newHeight: number) => void,
+  getProvider: (id: string) => ?SourceInfo,
+  onHeightChange: (record: Record, newHeight: number) => void,
+  expansionStateId: Object,
 };
 
 const AnsiRenderSegment = ({key, style, content}: RenderSegmentProps) => (
@@ -50,7 +46,6 @@ const ONE_DAY = 1000 * 60 * 60 * 24;
 export default class RecordView extends React.Component<Props> {
   _wrapper: ?HTMLElement;
   _debouncedMeasureAndNotifyHeight: () => void;
-  _rafDisposable: ?rxjs$Subscription;
 
   constructor(props: Props) {
     super(props);
@@ -70,14 +65,20 @@ export default class RecordView extends React.Component<Props> {
     this.measureAndNotifyHeight();
   }
 
-  componentWillUnmount() {
-    if (this._rafDisposable != null) {
-      this._rafDisposable.unsubscribe();
+  componentDidUpdate(prevProps: Props) {
+    // Record is an immutable object, so any change that would affect a height
+    // change should result in us getting a new object.
+    if (this.props.record !== prevProps.record) {
+      this.measureAndNotifyHeight();
     }
   }
 
-  _renderContent(displayableRecord: DisplayableRecord): React.Element<any> {
-    const {record} = displayableRecord;
+  componentWillUnmount() {
+    this._debouncedMeasureAndNotifyHeight.dispose();
+  }
+
+  _renderContent(): React.Element<any> {
+    const {record} = this.props;
     if (record.kind === 'request') {
       // TODO: We really want to use a text editor to render this so that we can get syntax
       // highlighting, but they're just too expensive. Figure out a less-expensive way to get syntax
@@ -85,10 +86,10 @@ export default class RecordView extends React.Component<Props> {
       return <pre>{record.text || ' '}</pre>;
     } else if (record.kind === 'response') {
       const executor = this.props.getExecutor(record.sourceId);
-      return this._renderNestedValueComponent(displayableRecord, executor);
+      return this._renderNestedValueComponent(executor);
     } else if (record.data != null) {
       const provider = this.props.getProvider(record.sourceId);
-      return this._renderNestedValueComponent(displayableRecord, provider);
+      return this._renderNestedValueComponent(provider);
     } else {
       // If there's not text, use a space to make sure the row doesn't collapse.
       const text = record.text || ' ';
@@ -105,29 +106,74 @@ export default class RecordView extends React.Component<Props> {
   }
 
   _renderNestedValueComponent(
-    displayableRecord: DisplayableRecord,
-    provider: ?OutputProvider | ?Executor,
+    provider: ?SourceInfo | ?Executor,
   ): React.Element<any> {
-    const {record, expansionStateId} = displayableRecord;
+    const {record, expansionStateId} = this.props;
     const getProperties = provider == null ? null : provider.getProperties;
     const type = record.data == null ? null : record.data.type;
-    const simpleValueComponent = getComponent(type);
-    return (
-      <LazyNestedValueComponent
-        className="console-lazy-nested-value"
-        evaluationResult={record.data}
-        fetchChildren={getProperties}
-        simpleValueComponent={simpleValueComponent}
-        shouldCacheChildren={true}
-        expansionStateId={expansionStateId}
-      />
-    );
+    if (type === 'objects') {
+      // Render multiple objects.
+      const children = [];
+      for (const [index, object] of nullthrows(
+        record.data?.objects,
+      ).entries()) {
+        const evaluationResult: EvaluationResult = {
+          description: object.description,
+          type: object.type || '',
+          // $FlowFixMe: that isn't an object ID,
+          objectId: object.expression,
+        };
+        const simpleValueComponent = getComponent(object.type);
+
+        // Each child must have it's own expansion state ID.
+        const expansionStateKey = 'child' + index;
+        if (!expansionStateId[expansionStateKey]) {
+          expansionStateId[expansionStateKey] = {};
+        }
+
+        if (object.expression.reference === 0) {
+          children.push(
+            <SimpleValueComponent
+              expression={null}
+              evaluationResult={{
+                type: object.type != null ? object.type : 'text',
+                value: object.expression.getValue(),
+              }}
+            />,
+          );
+        } else {
+          children.push(
+            <LazyNestedValueComponent
+              className="console-lazy-nested-value"
+              evaluationResult={evaluationResult}
+              fetchChildren={getProperties}
+              simpleValueComponent={simpleValueComponent}
+              shouldCacheChildren={true}
+              expansionStateId={expansionStateId[expansionStateKey]}
+            />,
+          );
+        }
+      }
+      return <span className="console-multiple-objects">{children}</span>;
+    } else {
+      // Render single object.
+      const simpleValueComponent = getComponent(type);
+      return (
+        <LazyNestedValueComponent
+          className="console-lazy-nested-value"
+          evaluationResult={record.data}
+          fetchChildren={getProperties}
+          simpleValueComponent={simpleValueComponent}
+          shouldCacheChildren={true}
+          expansionStateId={expansionStateId}
+        />
+      );
+    }
   }
 
   render(): React.Node {
-    const {displayableRecord} = this.props;
-    const {record} = displayableRecord;
-    const {level, kind, timestamp, sourceId} = record;
+    const {record} = this.props;
+    const {level, kind, timestamp, sourceId, sourceName} = record;
 
     const classNames = classnames('console-record', `level-${level || 'log'}`, {
       request: kind === 'request',
@@ -142,7 +188,7 @@ export default class RecordView extends React.Component<Props> {
         className={`console-record-source-label ${getHighlightClassName(
           level,
         )}`}>
-        {sourceId}
+        {sourceName ?? sourceId}
       </span>
     ) : null;
     let renderedTimestamp;
@@ -162,41 +208,29 @@ export default class RecordView extends React.Component<Props> {
         <div ref={this._handleRecordWrapper} className={classNames}>
           {icon}
           <div className="console-record-content-wrapper">
-            {displayableRecord.record.repeatCount > 1 && (
+            {record.repeatCount > 1 && (
               <div className="console-record-duplicate-number">
-                {displayableRecord.record.repeatCount}
+                {record.repeatCount}
               </div>
             )}
             <div className="console-record-content">
-              {this._renderContent(displayableRecord)}
+              {this._renderContent()}
             </div>
           </div>
           {sourceLabel}
           {renderedTimestamp}
+          {<FullWidthProgressBar progress={null} visible={record.incomplete} />}
         </div>
       </MeasuredComponent>
     );
   }
 
   measureAndNotifyHeight = () => {
-    // This method is called after the necessary DOM mutations have
-    // already occurred, however it is possible that the updates have
-    // not been flushed to the screen. So the height change update
-    // is deferred until the rendering is complete so that
-    // this._wrapper.offsetHeight gives us the correct final height
-    if (this._rafDisposable != null) {
-      this._rafDisposable.unsubscribe();
+    if (this._wrapper == null) {
+      return;
     }
-    this._rafDisposable = nextAnimationFrame.subscribe(() => {
-      if (this._wrapper == null) {
-        return;
-      }
-      const {offsetHeight} = this._wrapper;
-      const {displayableRecord, onHeightChange} = this.props;
-      if (offsetHeight !== displayableRecord.height) {
-        onHeightChange(displayableRecord.id, offsetHeight);
-      }
-    });
+    const {offsetHeight} = this._wrapper;
+    this.props.onHeightChange(this.props.record, offsetHeight);
   };
 
   _handleRecordWrapper = (wrapper: HTMLElement) => {

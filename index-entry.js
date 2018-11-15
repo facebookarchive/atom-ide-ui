@@ -7,13 +7,14 @@
  * of patent rights can be found in the PATENTS file in the same directory.
  *
  * @noflow
+ * @format
  */
 'use strict';
 
+/* eslint nuclide-internal/no-commonjs: 0 */
 /* eslint
   comma-dangle: [1, always-multiline],
   prefer-object-spread/prefer-object-spread: 0,
-  nuclide-internal/no-commonjs: 0,
   */
 
 /**
